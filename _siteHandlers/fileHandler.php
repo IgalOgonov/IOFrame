@@ -1,0 +1,208 @@
+<?php
+namespace IOFrame{
+
+    require_once __DIR__.'/../_util/helperFunctions.php';
+    require_once 'lockHandler.php';
+
+    /**Handles local file operations in IOFrame
+     * @author Igal Ogonov <igal1333@hotmail.com>
+     * @license LGPL
+     * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
+    */
+    class fileHandler
+    {
+        /**Literally nothing to construct.
+        */
+        function __construct()
+        {
+        }
+
+        /** Reads a file $fileName at url $url after waiting $sec seconds for a mutex.
+         * @param string $url Url of specified file
+         * @param string $fileName  Name of specified file
+         * @param int $sec seconds to wait for lock - @lockHandler
+         * @param lockHandler $lockHandler Use an existing lockHandler - do not to waste resources when it's not needed.
+         *
+         * @throws \Exception If lock file can't be opened, mutex was locked over the wait specified duration.
+         *
+         * @returns string
+         *  the file contents,
+         *  or throws an exception.
+         * */
+        function readFileWaitMutex(string $url, string $fileName, $params = []){
+
+            //Set defaults
+            if(!isset($params['sec']))
+                $sec = 2;
+            else
+                $sec = $params['sec'];
+
+            if(!isset($params['lockHandler']))
+                $lockHandler = null;
+            else
+                $lockHandler = $params['lockHandler'];
+
+            if(substr($url,-1) != '/')
+                $url .= '/';
+            if(!is_file($url.$fileName))
+                return false;
+            if($lockHandler === null)
+                $lockHandler = new lockHandler($url);
+            if($lockHandler->waitForMutex(['sec'=>$sec])){
+                try{
+                    $myFile = @fopen($url.$fileName,"r");
+                    if(filesize($url.$fileName) == 0)
+                        return '';
+                    if(!$myFile)
+                        throw new \Exception("Cannot open file ".$url.$fileName);
+                    $fileContents = fread($myFile,filesize($url.$fileName));
+                    fclose($myFile);
+                    return $fileContents;
+                }
+                catch(\Exception $e){
+                    return false;
+                }
+            }
+            else
+                throw new \Exception("Mutex locked for file ".$fileName);
+        }
+
+        /**
+         * Writes a file $fileName to url $url after waiting $sec seconds for a mutex.
+         *
+         * @param string $url Url of specified file
+         * @param string $fileName  Name of specified file
+         * @param int $sec seconds to wait for lock - @lockHandler
+         * @param string $content content to write into the file
+         * @param bool $append set to true if you want to append to the file end, rather then rewrite file.
+         * @param bool $backUp set to true if you wish to back the file up with default $maxBackup
+         * @param bool $useNative If true, will use native PHP lock that is faster, but may not work across some platforms
+         * @param lockHandler $lockHandler Use an existing lockHandler - do not to waste resources when it's not needed.
+         *
+         * @throws \Exception Generally if either lock file can't be opened, mutex was locked over the wait specified duration.
+         *
+         * @returns bool
+         *      true on success, false on failure.
+         * */
+        function writeFileWaitMutex(string $url, string $fileName, string $content, $params = []){
+            //Set defaults
+            if(!isset($params['sec']))
+                $sec = 2;
+            else
+                $sec = $params['sec'];
+
+            if(!isset($params['append']))
+                $append = false;
+            else
+                $append = $params['append'];
+
+            if(!isset($params['backUp']))
+                $backUp = false;
+            else
+                $backUp = $params['backUp'];
+
+            if(!isset($params['useNative']))
+                $useNative = false;
+            else
+                $useNative = $params['useNative'];
+
+            if(!isset($params['lockHandler']))
+                $lockHandler = null;
+            else
+                $lockHandler = $params['lockHandler'];
+
+
+            if(substr($url,-1) != '/')
+                $url .= '/';
+            if(!is_file($url.$fileName))
+                return false;
+            //Native lock implementation
+            if($useNative){
+                ($append)?
+                    $mode = 'a' : $mode = 'r+';
+                $myFile = fopen($url.$fileName, $mode);
+                if (flock($myFile, LOCK_EX)) {  // acquire an exclusive lock
+                    if($append){
+                        fwrite($myFile,$content);
+                    }
+                    else{
+                        ftruncate($myFile, 0);      // truncate file
+                        fwrite($myFile, $content);
+                        fflush($myFile);            // flush output before releasing the lock
+                    }
+                } else {
+                    throw new \Exception("Couldn't get the lock on ".$url.$fileName);
+                }
+                flock($myFile, LOCK_UN);    // release the lock
+                fclose($myFile);
+            }
+
+            //Original implementation
+            else try{
+                if($lockHandler === null)
+                    $lockHandler = new lockHandler($url);
+
+                if($lockHandler->waitForMutex(['sec'=>$sec])){
+                    $lockHandler->makeMutex();
+                    ($append)?
+                        $mode = 'a' : $mode = 'w+';
+                    if($backUp)
+                        $this->backupFile($url, $fileName);
+                    try{
+                        $myFile = fopen($url.$fileName, $mode);
+                    }
+                    catch (\Exception $e){
+                        $lockHandler->deleteMutex();
+                        throw new \Exception($e);
+                    }
+                    if(!$myFile){
+                        $lockHandler->deleteMutex();
+                        throw new \Exception("Cannot open file ".$url.$fileName);
+                    }
+                    fwrite($myFile,$content);
+                    fclose($myFile);
+                    $lockHandler->deleteMutex();
+                }
+                else
+                    throw new \Exception("Mutex locked for file ".$fileName);
+            }
+            catch(\Exception $e){
+                return false;
+            }
+            return true;
+        }
+
+        /** Creates a backup of a file with the name $filename at $url,
+         * with the number of the backup in that folder and a 'backup' file extension.
+         *
+         * @param string $url Url of specified file
+         * @param string $fileName  Name of specified file
+         * @param int $maxBackup Deletes the $maxBackup-th backup, if the limit exists
+         * */
+        function backupFile(string $url, string $filename, $params = []){
+
+            //Set defaults
+            if(!isset($params['maxBackup']))
+                $maxBackup = 10;
+            else
+                $maxBackup = $params['maxBackup'];
+
+            for($i=$maxBackup; $i>0;$i--){
+                if(is_file($url.$filename.'.backup'.$i)){
+                    if($i==$maxBackup){
+                        unlink($url.$filename.'.backup'.$i);
+                    }
+                    else{
+                        rename($url.$filename.'.backup'.$i, $url.$filename.'.backup'.($i+1));
+                    }
+                }
+            }
+            copy($url.$filename, $url.$filename.'.backup1');
+        }
+
+
+
+
+    }
+}
+?>

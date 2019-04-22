@@ -1,0 +1,13 @@
+.pop-up-tooltip{
+       top : 1ex;
+       left : 1ex;
+       padding : 0.5em;
+       max-width : 30em;
+       border-radius : 0.7em;
+       border : solid 0.1em black;
+       background-color : rgb(214, 229, 255);
+       font-size: 0.8em;
+       font-weight: 800;
+       z-index : 1;
+       display: table;
+   }

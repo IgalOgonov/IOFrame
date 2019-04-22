@@ -1,0 +1,1 @@
+{"name":"Test Plugin II", "version":"1", "summary":"Second test plugin", "description":"Used to test order and dependency with the first test plugin. It will depend on it (until the end).)"}

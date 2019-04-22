@@ -1,0 +1,16 @@
+{
+	"name":"IOWeb/IOFrame",
+    "description": "The IOFrame PHP API-Based framework",
+    "keywords": ["php", "framework", "api"],
+    "homepage": "https://github.com/IgalOgonov/IOFrame",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Igal Ogonov",
+            "email": "igal1333@hotmail.com",
+            "homepage": "https://ioweb.co.il"
+        }
+    ]
+	
+}

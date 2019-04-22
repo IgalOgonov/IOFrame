@@ -1,0 +1,138 @@
+<?php
+
+/* You'll notice a lot of this is copy-pasted from uninstall in pluginHandler.
+ * It is because quickUninstall already handles a lot of the work for you, while if you are using
+ * fullUninstall, you need to do ALL of the work yourself. It is very easy to forget something, miss something,
+ * create new attack vectors/vulnerabilities, and more.
+ * Please, DO NOT write a fullUninstall unless you are experienced, and understand pluginHandler->uninstall() fully.
+ * */
+
+
+if(!$test){
+
+    $url = $settings->getSetting('absPathToRoot').'_plugins/'.$name.'/';   //Plugin folder
+    $depUrl = $settings->getSetting('absPathToRoot').'_plugins/_dependency.map/';
+    $lockHandler = new IOFrame\lockHandler($url);
+    $fileHandler = new IOFrame\fileHandler();
+    $sqlHandler = new IOFrame\sqlHandler($settings);
+    $plugList = new IOFrame\settingsHandler($settings->getSetting('absPathToRoot').'_siteFiles/plugins/');
+    $plugName = $pluginHandler->getInfo($name)[0];
+    //-------Check if the plugin is absent - or if override is false while the plugin isn't listed installed.
+    $goOn = ($plugName['status'] != 'absent');
+    if(!$goOn){
+        echo 'Plugin '.$name.' absent, can not uninstall!'.EOL;
+        if($plugName['status'] == 'absent') //Only remove the plugin from the list if its actually absent
+            $plugList->setSetting($name,null);
+        return 1;
+    }
+    //-------Make sure quickUninstall exists
+    if(!file_exists($url.'quickUninstall.php')){
+        echo 'Plugin '.$name.' quickUninstall absent, can not uninstall!'.EOL;
+        return 2;
+    }
+    //-------Check for dependencies
+    $dep = $pluginHandler->checkDependencies($name,true,$test);
+    if(!($dep === 0)){
+        echo 'Plugin '.$name.' dependencies are '.$dep.', can not uninstall!'.EOL;
+        return 3;
+    }
+    //-------Change plugin to "zombie"
+    if(!$test)
+        $plugList->setSetting($name,'zombie');
+    //-------Call quickUninstall.php - REMEMBER - OPTIONS ARRAY MUST BE FILTERED
+    try{
+        unset($_SESSION['testRandomNumber']);
+        unset($_SESSION['testSetting']);
+
+        //Create a PDO connection
+        $sqlSettings = new IOFrame\settingsHandler($settings->getSetting('absPathToRoot').SETTINGS_DIR_FROM_ROOT.'/sqlSettings/');
+        $conn = IOFrame\prepareCon($sqlSettings);
+        // set the PDO error mode to exception
+        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        // INITIALIZE CORE VALUES TABLE
+        /* Literally just the pivot time for now. */
+        $makeTB = $conn->prepare("DROP TABLE ".$sqlHandler->getSQLPrefix()."TEST_TABLE CASCADE;");
+        $makeTB->execute();
+    }
+    catch(Exception $e){
+        if($test)
+            echo 'Exception during uninstall: '.$e.EOL;
+        return 6;
+    }
+    //-------Remove plugin from order list
+    $pluginHandler->removeFromOrder($name, 'name', false, true, $test);
+    //-------Remove dependencies
+    $dep = json_decode($fileHandler->readFileWaitMutex($url,'dependencies.json',[]),true);
+    if($dep != '')
+        foreach($dep as $pName=>$ver){
+            if(file_exists($depUrl.$pName.'/settings')){
+                $depHandler = new IOFrame\settingsHandler($depUrl.$pName.'/');
+                $depHandler->setSetting($name,null);
+                echo 'Removing '.$name.' from dependency tree of '.$pName.EOL;
+            }
+        }
+    //-------If the definitions file exists, remove them
+    if(file_exists($url.'definitions.json')){
+        if(!$pluginHandler->validatePluginFile($url,'definitions',false,$test)){
+            echo 'Definitions for '.$name.' are not valid!'.EOL;
+            return 5;
+        }
+        //Now remove the definitions from the system definition file
+        try{
+            $gDefUrl = $settings->getSetting('absPathToRoot').'_Core/definitions/';
+            //Read definition files - and remove the matching ones
+            $defFile = $fileHandler->readFileWaitMutex($url,'definitions.json',['lockHandler' => $lockHandler]);
+            if($defFile != null){       //If the file is empty, don't bother doing work
+                $defArr = json_decode($defFile,true);
+                $gDefFile = $fileHandler->readFileWaitMutex($gDefUrl,'definitions.json',['lockHandler' => $lockHandler]);
+                $gDefArr = json_decode($gDefFile,true);
+                foreach($defArr as $def=>$val){
+                    if(isset($gDefArr[$def]))
+                        if($gDefArr[$def] == $val){
+                            unset($gDefArr[$def]);
+                        }
+                }
+                //Write to global definition file after backing it up
+                $defLock = new IOFrame\lockHandler($gDefUrl);
+                $defLock->makeMutex();
+                $fileHandler->backupFile($gDefUrl,'definitions.json');
+                $gDefFile = fopen($gDefUrl.'definitions.json', "w+") or die("Unable to open definitions file!");
+                fwrite($gDefFile,json_encode($gDefArr));
+                fclose($gDefFile);
+                $defLock->deleteMutex();
+                echo 'Definitions removed from system definitions: '.$defFile.EOL;
+            }
+        }
+        catch (Exception $e){
+            echo 'Exception during definition removal plugin '.$name.': '.$e.EOL;
+            return 5;
+        }
+    }
+    //-------Remove plugin from list
+    $plugList->setSetting($name,null);
+
+    echo '<span>Uninstall ended!</span>'.EOL.
+        '<span><a href="../cp/plugins">back to plugins</a></span>';
+}
+else{
+    echo '<span>fullUninstall activates here!!</span>'.EOL.
+        '<span><a href="../cp/plugins">back to plugins</a></span>';
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+?>

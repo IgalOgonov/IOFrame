@@ -1,0 +1,144 @@
+.wrapper{
+    overflow: hidden;
+}
+
+a{
+    text-decoration: none !important;
+}
+a:visited{
+     color: LightSeaGreen !important;
+ }
+
+h1{
+    text-align: center;
+    color: rgb(0, 0, 149);
+    font-weight: 700;
+    background-color: rgba(135,135,255,0.15);
+}
+
+
+div.wrapper {
+    overflow-x: hidden;
+    position: relative;
+    border: 1px solid #999999;
+    z-index: 1;
+    max-width:1600px;
+    min-height: 150px;
+    margin: auto;
+    margin-bottom:30px;
+    background-color: rgba(0, 140, 207, 0.2);
+    background-attachment: fixed;
+}
+
+div.option {
+    background-color: aliceblue;
+    border: 0px;
+    display: table;
+    border-radius: 5px;
+    margin: 0px 0px 3px 3px;
+}
+
+div.option>a{
+    font-weight: 800;
+}
+
+.plugins {
+    clear: both;
+    width: 100%;
+}
+
+.plugin-buttons {
+    text-align: center;
+}
+
+.plugin-button {
+    margin: 1px;
+}
+
+.plugin-icons {
+    width: 64px;
+}
+
+.plugin-names {
+    text-align: center;
+    font-family: Times, serif;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.real-name-popup {
+}
+
+.plugin-statuses {
+    text-align: center;
+}
+
+.plugin-summary {
+    font-style: italic;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.isInactive{
+    display: none;
+}
+
+.isActive{
+    display: inherit;
+}
+
+.isVisible{
+    height: inherit;
+    visibility: visible;
+    opacity: 1;
+    transition: opacity 0.2s linear;
+}
+
+.isInvisible{
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s linear;
+}
+
+table tr td{
+    padding: 2px;
+    border: 2px black;
+    border-style: solid dashed;
+    background-color: rgba(0, 140, 207, 0.2);
+}
+table tr th{
+    padding: 2px;
+    text-align: center;
+}
+
+.ui-button {
+    text-align: right;
+}
+
+.order-icons{
+    text-align: center;
+}
+
+.order-indices{
+    text-align: center;
+    font-size: 30px;
+    font-weight: 700;
+    color: rgb(0, 140, 207);
+}
+
+.order-names{
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.active-order{
+    filter: contrast(200%) drop-shadow(1px 1px 2px teal) saturate(150%);
+    transition: 0.1s ease-in-out;
+}
+
+.lowVisual{
+    filter: grayscale(80%) opacity(40%);
+}
