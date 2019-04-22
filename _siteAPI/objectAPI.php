@@ -262,22 +262,26 @@ switch($type){
     case "c":
         require_once 'objectAPI_fragments/c_checks.php';
         require_once 'objectAPI_fragments/c_execution.php';
-        echo $result== 0? '0' : (string)$result;
+        echo ($result === 0)?
+            '0' : $result;
         break;
     case "u":
         require_once 'objectAPI_fragments/u_checks.php';
         require_once 'objectAPI_fragments/u_execution.php';
-        echo $result== 0? '0' : (string)$result;
+        echo ($result === 0)?
+            '0' : $result;
         break;
     case "d":
         require_once 'objectAPI_fragments/d_checks.php';
         require_once 'objectAPI_fragments/d_execution.php';
-        echo $result== 0? '0' : (string)$result;
+        echo ($result === 0)?
+            '0' : $result;
         break;
     case "a":
         require_once 'objectAPI_fragments/a_checks.php';
         require_once 'objectAPI_fragments/a_execution.php';
-        echo $result== 0? '0' : (string)$result;
+        echo ($result === 0)?
+            '0' : $result;
         break;
     case "ga":
         require_once 'objectAPI_fragments/ga_checks.php';

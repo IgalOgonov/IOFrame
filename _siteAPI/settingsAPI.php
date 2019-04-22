@@ -80,7 +80,8 @@ switch($_REQUEST["action"]){
     case 'getSetting':
         require_once 'settingsAPI_fragments/get_checks.php';
         require_once 'settingsAPI_fragments/getSetting_execution.php';
-        echo $result;
+        echo ($result === 0)?
+            '0' : $result;
         break;
 
     case 'getSettings':

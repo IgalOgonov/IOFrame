@@ -142,7 +142,7 @@ switch($_REQUEST["action"]){
         require_once 'userAPI_fragments/addUser_checks.php';
         require_once 'userAPI_fragments/addUser_execution.php';
 
-        echo ($result == 0)?
+        echo ($result === 0)?
             '0' : $result;
         break;
 
@@ -187,8 +187,7 @@ switch($_REQUEST["action"]){
                 $id = $sqlHandler->selectFromTable($sqlHandler->getSQLPrefix().'USERS',['Email',$inputs['m'],'='],['ID'],[],false);
             $securityHandler->commitEventUser(0,$id,false);
         }
-
-        echo ($result == 0)?
+        echo ($result === 0)?
             '0' : $result;
         break;
 
@@ -209,7 +208,7 @@ switch($_REQUEST["action"]){
         require_once 'userAPI_fragments/pwdReset_execution.php';
 
         if($inputs['async'] !== null)
-            echo ($result == 0)?
+            echo ($result === 0)?
                 '0' : $result;
 
         break;
@@ -231,7 +230,7 @@ switch($_REQUEST["action"]){
         require_once 'userAPI_fragments/changePassword_checks.php';
         require_once 'userAPI_fragments/changePassword_execution.php';
 
-        echo ($result == 0)?
+        echo ($result === 0)?
             '0' : $result;
         break;
 
@@ -252,7 +251,7 @@ switch($_REQUEST["action"]){
         require_once 'userAPI_fragments/regConfirm_checks.php';
         require_once 'userAPI_fragments/regConfirm_execution.php';
 
-        echo ($result == 0)?
+        echo ($result === 0)?
             '0' : $result;
         break;
 
@@ -273,7 +272,7 @@ switch($_REQUEST["action"]){
         require_once 'userAPI_fragments/mailReset_execution.php';
 
         if($inputs['async'] !== null)
-            echo ($result == 0)?
+            echo ($result === 0)?
                 '0' : $result;
         break;
 
@@ -293,7 +292,7 @@ switch($_REQUEST["action"]){
         require_once 'userAPI_fragments/changeMail_checks.php';
         require_once 'userAPI_fragments/changeMail_execution.php';
 
-        echo ($result == 0)?
+        echo ($result === 0)?
             '0' : $result;
         break;
 
@@ -312,7 +311,7 @@ switch($_REQUEST["action"]){
 
         require_once 'userAPI_fragments/banUser_checks.php';
         require_once 'userAPI_fragments/banUser_execution.php';
-        echo ($result == 0)?
+        echo ($result === 0)?
             '0' : $result;
         break;
 
