@@ -34,7 +34,8 @@ namespace IOFrame{
             }
             else if(gettype($inp) == "array"){
                 $res = $inp;
-                for($i=0; $i<count($res); $i++){
+                $count = count($res);
+                for($i=0; $i<$count; $i++){
                     for($j=0; $j<strlen($res[$i]); $j++) {
                         if (preg_match('/\W/', $res[$i][$j]) != 0) {
                             $temp = ord($res[$i][$j]);

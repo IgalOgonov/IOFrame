@@ -1093,7 +1093,8 @@ namespace IOFrame{
 
             //Update all IDs larger than trueOffsetStart
             //var_dump($tempArr);
-            for($i = $trueOffsetStart+1; $i<count($this->treeArrays[$treeName]); $i++){
+            $tempCount = count($this->treeArrays[$treeName]);
+            for($i = $trueOffsetStart+1; $i<$tempCount; $i++){
                 $tempArr[$i+$offset] = array();
                 $tempArr[$i+$offset]['content'] = $this->treeArrays[$treeName][$i]['content'];
                 $tempArr[$i+$offset]['smallestEdge'] = $this->treeArrays[$treeName][$i]['smallestEdge'] + $offset*2;
@@ -1292,7 +1293,8 @@ namespace IOFrame{
 
             //Update all IDs larger than trueOffsetStart
             //var_dump($tempArr);
-            for($i = $targetID+$offset; $i<count($this->treeArrays[$treeName]); $i++){
+            $tempCount = count($this->treeArrays[$treeName]);
+            for($i = $targetID+$offset; $i<$tempCount; $i++){
                 $tempArr[$i-$offset] = array();
                 $tempArr[$i-$offset]['content'] = $this->treeArrays[$treeName][$i]['content'];
                 $tempArr[$i-$offset]['smallestEdge'] = $this->treeArrays[$treeName][$i]['smallestEdge'] - $edgeOffset;

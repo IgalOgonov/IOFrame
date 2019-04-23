@@ -1054,8 +1054,10 @@ namespace IOFrame{
                 array_push($conds,'OR');
             $res = $this->sqlHandler->selectFromTable($tableName,$conds,$columns,[],$test);
             if(is_array($res)){
-                for($i = 0; $i<count($res); $i+=1){
-                    for($j = 0; $j<(count($res[$i])); $j++){
+                $resLength = count($res);
+                for($i = 0; $i<$resLength; $i+=1){
+                    $resLength2 = count($res[$i]);
+                    for($j = 0; $j<$resLength2; $j++){
                         unset($res[$i][$j]);//This is ok because no valid column name will consist solely of digits
                     }
                     $tempRes[$res[$i][$keyCol]] = $res[$i];

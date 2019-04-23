@@ -1199,7 +1199,8 @@ namespace IOFrame{
             $res = 1;
 
             //If the user is not suspicious, we got our unser
-            for($i=0; $i<count($tempRes); $i++){
+            $tempCount = count($tempRes);
+            for($i=0; $i<$tempCount; $i++){
                 if($tempRes[$i]['Allowed'] == 'User')
                     $res = 0;
                 elseif($res === 1 && $tempRes[$i]['Allowed']){
