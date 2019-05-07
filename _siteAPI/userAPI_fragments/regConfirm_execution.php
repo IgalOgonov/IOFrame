@@ -1,6 +1,7 @@
 <?php
 
-require_once $settings->getSetting('absPathToRoot').'/_siteHandlers/userHandler.php';
+if(!defined('userHandler'))
+    require __DIR__.'/../../_siteHandlers/userHandler.php';
 
 //Attempts to activate the user, if the REQUEST contains both the ID and the code
 if(isset($inputs['id']) and isset($inputs['code']) ){

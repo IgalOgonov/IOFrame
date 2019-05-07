@@ -3,10 +3,10 @@
  * As for sending mails, it is used ONLY to send the first mail to a user asynchronously - meaning no ccs, bccs, replies
  * and certainly no attachments are allowed.
 */
-require_once __DIR__ . '/../_Core/coreInit.php';
-require_once __DIR__.'/../_siteHandlers/mailHandler.php';
+require __DIR__ . '/../_Core/coreInit.php';
+require __DIR__.'/../_siteHandlers/mailHandler.php';
 
-require_once 'defaultInputChecks.php';
+require 'defaultInputChecks.php';
 
 if($test){
     echo 'Testing mode!'.EOL;

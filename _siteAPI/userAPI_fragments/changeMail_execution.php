@@ -1,6 +1,7 @@
 <?php
 
-require_once $settings->getSetting('absPathToRoot').'/_siteHandlers/userHandler.php';
+if(!defined('userHandler'))
+    require __DIR__.'/../../_siteHandlers/userHandler.php';
 
 $id = $_SESSION['MAIL_CHANGE_ID'];
 if(!isset($userHandler))

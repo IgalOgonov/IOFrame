@@ -1,6 +1,6 @@
 <?php
 namespace IOFrame{
-
+    define('settingsHandler',true);
 
     /**Handles settings files (and maybe by now - DB shared settings) in IOFrame
      * @author Igal Ogonov <igal1333@hotmail.com>
@@ -8,9 +8,13 @@ namespace IOFrame{
      * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
     */
 
-    require_once 'lockHandler.php';
-    require_once 'fileHandler.php';
-    require_once __DIR__.'/../_util/helperFunctions.php';
+
+    if(!defined('lockHandler'))
+        require 'lockHandler.php';
+    if(!defined('fileHandler'))
+        require 'fileHandler.php';
+    if(!defined('helperFunctions'))
+        require __DIR__.'/../_util/helperFunctions.php';
 
     /** @const OP_MODE_LOCAL Operation mode where settingsHandler works on the local node */
     const SETTINGS_OP_MODE_LOCAL = 'local';

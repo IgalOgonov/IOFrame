@@ -1,6 +1,6 @@
 <?php
 namespace IOFrame{
-
+    define('treeHandler',true);
     /**
      * A class to handle trees.
      * Trees are implemented as euler tour trees stored in some SQL table (table name provided by the user).
@@ -18,7 +18,8 @@ namespace IOFrame{
      * @license LGPL
      * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
      */
-    include_once 'abstractDBWithCache.php';
+    if(!defined('abstractDBWithCache'))
+        require 'abstractDBWithCache.php';
     use Monolog\Logger;
     use Monolog\Handler\IOFrameHandler;
 

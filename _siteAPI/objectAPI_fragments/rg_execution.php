@@ -9,16 +9,11 @@ $groupName = $params['groupName'];
 isset($params['updated'])?
     $updated = $params['updated'] : $updated = 0;
 
+//Meant for extension by plugins
+if(!isset($executionParameters))
+    $executionParameters = [];
+
+$executionParameters['updated'] = $updated;
+
 //Get all the objects requested
-$objects =  $objHandler->getObjectsByGroup($groupName,$updated,true,true,$test);
-//Parse content if needed
-if(function_exists('parseObjectContent')){
-    foreach($objects as $id=>$content){
-        if(gettype($id)!='integer'){
-            $objects[$id] = parseObjectContent($content);
-        }
-    }
-}
-
-
-$result = $objects;
+$result =  $objHandler->getObjectsByGroup($groupName,$executionParameters,$test);

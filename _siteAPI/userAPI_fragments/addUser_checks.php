@@ -1,5 +1,6 @@
 <?php
-require_once $settings->getSetting('absPathToRoot').'/_util/validator.php';
+if(!defined('validator'))
+    require __DIR__.'/../../_util/validator.php';
 
 if(!isset($userSettings))
     $userSettings = new IOFrame\settingsHandler(

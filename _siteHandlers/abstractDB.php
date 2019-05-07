@@ -1,8 +1,11 @@
 <?php
 namespace IOFrame{
+    define('abstractDB',true);
 
-    require_once 'abstractLogger.php';
-    require_once 'sqlHandler.php';
+    if(!defined('abstractLogger'))
+        require 'abstractLogger.php';
+    if(!defined('sqlHandler'))
+        require 'sqlHandler.php';
     use Monolog\Logger;
     use Monolog\Handler\IOFrameHandler;
 

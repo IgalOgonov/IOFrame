@@ -1,9 +1,13 @@
 <?php
 
-require_once $settings->getSetting('absPathToRoot').'/_util/validator.php';
-require_once $settings->getSetting('absPathToRoot').'/_siteHandlers/userHandler.php';
-require_once $settings->getSetting('absPathToRoot').'/_siteHandlers/IPHandler.php';
-require_once $settings->getSetting('absPathToRoot').'/_siteHandlers/securityHandler.php';
+if(!defined('validator'))
+    require __DIR__.'/../../_util/validator.php';
+if(!defined('userHandler'))
+    require __DIR__.'/../../_siteHandlers/userHandler.php';
+if(!defined('IPHandler'))
+    require __DIR__.'/../../_siteHandlers/IPHandler.php';
+if(!defined('securityHandler'))
+    require __DIR__.'/../../_siteHandlers/securityHandler.php';
 
 //No need to do extra work
 if(!$auth->isLoggedIn())
@@ -96,8 +100,6 @@ if(!$inputs["log"]=='out'){
         }
     }
 }
-
-require_once $settings->getSetting('absPathToRoot').'/_siteHandlers/userHandler.php';
 
 if(!isset($userHandler))
     $userHandler = new IOFrame\userHandler(

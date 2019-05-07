@@ -2,7 +2,9 @@
 
 
 namespace IOFrame{
-    require_once 'safeSTR.php';
+    define('hArray',true);
+    if(!defined('safeSTR'))
+        require 'safeSTR.php';
 
     /**An hArray is a string representing an 1D Array (a stack, actually). The characters of the string are latters and numbers.
      *Any character that isn't a digit or low/highcase later is converted to %<char ascii value>%.

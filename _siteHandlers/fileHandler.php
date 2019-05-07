@@ -1,8 +1,11 @@
 <?php
 namespace IOFrame{
+    define('fileHandler',true);
 
-    require_once __DIR__.'/../_util/helperFunctions.php';
-    require_once 'lockHandler.php';
+    if(!defined('helperFunctions'))
+        require __DIR__.'/../_util/helperFunctions.php';
+    if(!defined('lockHandler'))
+        require 'lockHandler.php';
 
     /**Handles local file operations in IOFrame
      * @author Igal Ogonov <igal1333@hotmail.com>

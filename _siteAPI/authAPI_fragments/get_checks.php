@@ -1,6 +1,7 @@
 <?php
 
-require_once __DIR__.'/../../_util/validator.php';
+if(!defined('validator'))
+    require __DIR__.'/../../_util/validator.php';
 
 //Input checks
 

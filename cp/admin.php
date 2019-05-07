@@ -11,7 +11,7 @@ if(!require __DIR__ . '/../_Core/coreInit.php')
 
 
 <!DOCTYPE html>
-<?php require_once $settings->getSetting('absPathToRoot').'templates/headers.php';
+<?php require $settings->getSetting('absPathToRoot').'templates/headers.php';
 
 
 echo '<script src="'.$dirToRoot.'js/ezPopup.js"></script>';
@@ -46,6 +46,6 @@ echo '<title>Admin Panel</title>';
 </div>
 
 
-<?php require_once $settings->getSetting('absPathToRoot').'templates/footers.php';?>
+<?php require $settings->getSetting('absPathToRoot').'templates/footers.php';?>
 
 </body>

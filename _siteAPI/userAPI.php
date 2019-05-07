@@ -112,9 +112,9 @@
  *        Examples: action=banUser&id=1&minutes=60000
  *
  * */
-require_once __DIR__ . '/../_Core/coreInit.php';
+require __DIR__ . '/../_Core/coreInit.php';
 
-require_once 'defaultInputChecks.php';
+require 'defaultInputChecks.php';
 
 if(!isset($_REQUEST["action"]))
     exit('Action not specified!');
@@ -139,8 +139,8 @@ switch($_REQUEST["action"]){
                     $inputs[$expected] = null;
         }
 
-        require_once 'userAPI_fragments/addUser_checks.php';
-        require_once 'userAPI_fragments/addUser_execution.php';
+        require 'userAPI_fragments/addUser_checks.php';
+        require 'userAPI_fragments/addUser_execution.php';
 
         echo ($result === 0)?
             '0' : $result;
@@ -168,8 +168,8 @@ switch($_REQUEST["action"]){
                     $inputs[$expected] = null;
         }
 
-        require_once 'userAPI_fragments/logUser_checks.php';
-        require_once 'userAPI_fragments/logUser_execution.php';
+        require 'userAPI_fragments/logUser_checks.php';
+        require 'userAPI_fragments/logUser_execution.php';
 
         //TODO AGAIN - MAKE THIS TIMING SAFE
         if($result === 1){
@@ -204,8 +204,8 @@ switch($_REQUEST["action"]){
                     $inputs[$expected] = null;
         }
 
-        require_once 'userAPI_fragments/reset_checks.php';
-        require_once 'userAPI_fragments/pwdReset_execution.php';
+        require 'userAPI_fragments/reset_checks.php';
+        require 'userAPI_fragments/pwdReset_execution.php';
 
         if($inputs['async'] !== null)
             echo ($result === 0)?
@@ -227,8 +227,8 @@ switch($_REQUEST["action"]){
                     $inputs[$expected] = null;
         }
 
-        require_once 'userAPI_fragments/changePassword_checks.php';
-        require_once 'userAPI_fragments/changePassword_execution.php';
+        require 'userAPI_fragments/changePassword_checks.php';
+        require 'userAPI_fragments/changePassword_execution.php';
 
         echo ($result === 0)?
             '0' : $result;
@@ -248,8 +248,8 @@ switch($_REQUEST["action"]){
                     $inputs[$expected] = null;
         }
 
-        require_once 'userAPI_fragments/regConfirm_checks.php';
-        require_once 'userAPI_fragments/regConfirm_execution.php';
+        require 'userAPI_fragments/regConfirm_checks.php';
+        require 'userAPI_fragments/regConfirm_execution.php';
 
         echo ($result === 0)?
             '0' : $result;
@@ -268,8 +268,8 @@ switch($_REQUEST["action"]){
                     $inputs[$expected] = null;
         }
 
-        require_once 'userAPI_fragments/reset_checks.php';
-        require_once 'userAPI_fragments/mailReset_execution.php';
+        require 'userAPI_fragments/reset_checks.php';
+        require 'userAPI_fragments/mailReset_execution.php';
 
         if($inputs['async'] !== null)
             echo ($result === 0)?
@@ -289,8 +289,8 @@ switch($_REQUEST["action"]){
                     $inputs[$expected] = null;
         }
 
-        require_once 'userAPI_fragments/changeMail_checks.php';
-        require_once 'userAPI_fragments/changeMail_execution.php';
+        require 'userAPI_fragments/changeMail_checks.php';
+        require 'userAPI_fragments/changeMail_execution.php';
 
         echo ($result === 0)?
             '0' : $result;
@@ -309,8 +309,8 @@ switch($_REQUEST["action"]){
                     $inputs[$expected] = null;
         }
 
-        require_once 'userAPI_fragments/banUser_checks.php';
-        require_once 'userAPI_fragments/banUser_execution.php';
+        require 'userAPI_fragments/banUser_checks.php';
+        require 'userAPI_fragments/banUser_execution.php';
         echo ($result === 0)?
             '0' : $result;
         break;

@@ -12,7 +12,7 @@ $dirToRoot = IOFrame\htmlDirDist($_SERVER['PHP_SELF'],$settings->getSetting('pat
 
 
 <!DOCTYPE html>
-<?php require_once $settings->getSetting('absPathToRoot').'templates/headers.php';
+<?php require $settings->getSetting('absPathToRoot').'templates/headers.php';
 
 echo '<script src="'.$dirToRoot.'js/ezPopup.js"></script>';
 echo '<link rel="stylesheet" href="'.$dirToRoot.'/css/plugins.css">';
@@ -31,11 +31,11 @@ echo '<title>Plugins</title>';
 <p id="errorLog"></p>
 
 <div class="wrapper">
-    <?php require_once $settings->getSetting('absPathToRoot').'moduleIncludes/Vue_Module_plugins.php'?>
-    <?php require_once $settings->getSetting('absPathToRoot').'moduleIncludes/Vue_Module_pluginList.php'?>
+    <?php require $settings->getSetting('absPathToRoot').'moduleIncludes/Vue_Module_plugins.php'?>
+    <?php require $settings->getSetting('absPathToRoot').'moduleIncludes/Vue_Module_pluginList.php'?>
 </div>
 
 
-<?php require_once $settings->getSetting('absPathToRoot').'templates/footers.php';?>
+<?php require $settings->getSetting('absPathToRoot').'templates/footers.php';?>
 
 </body>

@@ -1,8 +1,11 @@
 <?php
 namespace IOFrame{
+    define('redisHandler',true);
 
-    require_once __DIR__.'/../_util/helperFunctions.php';
-    require_once 'abstractSettings.php';
+    if(!defined('helperFunctions'))
+        require __DIR__.'/../_util/helperFunctions.php';
+    if(!defined('abstractSettings'))
+        require 'abstractSettings.php';
 
     /**Handles interfacing with redis -relies on Phpredis.
      * Supports PHPRedis v >=4.0.0, with the newest Redis as of 2019.02

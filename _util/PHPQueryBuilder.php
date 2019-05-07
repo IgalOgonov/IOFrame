@@ -2,7 +2,7 @@
 
 
 namespace IOFrame{
-
+    define('PHPQueryBuilder',true);
     /**A parser to create basic SQL Queries from arrays
      * @author Igal Ogonov <igal1333@hotmail.com>
      * @license LGPL

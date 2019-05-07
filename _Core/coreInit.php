@@ -4,7 +4,7 @@ session_start();
 
 
 //First, include all user includes
-require_once __DIR__.'/../_util/helperFunctions.php';
+require __DIR__.'/../_util/helperFunctions.php';
 IOFrame\include_all_php(__DIR__.'/include/', true);
 use Monolog\Logger;
 use Monolog\Handler\IOFrameHandler;
@@ -12,14 +12,14 @@ use Monolog\Handler\IOFrameHandler;
 //This gives the user a way to run his own script through his include, independent of this framework.
 if(!isset($skipCoreInit) || $skipCoreInit==false){
     //Require basic things needed to function
-        require_once 'definitions/definitions.php';
-        require_once __DIR__.'/../_siteHandlers/ext/monolog/vendor/autoload.php';
-        require_once __DIR__.'/../_siteHandlers/settingsHandler.php';
-        require_once __DIR__.'/../_siteHandlers/sqlHandler.php';
-        require_once __DIR__.'/../_siteHandlers/redisHandler.php';
-        require_once __DIR__.'/../_siteHandlers/authHandler.php';
-        require_once __DIR__.'/../_siteHandlers/sessionHandler.php';
-        require_once __DIR__.'/../_siteHandlers/pluginHandler.php';
+        require 'definitions/definitions.php';
+        require __DIR__.'/../_siteHandlers/ext/monolog/vendor/autoload.php';
+        require __DIR__.'/../_siteHandlers/settingsHandler.php';
+        require __DIR__.'/../_siteHandlers/sqlHandler.php';
+        require __DIR__.'/../_siteHandlers/redisHandler.php';
+        require __DIR__.'/../_siteHandlers/authHandler.php';
+        require __DIR__.'/../_siteHandlers/sessionHandler.php';
+        require __DIR__.'/../_siteHandlers/pluginHandler.php';
 
         /*Changes connection type to https if it isn't already*/
         function convertToHTTPS(){

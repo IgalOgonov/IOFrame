@@ -1,8 +1,11 @@
 <?php
 namespace IOFrame{
+    define('abstractDBWithCache',true);
 
-    require_once 'abstractDB.php';
-    require_once 'redisHandler.php';
+    if(!defined('abstractDB'))
+        require 'abstractDB.php';
+    if(!defined('redisHandler'))
+        require 'redisHandler.php';
     use Monolog\Logger;
     use Monolog\Handler\IOFrameHandler;
 

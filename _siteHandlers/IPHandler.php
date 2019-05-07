@@ -1,5 +1,7 @@
 <?php
 namespace IOFrame{
+    define('IPHandler',true);
+
     /** This handler is used in order to manage the IP Blacklist/Whitelist.
      * Lets say, for examples in this comment, our example IP is 102.43.196.23
      *
@@ -34,7 +36,8 @@ namespace IOFrame{
      * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
      */
 
-    require_once 'abstractDBWithCache.php';
+    if(!defined('abstractDBWithCache'))
+        require 'abstractDBWithCache.php';
     use Monolog\Logger;
     use Monolog\Handler\IOFrameHandler;
 

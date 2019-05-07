@@ -1,7 +1,9 @@
 <?php
 namespace IOFrame{
+    define('authHandler',true);
 
-    require_once 'abstractDBWithCache.php';
+    if(!defined('abstractDBWithCache'))
+        require 'abstractDBWithCache.php';
     use Monolog\Logger;
     use Monolog\Handler\IOFrameHandler;
 
@@ -1107,7 +1109,8 @@ namespace IOFrame{
             $res = [];
 
             if($safeStr){
-                require_once __DIR__.'/../_util/safeSTR.php';
+                if(!defined('safeSTR'))
+                    require __DIR__.'/../_util/safeSTR.php';
             }
 
             if(is_array($response))
@@ -1138,7 +1141,8 @@ namespace IOFrame{
                 $safeStr = true;
 
             if($safeStr){
-                require_once __DIR__.'/../_util/safeSTR.php';
+                if(!defined('safeSTR'))
+                    require __DIR__.'/../_util/safeSTR.php';
             }
 
             $actionsToInsert = [];
@@ -1550,7 +1554,8 @@ namespace IOFrame{
                 $safeStr = true;
 
             if($safeStr){
-                require_once __DIR__.'/../_util/safeSTR.php';
+                if(!defined('safeSTR'))
+                    require __DIR__.'/../_util/safeSTR.php';
             }
 
             $groupsToInsert = [];

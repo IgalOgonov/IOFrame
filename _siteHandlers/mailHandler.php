@@ -1,12 +1,14 @@
 <?php
 
 namespace IOFrame{
+    define('mailHandler',true);
 
-    require_once 'abstractDBWithCache.php';
-    require_once 'ext/phpmailer/vendor/phpmailer/phpmailer/src/PHPMailer.php';
-    require_once 'ext/phpmailer/vendor/phpmailer/phpmailer/src/SMTP.php';
-    require_once 'ext/phpmailer/vendor/phpmailer/phpmailer/src/Exception.php';
-    require_once 'ext/phpmailer/vendor/phpmailer/phpmailer/src/OAuth.php';
+    if(!defined('abstractDBWithCache'))
+        require 'abstractDBWithCache.php';
+    require 'ext/phpmailer/vendor/phpmailer/phpmailer/src/PHPMailer.php';
+    require 'ext/phpmailer/vendor/phpmailer/phpmailer/src/SMTP.php';
+    require 'ext/phpmailer/vendor/phpmailer/phpmailer/src/Exception.php';
+    require 'ext/phpmailer/vendor/phpmailer/phpmailer/src/OAuth.php';
     use PHPMailer\PHPMailer\PHPMailer;
     use Monolog\Logger;
     use Monolog\Handler\IOFrameHandler;

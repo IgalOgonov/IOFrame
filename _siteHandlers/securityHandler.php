@@ -1,13 +1,17 @@
 <?php
 namespace IOFrame{
+    define('securityHandler',true);
+
     /* Means to handle general security functions related to the framework.
      * @author Igal Ogonov <igal1333@hotmail.com>
      * @license LGPL
      * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
      * */
 
-    require_once 'abstractDBWithCache.php';
-    require_once 'IPHandler.php';
+    if(!defined('abstractDBWithCache'))
+        require 'abstractDBWithCache.php';
+    if(!defined('IPHandler'))
+        require 'IPHandler.php';
     use Monolog\Logger;
     use Monolog\Handler\IOFrameHandler;
 
@@ -84,7 +88,7 @@ namespace IOFrame{
             if(!filter_var($IP,FILTER_VALIDATE_IP))
                 return false;
 
-            $query = 'SELECT commitEventIP(:IP,:Event_Type,:Is_Reliable,:Full_IP)';
+            $query = 'SELECT '.$this->sqlHandler->getSQLPrefix().'commitEventIP(:IP,:Event_Type,:Is_Reliable,:Full_IP)';
             $bindings = [[':IP',$IP],[':Event_Type',$eventCode],[':Is_Reliable',$isTrueIP],[':Full_IP',$fullIP]];
 
             if(!$test)
@@ -108,7 +112,7 @@ namespace IOFrame{
          */
         function commitEventUser($eventCode, $id, $test = false){
 
-            $query = 'SELECT commitEventUser(:ID,:Event_Type)';
+            $query = 'SELECT '.$this->sqlHandler->getSQLPrefix().'commitEventUser(:ID,:Event_Type)';
             $bindings = [[':ID',$id],[':Event_Type',$eventCode]];
 
             if(!$test)

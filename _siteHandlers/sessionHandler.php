@@ -1,7 +1,9 @@
 <?php
 namespace IOFrame{
+    define('sessionHandler',true);
 
-    require_once 'abstractDBWithCache.php';
+    if(!defined('abstractDBWithCache'))
+        require 'abstractDBWithCache.php';
     use Monolog\Logger;
     use Monolog\Handler\IOFrameHandler;
 
@@ -42,15 +44,16 @@ namespace IOFrame{
             // Also log out user who is registered to this session - wouldn't want a delayed session hijack, now would we?
             if (isset($_SESSION['discard_after']) && $now > $_SESSION['discard_after']) {
 
-                //Create a loginHandler
-                require_once $this->settings->getSetting('absPathToRoot').'_siteHandlers/userHandler.php';
-                $loginHandler = new userHandler(
+                //Create a userHandler
+                if(!defined('userHandler'))
+                    require __DIR__.'/../_siteHandlers/userHandler.php';
+                $userHandler = new userHandler(
                     $this->settings,
                     $this->defaultSettingsParams
                 );
                 //Logout - without forgetting the relog credentials!
-                $loginHandler->logOut(['forgetMe'=>false]);
-                unset($loginHandler);
+                $userHandler->logOut(['forgetMe'=>false]);
+                unset($userHandler);
                 //Return will be false
                 $res = false;
             }

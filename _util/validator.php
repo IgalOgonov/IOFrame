@@ -1,7 +1,7 @@
 <?php
 
 namespace IOFrame;
-
+define('validator',true);
 
 /**Common validation operations - mainly for the APIs
  * @author Igal Ogonov <igal1333@hotmail.com>

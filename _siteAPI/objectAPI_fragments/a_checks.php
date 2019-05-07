@@ -16,35 +16,34 @@ function checkPageMapAuth($sesInfo, $auth){
 }
 
 if(!isset($params['id'])){
-    echo 'You must send an object id to assign it to a page!';
-    return false;
+    if($test)
+        echo 'You must send an object id to assign it to a page!';
+    exit('-1');
 }
 if(!isset($params['page'])){
-    echo 'You must specify a page!';
-    return false;
+    if($test)
+        echo 'You must specify a page!';
+    exit('-1');
 }
 foreach($params as $key=>$value){
     switch($key){
         case 'obj':
             if(strlen($value)<1){
-                echo 'You need a non empty object if you want to create it!';
-                return false;
+                if($test)
+                    echo 'You need a non empty object if you want to create it!';
+                exit('-1');
             }
             break;
         case 'page':
             if(filter_var($value,FILTER_VALIDATE_URL)){
-                echo 'Illegal page name!';
-                return false;
+                if($test)
+                    echo 'Illegal page name!';
+                exit('-1');
             }
             if(strlen($value)<1){
-                echo 'You need a non empty page address if you want to create it!';
-                return false;
-            }
-            break;
-        case '?':
-            if(!($value==true || $value==false)){
-                echo 'Illegal test value!';
-                return false;
+                if($test)
+                    echo 'You need a non empty page address if you want to create it!';
+                exit('-1');
             }
             break;
     }
@@ -63,6 +62,6 @@ if(!isset($auth))
 if(!checkPageMapAuth($sesInfo, $auth)){
     if($test)
         echo 'User '.$sesInfo['ID'].' is not authorized to modify  page/object assignments! ';
-    echo 3;
+    exit('3');
 }
 

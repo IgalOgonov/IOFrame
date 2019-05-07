@@ -2,9 +2,12 @@
 
 namespace IOFrame{
 
-    require_once __DIR__.'/../_siteHandlers/settingsHandler.php';
-    require_once __DIR__.'/../_util/helperFunctions.php';
-    require_once __DIR__.'/../_util/safeSTR.php';
+    if(!defined('settingsHandler'))
+        require __DIR__.'/../_siteHandlers/settingsHandler.php';
+    if(!defined('helperFunctions'))
+        require __DIR__.'/../_util/helperFunctions.php';
+    if(!defined('safeSTR'))
+        require __DIR__.'/../_util/safeSTR.php';
 
 
     /*Database initiation function. Does require the user to already have a MySQL database up, as well as a user with enough
@@ -645,13 +648,9 @@ namespace IOFrame{
              */
             $query ="CREATE TABLE IF NOT EXISTS ".$prefix."OBJECT_CACHE_META (
                                                               Group_Name Varchar(255) PRIMARY KEY,
-                                                              Group_Size int NOT NULL CHECK(Group_Size>0),
                                                               Owner int NOT NULL CHECK(Owner>0),
-                                                              Min_Modify_Rank int DEFAULT 0 NOT NULL CHECK(Min_Modify_Rank>=0),
-                                                              Min_View_Rank int DEFAULT -1 NOT NULL CHECK(Min_Modify_Rank>=-1),
                                                               Last_Updated varchar(14) NOT NULL,
-                                                              Allow_Addition bool NOT NULL DEFAULT false,
-                                                              Meta varchar(255) DEFAULT NULL
+                                                              Allow_Addition bool NOT NULL DEFAULT false
                                                               ) ENGINE=InnoDB DEFAULT CHARSET = utf8;";
             $makeTB = $conn->prepare($query);
             try{

@@ -1,10 +1,15 @@
 <?php
 namespace IOFrame{
+    define('sqlHandler',true);
 
-    require_once 'abstractLogger.php';
-    require_once 'fileHandler.php';
-    require_once __DIR__.'/../_util/helperFunctions.php';
-    require_once __DIR__.'/../_util/PHPQueryBuilder.php';
+    if(!defined('abstractLogger.php'))
+        require 'abstractLogger.php';
+    if(!defined('fileHandler'))
+        require 'fileHandler.php';
+    if(!defined('helperFunctions'))
+        require __DIR__.'/../_util/helperFunctions.php';
+    if(!defined('PHPQueryBuilder'))
+        require __DIR__.'/../_util/PHPQueryBuilder.php';
     use Monolog\Logger;
     use Monolog\Handler\IOFrameHandler;
 

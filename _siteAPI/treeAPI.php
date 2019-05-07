@@ -133,12 +133,12 @@
  *        Examples: action=getTreeMap
  */
 
-require_once __DIR__ . '/../_Core/coreInit.php';
-require_once __DIR__.'/../_siteHandlers/treeHandler.php';
-require_once __DIR__.'/../_util/validator.php';
+require __DIR__ . '/../_Core/coreInit.php';
+require __DIR__.'/../_siteHandlers/treeHandler.php';
+require __DIR__.'/../_util/validator.php';
 
 //If it's a test call..
-require_once 'defaultInputChecks.php';
+require 'defaultInputChecks.php';
 
 if($test){
     echo 'Testing mode!'.EOL;
@@ -189,7 +189,6 @@ function validateEulerArray($eulerArray){
 
 //Make sure the action is valid, and has all relevant parameters set.
 //Also, make sure the user is authorized to perform the action.
-$authHandler = new IOFrame\authHandler($settings,['sqlHandler'=>$sqlHandler,'logger'=>$logger]);
 switch($_REQUEST['action']){
     /*Auth, and ensure needed inputs are present*/
     case 'addTrees':
@@ -248,9 +247,9 @@ switch($_REQUEST['action']){
         }
 
         if( !(
-             $authHandler->isAuthorized(0) ||
-             $authHandler->hasAction('TREE_MODIFY_ALL') ||
-             $authHandler->hasAction('TREE_C_AUTH')
+            $auth->isAuthorized(0) ||
+            $auth->hasAction('TREE_MODIFY_ALL') ||
+            $auth->hasAction('TREE_C_AUTH')
              )
         ){
             if($test)
@@ -312,9 +311,9 @@ switch($_REQUEST['action']){
         }
 
         if( !(
-            $authHandler->isAuthorized(0) ||
-            $authHandler->hasAction('TREE_MODIFY_ALL') ||
-            $authHandler->hasAction('TREE_D_AUTH')
+            $auth->isAuthorized(0) ||
+            $auth->hasAction('TREE_MODIFY_ALL') ||
+            $auth->hasAction('TREE_D_AUTH')
         )
         ){
             //Only relevant if there are trees we are not individually authorized to remove
@@ -374,10 +373,10 @@ switch($_REQUEST['action']){
         }
 
         if( !(
-            $authHandler->isAuthorized(0) ||
-            $authHandler->hasAction('TREE_MODIFY_ALL') ||
-            $authHandler->hasAction('TREE_C_AUTH') ||
-            $authHandler->hasAction('TREE_D_ACTION'.$_REQUEST['treeName'])
+            $auth->isAuthorized(0) ||
+            $auth->hasAction('TREE_MODIFY_ALL') ||
+            $auth->hasAction('TREE_C_AUTH') ||
+            $auth->hasAction('TREE_D_ACTION'.$_REQUEST['treeName'])
         )
         ){
             if($test)
@@ -535,10 +534,10 @@ switch($_REQUEST['action']){
         }
 
         if( !(
-            $authHandler->isAuthorized(0) ||
-            $authHandler->hasAction('TREE_MODIFY_ALL') ||
-            $authHandler->hasAction('TREE_U_AUTH') ||
-            $authHandler->hasAction('TREE_U_ACTION'.$_REQUEST['treeName'])
+            $auth->isAuthorized(0) ||
+            $auth->hasAction('TREE_MODIFY_ALL') ||
+            $auth->hasAction('TREE_U_AUTH') ||
+            $auth->hasAction('TREE_U_ACTION'.$_REQUEST['treeName'])
         )
         ){
             if($test)
@@ -584,10 +583,10 @@ switch($_REQUEST['action']){
             $_REQUEST['returnType'] = 'assoc';
 
         if( !(
-            $authHandler->isAuthorized(0) ||
-            $authHandler->hasAction('TREE_MODIFY_ALL') ||
-            $authHandler->hasAction('TREE_U_AUTH') ||
-            $authHandler->hasAction('TREE_U_ACTION'.$_REQUEST['treeName'])
+            $auth->isAuthorized(0) ||
+            $auth->hasAction('TREE_MODIFY_ALL') ||
+            $auth->hasAction('TREE_U_AUTH') ||
+            $auth->hasAction('TREE_U_ACTION'.$_REQUEST['treeName'])
         )
         ){
             if($test)
@@ -656,10 +655,10 @@ switch($_REQUEST['action']){
 
 
         if( !(
-            $authHandler->isAuthorized(0) ||
-            $authHandler->hasAction('TREE_MODIFY_ALL') ||
-            $authHandler->hasAction('TREE_U_AUTH') ||
-            ( $authHandler->hasAction('TREE_U_ACTION'.$_REQUEST['treeName']) && $authHandler->hasAction('TREE_U_ACTION'.$_REQUEST['targetTreeName']) )
+            $auth->isAuthorized(0) ||
+            $auth->hasAction('TREE_MODIFY_ALL') ||
+            $auth->hasAction('TREE_U_AUTH') ||
+            ( $auth->hasAction('TREE_U_ACTION'.$_REQUEST['treeName']) && $auth->hasAction('TREE_U_ACTION'.$_REQUEST['targetTreeName']) )
         )
         ){
             if($test)
@@ -762,10 +761,10 @@ switch($_REQUEST['action']){
         );
 
         //Auth that wasn't checked in the earlier stage - if you are authorized, get even trees that are private
-        if($authHandler->isLoggedIn())
+        if($auth->isLoggedIn())
             if( (
-                $authHandler->isAuthorized(0) ||
-                $authHandler->hasAction('TREE_R_AUTH')
+                $auth->isAuthorized(0) ||
+                $auth->hasAction('TREE_R_AUTH')
             )
             ){
                 $treeHandler->getFromDB([$_REQUEST['treeName']=>$_REQUEST['lastUpdated']],['ignorePrivate'=>false],$test);
@@ -804,11 +803,11 @@ switch($_REQUEST['action']){
 
 
         //Auth that wasn't checked in the earlier stage - if you are authorized, get even trees that are private
-        if($authHandler->isLoggedIn())
+        if($auth->isLoggedIn())
             if( (
-                $authHandler->isAuthorized(0) ||
-                $authHandler->hasAction('TREE_READ_ALL') ||
-                $authHandler->hasAction('TREE_R_AUTH')
+                $auth->isAuthorized(0) ||
+                $auth->hasAction('TREE_READ_ALL') ||
+                $auth->hasAction('TREE_R_AUTH')
             )
             ){
                 $treeHandler->getFromDB($combinedArray,['ignorePrivate'=>false],$test);

@@ -48,10 +48,10 @@
  *          target=siteSettings&action=unsetSetting&params={"settingName":"maxInacTime"}
  * */
 
-require_once __DIR__ . '/../_Core/coreInit.php';
+require __DIR__ . '/../_Core/coreInit.php';
 
 
-require_once 'defaultInputChecks.php';
+require 'defaultInputChecks.php';
 
 if(!isset($_REQUEST["action"]))
     exit('Action not specified!');
@@ -78,28 +78,28 @@ else
 switch($_REQUEST["action"]){
 
     case 'getSetting':
-        require_once 'settingsAPI_fragments/get_checks.php';
-        require_once 'settingsAPI_fragments/getSetting_execution.php';
+        require 'settingsAPI_fragments/get_checks.php';
+        require 'settingsAPI_fragments/getSetting_execution.php';
         echo ($result === 0)?
             '0' : $result;
         break;
 
     case 'getSettings':
-        require_once 'settingsAPI_fragments/get_checks.php';
-        require_once 'settingsAPI_fragments/getSettings_execution.php';
+        require 'settingsAPI_fragments/get_checks.php';
+        require 'settingsAPI_fragments/getSettings_execution.php';
         echo json_encode($result);
         break;
 
     case 'setSetting':
-        require_once 'settingsAPI_fragments/set_checks.php';
-        require_once 'settingsAPI_fragments/setSetting_execution.php';
+        require 'settingsAPI_fragments/set_checks.php';
+        require 'settingsAPI_fragments/setSetting_execution.php';
         echo $result === true ?
             '1' : '0';
         break;
 
     case 'unsetSetting':
-        require_once 'settingsAPI_fragments/unset_checks.php';
-        require_once 'settingsAPI_fragments/unsetSetting_execution.php';
+        require 'settingsAPI_fragments/unset_checks.php';
+        require 'settingsAPI_fragments/unsetSetting_execution.php';
         echo ($result === false)?
             '0' : $result;
         break;

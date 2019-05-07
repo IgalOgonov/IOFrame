@@ -1,8 +1,11 @@
 <?php
 
 namespace IOFrame{
+    define('abstractLogger',true);
+
     require_once 'ext/monolog/vendor/autoload.php';
-    require_once 'abstractSettings.php';
+    if(!defined('abstractSettings'))
+        require 'abstractSettings.php';
     use Monolog\Logger;
     use Monolog\Handler\IOFrameHandler;
 

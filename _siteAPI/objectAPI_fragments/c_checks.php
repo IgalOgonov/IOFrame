@@ -1,50 +1,48 @@
 <?php
 
-require_once __DIR__.'/../../_util/validator.php';
+if(!defined('validator'))
+    require __DIR__.'/../../_util/validator.php';
 
 //obj is required
 if(!isset($params['obj'])){
-    echo 'You must send an object parameter to create an object!';
-    return false;
+    if($test)
+        echo 'You must send an object parameter to create an object!';
+    exit('-1');
 }
 foreach($params as $key=>$value){
     switch($key){
         case 'obj':
             if(strlen($value)<1){
-                echo 'You need a non empty object if you want to create it!';
-                return false;
+                if($test)
+                    echo 'You need a non empty object if you want to create it!';
+                exit('-1');
             }
             break;
 
         case 'minViewRank':
             if($value != '' && $value!=-1)
                 if((gettype($params[$key]) == 'string' && preg_match_all('/\D|/',$value)>0 ) || $value<-1){
-                    echo 'minViewRank has to be a number not smaller than -1!';
-                    return false;
+                    if($test)
+                        echo 'minViewRank has to be a number not smaller than -1!';
+                    exit('-1');
                 }
             break;
 
         case 'minModifyRank':
             if($value != '')
                 if((gettype($params[$key]) == 'string' && preg_match_all('/\D/',$value)>0) || $value<0){
-                    echo 'minModifyRank has to be a number not smaller than 0!';
-                    return false;
+                    if($test)
+                        echo 'minModifyRank has to be a number not smaller than 0!';
+                    exit('-1');
                 }
             break;
 
         case 'group':
             if($value != '')
                 if(!\IOFrame\validator::validateSQLKey($value)){
-                    echo 'Illegal group name for the object!';
-                    return false;
-                }
-            break;
-
-        case '?':
-            if($value != '')
-                if(!($value==true || $value=='true' || $value=='false' || $value==false)){
-                    echo 'Illegal test value!';
-                    return false;
+                    if($test)
+                        echo 'Illegal group name for the object!';
+                    exit('-1');
                 }
             break;
     }

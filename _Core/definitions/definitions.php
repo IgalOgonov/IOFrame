@@ -30,7 +30,8 @@ namespace IOFrame{
 //-------------------Opens definitions.json and defines them.
     if(file_exists(__DIR__.'/definitions.json')){
         //Just in case somebody is installing a new plugin and adding new definitions, we need to be able to wait
-        require_once __DIR__.'/../../_siteHandlers/lockHandler.php';
+        if(!defined('lockHandler'))
+            require __DIR__.'/../../_siteHandlers/lockHandler.php';
         //If new definitions are being installed, wait
         $mutex = new lockHandler(__DIR__.'/', 'mutex');
         if(!$mutex->waitForMutex())

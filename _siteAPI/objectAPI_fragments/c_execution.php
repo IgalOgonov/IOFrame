@@ -1,6 +1,9 @@
 <?php
 
 
+if(!isset($executionParameters))
+    $executionParameters = [];
+
 //Create the object
-$result = $objHandler->addObject($obj,$minModifyRank,$minViewRank,$group, true, $test);
+$result = $objHandler->addObject($obj,$group,$minModifyRank,$minViewRank, $executionParameters, $test);
 

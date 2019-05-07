@@ -162,9 +162,9 @@
  * */
 
 
-require_once __DIR__ . '/../_Core/coreInit.php';
+require __DIR__ . '/../_Core/coreInit.php';
 
-require_once 'defaultInputChecks.php';
+require 'defaultInputChecks.php';
 
 if($test)
     echo 'Testing mode!'.EOL;
@@ -179,98 +179,98 @@ else
 
 switch($_REQUEST["action"]){
     case 'getRank':
-        require_once 'authAPI_fragments/getRank_checks.php';
-        require_once 'authAPI_fragments/getRank_execution.php';
+        require 'authAPI_fragments/getRank_checks.php';
+        require 'authAPI_fragments/getRank_execution.php';
         echo  ($result)? $auth->getRank() : '0';
         break;
 
     case 'isLoggedIn':
-        require_once 'authAPI_fragments/isLoggedIn_checks.php';
-        require_once 'authAPI_fragments/isLoggedIn_execution.php';
+        require 'authAPI_fragments/isLoggedIn_checks.php';
+        require 'authAPI_fragments/isLoggedIn_execution.php';
         echo ($result)? '1' : '0';
         break;
 
     case 'modifyUserRank':
-        require_once 'authAPI_fragments/modifyUserRank_checks.php';
-        require_once 'authAPI_fragments/modifyUserRank_execution.php';
+        require 'authAPI_fragments/modifyUserRank_checks.php';
+        require 'authAPI_fragments/modifyUserRank_execution.php';
         echo ($result)? '1' : '0';
         break;
 
     case 'getUsers':
-        require_once 'authAPI_fragments/get_checks.php';
-        require_once 'authAPI_fragments/getUsers_execution.php';
+        require 'authAPI_fragments/get_checks.php';
+        require 'authAPI_fragments/getUsers_execution.php';
         echo json_encode($result);
         break;
 
     case 'getUserActions':
-        require_once 'authAPI_fragments/get_checks.php';
-        require_once 'authAPI_fragments/getUserActions_execution.php';
+        require 'authAPI_fragments/get_checks.php';
+        require 'authAPI_fragments/getUserActions_execution.php';
         echo json_encode($result);
         break;
 
     case 'getActions':
-        require_once 'authAPI_fragments/getActions_checks.php';
-        require_once 'authAPI_fragments/getActions_execution.php';
+        require 'authAPI_fragments/getActions_checks.php';
+        require 'authAPI_fragments/getActions_execution.php';
         echo json_encode($result);
         break;
 
     case 'setActions':
-        require_once 'authAPI_fragments/set_checks.php';
-        require_once 'authAPI_fragments/setActions_execution.php';
+        require 'authAPI_fragments/set_checks.php';
+        require 'authAPI_fragments/setActions_execution.php';
         echo ($result)? '1' : '0';
         break;
 
     case 'deleteActions':
-        require_once 'authAPI_fragments/delete_checks.php';
-        require_once 'authAPI_fragments/deleteActions_execution.php';
+        require 'authAPI_fragments/delete_checks.php';
+        require 'authAPI_fragments/deleteActions_execution.php';
         echo ($result)? '1' : '0';
         break;
 
 
     case 'getGroups':
-        require_once 'authAPI_fragments/get_checks.php';
-        require_once 'authAPI_fragments/getGroups_execution.php';
+        require 'authAPI_fragments/get_checks.php';
+        require 'authAPI_fragments/getGroups_execution.php';
         echo json_encode($result);
         break;
 
 
     case 'getGroupActions':
-        require_once 'authAPI_fragments/get_checks.php';
-        require_once 'authAPI_fragments/getGroupActions_execution.php';
+        require 'authAPI_fragments/get_checks.php';
+        require 'authAPI_fragments/getGroupActions_execution.php';
         echo json_encode($result);
         break;
 
 
     case 'setGroups':
-        require_once 'authAPI_fragments/set_checks.php';
-        require_once 'authAPI_fragments/setGroups_execution.php';
+        require 'authAPI_fragments/set_checks.php';
+        require 'authAPI_fragments/setGroups_execution.php';
         echo ($result)? '1' : '0';
         break;
 
 
     case 'deleteGroups':
-        require_once 'authAPI_fragments/delete_checks.php';
-        require_once 'authAPI_fragments/deleteGroups_execution.php';
+        require 'authAPI_fragments/delete_checks.php';
+        require 'authAPI_fragments/deleteGroups_execution.php';
         echo ($result)? '1' : '0';
         break;
 
 
     case 'modifyUserActions':
-        require_once 'authAPI_fragments/modify_checks.php';
-        require_once 'authAPI_fragments/modifyUserActions_execution.php';
+        require 'authAPI_fragments/modify_checks.php';
+        require 'authAPI_fragments/modifyUserActions_execution.php';
         echo ($result)? '1' : '0';
         break;
 
 
     case 'modifyUserGroups':
-        require_once 'authAPI_fragments/modify_checks.php';
-        require_once 'authAPI_fragments/modifyUserGroups_execution.php';
+        require 'authAPI_fragments/modify_checks.php';
+        require 'authAPI_fragments/modifyUserGroups_execution.php';
         echo ($result)? '1' : '0';
         break;
 
     case 'modifyGroupActions':
-        require_once 'authAPI_fragments/modify_checks.php';
-        require_once 'authAPI_fragments/modifyGroupActions_execution.php';
+        require 'authAPI_fragments/modify_checks.php';
+        require 'authAPI_fragments/modifyGroupActions_execution.php';
         echo ($result)? '1' : '0';
         break;
 

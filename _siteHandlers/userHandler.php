@@ -1,14 +1,14 @@
 <?php
 namespace IOFrame{
-
+    define('userHandler',true);
     /**
      * Handles user registration, changes, login, etc.
      * @author Igal Ogonov <igal1333@hotmail.com>
      * @license LGPL
      * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
      */
-    include_once 'abstractDBWithCache.php';
-    include_once __DIR__.'/../_util/hArray.php';
+    if(!defined('abstractDBWithCache'))
+        require 'abstractDBWithCache.php';
     use GeoIp2\Database\Reader;
     use Monolog\Logger;
     use Monolog\Handler\IOFrameHandler;
@@ -678,7 +678,8 @@ namespace IOFrame{
         function sendConfirmationMail(
             string $uMail, int $uId, string $confirmCode, int $templateNum, string $title, bool $async, bool $test = false
         ){
-            require_once $this->settings->getSetting('absPathToRoot').'_siteHandlers/mailHandler.php';
+            if(!defined('mailHandler'))
+                require __DIR__.'/../_siteHandlers/mailHandler.php';
             $mail = new mailHandler($this->settings,['sqlHandler'=>$this->sqlHandler,'logger'=>$this->logger]);
             if(!$test){
                 try{
@@ -849,7 +850,14 @@ namespace IOFrame{
             }
 
             //Fetch table row that matches the username
-            $checkRes = $this->sqlHandler->selectFromTable($this->sqlHandler->getSQLPrefix().'USERS',['Email', $inputs["m"],'='],[],['noValidate'=>true]);
+            $prefix =  $this->sqlHandler->getSQLPrefix();
+            $checkRes = $this->sqlHandler->selectFromTable(
+                $prefix.'USERS JOIN '.$prefix.'USERS_EXTRA ON '.$prefix.'USERS.ID = '.$prefix.'USERS_EXTRA.ID',
+                ['Email', $inputs["m"],'='],
+                [],
+                ['noValidate'=>true],
+                $test
+            );
             // Check if it found something
             if (is_array($checkRes)) {
                 //Get auth details
@@ -957,7 +965,6 @@ namespace IOFrame{
 
                     //---------Fetch all the extra user data and update current session-------------
                     $this->login_updateSessionCore($checkRes, false, $test);
-                    $this->login_updateSessionExtra($checkRes, false, $test);
                     //--------------------------Update login history------------------------------
                     $this->login_updateHistory($checkRes, $test);
                     return $res;
@@ -1002,44 +1009,17 @@ namespace IOFrame{
                 "Username",
                 "Email",
                 "Active",
-                "Rank"
+                "Rank",
+                "Banned_Until"
             ];
             foreach($args as $val){
                 $data[$val]=$checkRes[0][$val];
             }
             if(!$test)
                 $_SESSION['details']=json_encode($data);
-            else
+            else{
                 echo 'Setting new session details:'.json_encode($data).EOL;
-        }
-
-        /** Updates session with extra values - those are not core values, can will change from app to app
-         * @param array $checkRes results gotten from the DB in an earlier stage
-         * @param bool $override whether to reuse all earlier session details, or completely override them.
-         * @param bool $test
-         */
-        private function login_updateSessionExtra(array $checkRes, bool $override=false, bool $test = false){
-            //Fetch existing details if they exist
-            if(isset( $_SESSION['details']) && !$override)
-                $data = json_decode( $_SESSION['details'],true);
-            //Get arguments from extended user info
-            try{
-                $extra_info = $this->sqlHandler->selectFromTable($this->sqlHandler->getSQLPrefix().'USERS_EXTRA',['ID',$checkRes[0]['ID'],'=']);
             }
-            catch(\Exception $e){
-                //TODO log
-                return;
-            }
-            $args = [
-                "Banned_Until"
-            ];
-            foreach($args as $val){
-                $data[$val]=$extra_info[0][$val];
-            }
-            if(!$test)
-                $_SESSION['details']=json_encode($data);
-            else
-                echo 'Setting new session details:'.json_encode($data).EOL;
         }
 
         /** Updates login history TODO - once number of logins exceeds 200, delete the oldest 100 and send them to archive.
@@ -1074,19 +1054,15 @@ namespace IOFrame{
 
             //Check if the username-ip combo already exists
             $u = $checkRes[0]["Username"];
-            try{
-                $checkRes = $this->sqlHandler->selectFromTable($this->sqlHandler->getSQLPrefix().'LOGIN_HISTORY',
-                    [['Username', $u,'='],['IP', [$_SERVER['REMOTE_ADDR'],'STRING'],'='],'AND'],
-                    [],
-                    [],
-                    $test);
-            }
-            catch(\Exception $e){
-                //TODO LOG EXCEPTION
-                return;
-            }
+            $checkRes = $this->sqlHandler->selectFromTable($this->sqlHandler->getSQLPrefix().'LOGIN_HISTORY',
+                [['Username', $u,'='],['IP', [$_SERVER['REMOTE_ADDR'],'STRING'],'='],'AND'],
+                [],
+                [],
+                $test);
             //if yes update them
             if (is_array($checkRes)) {
+                if(!defined('hArray'))
+                    require __DIR__.'/../_util/hArray.php';
                 //Remember that we got the IP history until now as one of the results - update it!
                 $lHist= new hArray($checkRes[0]['Login_History']);
                 $lHist->hArrPush(strtotime(date("YmdHis")));
@@ -1198,7 +1174,7 @@ namespace IOFrame{
 
             $res = 1;
 
-            //If the user is not suspicious, we got our unser
+            //If the user is not suspicious, we got our user
             $tempCount = count($tempRes);
             for($i=0; $i<$tempCount; $i++){
                 if($tempRes[$i]['Allowed'] == 'User')

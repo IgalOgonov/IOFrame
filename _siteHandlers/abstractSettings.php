@@ -1,6 +1,8 @@
 <?php
 
 namespace IOFrame{
+    define('abstractSettings',true);
+
     /** Just to be used by abstract classes that require $settings to work
      * @author Igal Ogonov <igal1333@hotmail.com>
      * @license LGPL

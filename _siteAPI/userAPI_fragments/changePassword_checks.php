@@ -1,6 +1,7 @@
 <?php
 
-require_once $settings->getSetting('absPathToRoot').'/_util/validator.php';
+if(!defined('validator'))
+    require __DIR__.'/../../_util/validator.php';
 
 if(!isset($inputs['newPassword']) || !IOFrame\validator::validatePassword($inputs['newPassword'])){
     if($test)

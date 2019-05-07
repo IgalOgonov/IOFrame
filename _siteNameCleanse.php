@@ -3,7 +3,8 @@
  * Will remove given string $strRem from any file spacified in the $url parameter, and replace it
  * $strRep.
  * */
-require_once '_util/helperFunctions.php';
+if(!defined('helperFunctions'))
+    require '_util/helperFunctions.php';
 
 //Replace $strRem with $strRep in the file at $url (absolute path)
 function cleanseFile($url,$strRemove,$strRep, $test = false,  $report = true){

@@ -1,7 +1,7 @@
 <?php
 
 namespace IOFrame{
-
+    define('safeSTR',true);
     /**
      * Returns an array given an hArray
      * @param string|hArray $hArr hArray to convert
@@ -103,26 +103,24 @@ namespace IOFrame{
     function str2SafeStr($str){
         $res=$str;
         $repeats = 1;
-        $tempLoc = 0;
         for($j=0; $j<strlen($res); $j++) {
             if (preg_match('/\W/', $res[$j]) != 0) {
                 $temp = ord($res[$j]);
                 $tempLoc = $j;
-                if($j<strlen($res)-1)               //To remove annoying notice
-                    while($res[$j] === $res[$j+1]){
-                        $repeats++;
-                        $j++;
-                    }
+                $currentLength = strlen($res);
+                while($j<$currentLength-1 && $res[$j] === $res[$j+1]){
+                    $repeats++;
+                    $j++;
+                }
                 if($repeats === 1){
                     $res = substr($res, 0, $j) . '%' .$temp . '%' . substr($res, $j + 1);
-                    $j+=strlen($temp)+1;
+                    $j+=strlen($temp)+2-1;
                 }
                 else{
                     $res = substr($res, 0, $tempLoc) . '%x'.$repeats.'x' .$temp . '%' . substr($res, $tempLoc + $repeats);
                     $repeats = 1;
-                    $j+=strlen($temp)+strlen($repeats)+3;
+                    $j = $tempLoc + strlen($temp)+4;
                 }
-
             }
         }
         return $res;

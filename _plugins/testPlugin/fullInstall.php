@@ -101,7 +101,7 @@ if(!$test){
                     echo 'Exception :'.$e.EOL;
                     try{
                         $options = [];
-                        require_once $url.'quickUninstall.php';
+                        require $url.'quickUninstall.php';
                         $plugList->setSetting($name,null,true);
                     }
                     catch (Exception $e){

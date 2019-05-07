@@ -1,5 +1,7 @@
 <?php
 
+if(!isset($executionParameters))
+    $executionParameters = [];
 $result = $objHandler->updateObject(
     $params['id'],
     $params['content'],
@@ -9,7 +11,7 @@ $result = $objHandler->updateObject(
     $params['mainOwner'],
     $params['addOwners'],
     $params['remOwners'],
-    true,
+    $executionParameters,
     $test
 );
 

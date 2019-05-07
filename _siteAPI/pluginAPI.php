@@ -121,12 +121,11 @@
  */
 //TODO potentially add auto-generating, expiring security tokens to full (un)install
 
-require_once __DIR__ . '/../_Core/coreInit.php';
-require_once __DIR__.'/../_siteHandlers/pluginHandler.php';
-require_once __DIR__.'/../_util/validator.php';
+require __DIR__ . '/../_Core/coreInit.php';
+require __DIR__.'/../_util/validator.php';
 
 //If it's a test call..
-require_once 'defaultInputChecks.php';
+require 'defaultInputChecks.php';
 
 
 if($test){
@@ -504,7 +503,7 @@ switch($_REQUEST['action']){
         $name = $_REQUEST['name'];
         $url = $settings->getSetting('absPathToRoot').'_plugins/'.$name.'/fullInstall.php';
         if(file_exists($url))
-            require_once($url);
+            require($url);
         break;
     case 'uninstall':
         $name = $_REQUEST['name'];
@@ -518,7 +517,7 @@ switch($_REQUEST['action']){
         $name = $_REQUEST['name'];
         $url = $settings->getSetting('absPathToRoot').'_plugins/'.$name.'/fullUninstall.php';
         if(file_exists($url))
-            require_once($url);
+            require($url);
         break;
     default:
         exit('Specified action is not recognized');

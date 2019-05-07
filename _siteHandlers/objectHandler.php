@@ -1,8 +1,11 @@
 <?php
 namespace IOFrame{
+    define('objectHandler',true);
 
-    require_once 'abstractDB.php';
-    require_once __DIR__.'/../_util/safeSTR.php';
+    if(!defined('abstractDB'))
+        require 'abstractDB.php';
+    if(!defined('safeSTR'))
+        require __DIR__.'/../_util/safeSTR.php';
     use Monolog\Logger;
     use Monolog\Handler\IOFrameHandler;
 
@@ -12,9 +15,6 @@ namespace IOFrame{
      */
 
     class objectHandler extends abstractDBWithCache {
-        /* @var \PDO $conn Generic PDO connection
-         * */
-        private $conn = null;
 
         /**
          * Basic construction function, with added connection if it exists
@@ -26,174 +26,126 @@ namespace IOFrame{
         function __construct(settingsHandler $settings,  $params = []){
 
             parent::__construct($settings,$params);
-
-            //Set defaults
-            if(!isset($params['conn']))
-                $conn = null;
-            else
-                $conn = $params['conn'];
-
-            //Standard constructor for classes that use settings and have a DB connection
-            if($conn != null)
-                $this->conn = $conn;
-            else{
-                $params['sqlHandler'] = null;
-                //This is intentionally re-implemented - not to use SQLHandler for this accidentally!
-                $sqlSettings = new settingsHandler(
-                    $settings->getSetting('absPathToRoot').SETTINGS_DIR_FROM_ROOT.'/sqlSettings/',
-                    $params
-                );
-                $this->conn = prepareCon($sqlSettings);
-            }
         }
 
 
-        /* Adds an object to the database, in safeString format.
+        /** Adds an object to the database, in safeString format.
          * @param string $obj          - the object.
          * @param string $group        - optional group name.
          * @param int $minModifyRank   - Minimal rank required to modify the object.
          * @param int $minViewRank     - Minimal rank required to view the object. Set -1 for "free-for-all".
-         * @param bool $safeStr        - If set, converts the object to a safe string, as defined by str2SafeStr
+         * @param array $params        - Object array of the form:
+         *                               'safeStr' => bool, default true. Whether to convert the object to safeString upon db insertion.
+         *                               'extraColumns' => 1.5D array, default [], of the form:
+         *                                                  [[<column name>,<default value>], ...]
+         *                                                  where <default value> is null if a value is required. Example:
+         *                                                  [
+         *                                                  ['Extra_Col_Name',null],
+         *                                                  ['Extra_Number',0],
+         *                                                  ]
+         *                                                 Specifies whether any extra columns are added to the
+         *                                                 db query. Notice that if it's set, a matching 'extraContent'
+         *                                                 array has to be validated in the API layer, else a critical
+         *                                                 error may occur.
+         *                               'extraContent' => 2D array, default []. Of dimensions NxE, where E is the number of
+         *                                                 (at least the required) extra columns in extraColumns, and N
+         *                                                 is the number of objects arrays. Example:
+         *                                                 [
+         *                                                 ['Extra Content 1', 02101],
+         *                                                 ['Extra Content 2', 01],
+         *                                                 ['Extra Content 2']
+         *                                                 ]
+         *                                                 Notice that this has to be validated - invalid input causes an
+         *                                                 exception to be thrown. This example, for instance, only works if
+         *                                                 the number of objects is 3.
          * @param bool $test           - Will not perform any DB actions if test isn't false, and instead echo messages.
          * @returns mixed Codes:
-         *                  -1 DB Error, or not logged in
-         *                  "ID":<ObjectID> on Success
-         *                  1   Illegal input
-         *                  2   Group exists, insufficient authorization to add object to group
-         *                  3   minViewRank and minModifyRank need to be lower or equal to your own
-         *                  4   Other error
-         * TODO *SHOULD* be remade using a stored procedure - doesn't support cuncurrent use at current state
+         *                  -2  Group exists, insufficient authorization to add object to group
+         *                  -1 if you are not logged in
+         *                  0 failed to set object
+         *                  1  Extra Content related error
+         *                OR
+         *                  Array of the form ['ID' => <new object ID>] on success
          * */
-        function addObject(string $obj, int $minModifyRank = 0, int $minViewRank = -1, string $group = '',
-                           bool $safeStr = true, bool $test = false){
-            $gCreate = false;           //Used to specify whether to create a group.
-            $gAdd = false;              //Used to specify whether to add the object to an existing group.
-            if($test != null && $test != false)           //Test is true whatever the value is, if it isn't null
-                $test = true;
-            if($minViewRank<0 || $minViewRank == null)        //If $minViewRank is lower than 0, all can view the object.
-                $minViewRank = -1;
-            else if($minModifyRank > $minViewRank && $minViewRank != -1)  //Having someone able to modify the object but not view it is illogical.
-                $minViewRank = $minModifyRank;
-            if($minModifyRank<0 || $minModifyRank == null)        //Same as viewRank
-                $minModifyRank = 0;
-
-            //You must be logged in to use this handler, as it checks the caller's rank and ID.
-            if(!assertLogin())
-                return -1;
-
-            $sesInfo = json_decode($_SESSION['details'], true);
-
-            //Check if a group for the object was specified
-            if($group != ''){
-                //Get group info from db
-                $groupExt = $this->retrieveGroup($group, [], $test);
-                //Check whether group exists
-                if($groupExt != 1){
-                    //Check user authorization
-                    if(!$this->checkObAddGroupAuth($groupExt, $sesInfo,true, $test)){
-                        if($test)
-                            echo 'Could not create object because user lacks authorization to add objects to group '.$group.'! ';
-                        return 2;
-                    }
-                    else {
-                        //Save the list of info about the group that we'll need to update it
-                        $gAdd = true;
-                    }
-                }
-                //If group doesn't exist, create the group with count 1 AFTER creating object - specify it with setting $gCreate to true.
-                else
-                    $gCreate = true;
-            }
-            //Create the object, and group if successful
-            //If we add or create a new group, the quiry must specify it, else we don't need to specify "group"
-            $params = [];
-            if($gAdd || $gCreate){
-                $query = 'INSERT INTO '.$this->sqlHandler->getSQLPrefix().'OBJECT_CACHE
-            (Ob_Group,Last_Updated, Owner, Min_Modify_Rank, Min_View_Rank, Object) VALUES
-            (:Ob_Group,:Last_Updated, :Owner, :Min_Modify_Rank, :Min_View_Rank, :Object)';
-                array_push($params,[':Ob_Group', $group]);
-            }
-            else{
-                $query = 'INSERT INTO '.$this->sqlHandler->getSQLPrefix().'OBJECT_CACHE
-            (Last_Updated, Owner, Min_Modify_Rank, Min_View_Rank, Object) VALUES
-            (:Last_Updated, :Owner, :Min_Modify_Rank, :Min_View_Rank, :Object)';
-            }
-            //
-            if($safeStr)
-                $obj = str2SafeStr($obj);
-            array_push($params,[':Ob_Group', $group],[':Last_Updated', time()],[':Owner', $sesInfo['ID']],
-                [':Min_Modify_Rank', $minModifyRank],[':Min_View_Rank', $minViewRank],[':Object', $obj]);
-            try{
-                if(!$test){
-                    $this->sqlHandler->exeQueryBindParam($query,$params);
-                    $newID = $this->conn->lastInsertId();
-                }
-                else
-                    echo 'Creating object with owner ID '.$sesInfo['ID'].', Min_View_Rank '.
-                        $minViewRank.', Min_Mod_Rank '.$minModifyRank.', Owner '.$sesInfo['ID'].', at '.time().'. Object is: '.$obj.'. ';
-            }
-            catch(\Exception $e){
-                echo 'Could not create object, error: '.$e;
-                //TODO log
-                return -1;
-            }
-            //If we are adding an object to an existing group, here is where we update it
-            if($gAdd){
-                if($this->addToGroup($groupExt,  1, $minModifyRank, $minViewRank, $test) == 1)
-                    return 4;
-            }
-            //If we are creating a new group, do so here
-            else if($gCreate){
-                if( $this->createGroup($group,$sesInfo['ID'],$minModifyRank,$minViewRank,1,$test) == 1)
-                    return 4;
-            }
-
-            if(!$test)
-                return '{"ID":'.$newID.'}';
+        function addObject(string $obj, string $group = '', int $minModifyRank = 0, int $minViewRank = -1,
+                           array $params = [], bool $test = false)
+        {
+            $res = $this->addObjects([[$obj,$group,$minModifyRank,$minViewRank]],$params,$test);
+            if(!is_array($res))
+                return $res;
+            if(isset($res['ID']))
+                return $res['ID'];
             else
-                return '<br>';
+                return $res[0];
         }
 
 
         /* Adds an object to the database, in safeString format.
-         * @param string $obj          - the object.
-         * @param string $group        - optional group name.
-         * @param int $minModifyRank   - Minimal rank required to modify the object.
-         * @param int $minViewRank     - Minimal rank required to view the object. Set -1 for "free-for-all".
-         * @param bool $safeStr        - If set, converts the object to a safe string, as defined by str2SafeStr
+         * @param array $inputs        - Inputs from adObject in the same order
+         * @param bool $params         -  Explained in addObject
          * @param bool $test           - Will not perform any DB actions if test isn't false, and instead echo messages.
-         * @returns mixed Codes:
-         *                  "ID":<ObjectID> on Success
-         *                  1   Illegal input
-         *                  2   Group exists, insufficient authorization to add object to group
-         *                  3   minViewRank and minModifyRank need to be lower or equal to your own
-         *                  4   Other error
-         * TODO *SHOULD* be remade using a stored procedure - doesn't support cuncurrent use at current state
+         * @returns mixed Array of the form:
+         *                  "ID":<ID of the **FIRST OBJECT OF ALL THOSE INSERTED**> on Success
+         *                  <Object number in input array>:<Error code> where the error codes ar from addObject
+         *                OR
+         *                1 if there is a conflict in the extra content/columns
          * */
-        /* Basically runs addObject on array $arr where $arr[i][0]..[i][7] are $id, $content, $group, $newVRank, $newMRank,
-         * $mainOwner, $newOwners and $remOwners respectively.
-         * Returns  JSON array of the form [lastInsertedID, rowCount, "res":[<obj1Res>,<obj2Res>,...]] where lastInsertedID is the ID of the
-         *          first inserted object, rowCount is the number of successfully inserted objects.
-         * TODO *SHOULD* be remade using a stored procedure - doesn't support cuncurrent use at current state
-         */
-        function addObjects(array $inputs, bool $safeStr = true, bool $test = false){
+        function addObjects(array $inputs, $params = [], bool $test = false){
 
-            //You must be logged in to use this handler, as it checks the caller's rank and ID.
-            if(!assertLogin())
-                return -1;
 
             //It would be better to do it all with 1 query, due to authentication this is not possible until stored-procedure reimplementation.
             $groups = [];       //Groups to retrieve
             $objects = [];      //Objects to create
-            $gCreate = [];      //Used to specify whether to create a group.
-            $gAdd = [];         //Used to specify whether to add the object to an existing group.
+            $groupsToUpdate = [];
+            $groupsToCreate = [];
+            $gChange = [];      //Groups to change
+            $gCreate = [];      //Groups to create
             $sesInfo = json_decode($_SESSION['details'], true);
+            $updateTime = time();
+            $tableName = $this->sqlHandler->getSQLPrefix().'OBJECT_CACHE';
+            $res = [];
+            //set default params
+            if(!isset($params['safeStr']))
+                $safeStr = true;
+            else
+                $safeStr = $params['safeStr'];
 
+            if(!isset($params['extraColumns']))
+                $extraColumns = [];
+            else
+                $extraColumns = $params['extraColumns'];
+            //Extract the actual names
+            $extraColumnNames = [];
+            foreach($extraColumns as $columnPair){
+                array_push($extraColumnNames,$columnPair[0]);
+            }
+
+            if(!isset($params['extraContent']))
+                $extraContent = [];
+            else
+                $extraContent = $params['extraContent'];
+
+            //You must be logged in to use this handler, as it checks the caller's rank and ID.
+            if(!assertLogin()){
+                foreach($inputs as $i=>$input){
+                    $res[$i] = -1;
+                }
+                return $res;
+            }
             foreach($inputs as $i=>$input){
+                //default values
+                if(!isset($input[1]))
+                    $input[1] = '';
+                if(!isset($input[2]))
+                    $input[2] = 0;
+                if(!isset($input[3]))
+                    $input[3] = -1;
 
-                if($input[3]<0 || $input[3] == null)        //If $minViewRank is lower than 0, all can view the object.
+                //If $minViewRank is lower than 0, all can view the object.
+                if($input[3]<0 || $input[3] == null)
                     $inputs[$i][3] = -1;
-                else if($input[2] > $input[3] && ($input[3] != -1))  //Having someone able to modify the object but not view it is illogical.
+                //Having someone able to modify the object but not view it is illogical.
+                else if($input[2] > $input[3] && ($input[3] != -1))
                     $inputs[$i][3] = $input[2];
                 if($input[2]<0 || $input[2] == null)        //Same as viewRank
                     $inputs[$i][2] = 0;
@@ -203,56 +155,116 @@ namespace IOFrame{
                     array_push($groups,$input[1]);
                 }
                 $objects[$i] = $input;
+
+                //Convert to safeString if asked
+                if($safeStr)
+                    $inputs[$i][0] = str2SafeStr($input[0]);
             }
 
             //Retrieve all marked groups
-            $groups = $this->retrieveGroups($groups,[],$test);
+            if($groups != [])
+                $groups = $this->retrieveGroups($groups,[],$test);
 
             //Group related
-            foreach($objects as $id => $obj){
+            foreach($objects as $inputOrderID => $obj){
                 if($obj != 1){
+                    $groupName = $obj[1];
+                    if($groups != [] && isset($groups[$groupName]))
+                        $groupInfo = $groups[$groupName];
+                    else
+                        $groupInfo = 1;
                     //Check whether group exists
-                    if($groups[$obj[1]] != 1){
+                    if($groupInfo != 1){
                         //Check user authorization
-                        if(!$this->checkObAddGroupAuth($groups[$obj[1]], $sesInfo,true, $test)){
+                        if(!$this->checkObAddGroupAuth($groupInfo, $sesInfo,true, $test)){
                             if($test)
-                                echo 'Could not create object because user lacks authorization to add objects to group '.$obj[1].'! ';
-                            $res[$id] = 2;
+                                echo 'Could not create object because user lacks authorization to add objects to group '.$groupName.'! ';
+                            $res[$inputOrderID] = -2;
                         }
                         else {
-                            //Update number of new objects going to be created, and ranks
-                            if(isset($gAdd[$obj[1]])){
-                                $newMM = min($obj[2],$gAdd[$obj[1]][1]);
-                                if($obj[3]>0)
-                                    $newMV = min($obj[3],$gAdd[$obj[1]][2]);
-                                else
-                                    $newMV = $gAdd[$obj[1]][2];
-                                $gAdd[$obj[1]] = [$gAdd[$obj[1]][0]+1, $newMM, $newMV];
+                            //Update the group
+                            if(!isset($gChange[$groupName])){
+                                $gChange[$groupName] = true;
+                                array_push($groupsToUpdate,$groupName);
                             }
-                            //Just create the group
-                            else
-                                $gAdd[$obj[1]] = [1, $obj[2], $obj[3]];
                         }
                     }
-                    //If group doesn't exist, create the group with count 1 AFTER creating object - specify it with setting $gCreate to true.
+                    //If group doesn't exist, then..
                     else{
-                        //Update number of new objects going to be created, and ranks
-                        if(isset($gCreate[$obj[1]])){
-                            $newMM = min($obj[2],$gCreate[$obj[1]][1]);
-                            if($obj[3]>0)
-                                $newMV = min($obj[3],$gCreate[$obj[1]][2]);
-                            else
-                                $newMV = $gCreate[$obj[1]][2];
-                            $gCreate[$obj[1]] = [$gCreate[$obj[1]][0]+1, $newMM, $newMV];
-                        }
-                        //Just create the group
-                        else
-                            $gCreate[$obj[1]] = [1, $obj[2], $obj[3]];
+                        //..if it's a group..
+                        if($groupName!='')
+                        //.. create the group.
+                            if(!isset($gCreate[$groupName])){
+                                $gCreate[$groupName] = true;
+                                array_push($groupsToCreate,$groupName);
+                            }
                     }
                 }
             }
 
-            //Add the objects that need to be added
+            //---- At this point, we have all the objects we want to create
+            $updateParams =[];
+            foreach($inputs as $inputOrderID => $input){
+                //Check if the object creation is legal
+                if(!isset($res[$inputOrderID])){
+                    $objectArray = [
+                        [$input[0],'STRING'],
+                        $input[1]!=''?[$input[1],'STRING']:null,
+                        [(string)$updateTime,'STRING'],
+                        $sesInfo['ID'],
+                        $input[2],
+                        $input[3]
+                    ];
+                    foreach($extraColumns as $index=>$pair){
+                        if(isset($extraContent[$inputOrderID][$index])){
+                            $contentToAdd = $extraContent[$inputOrderID][$index];
+                        }
+                        else{
+                            if($pair[1]!==null)
+                                $contentToAdd = $pair[1];
+                            else
+                                return 1;
+                        }
+                        if(gettype($contentToAdd) == 'string')
+                            $contentToAdd = [$contentToAdd,'STRING'];
+                        array_push($objectArray,$contentToAdd);
+                    }
+                    array_push($updateParams,$objectArray);
+                }
+            }
+            //Update relevant objects
+            if($updateParams !== []){
+                $columns = array_merge(
+                    ['Object','Ob_Group','Last_Updated','Owner','Min_Modify_Rank','Min_View_Rank'],
+                    $extraColumnNames
+                );
+                $request = $this->sqlHandler->insertIntoTable(
+                    $tableName,
+                    $columns,
+                    $updateParams,
+                    [],
+                    $test
+                );
+            }
+            else
+                $request = false;
+
+            //If we failed, return 5 for all objects that weren't set yet
+            if($request !== true){
+                foreach($objects as $inputOrderID => $input){
+                    if(!isset($res[$inputOrderID]))
+                        $res[$inputOrderID] = 0;
+                }
+                return $res;
+            }
+            //Get last inserted ID
+            $res = $this->sqlHandler->lastInsertId();
+            //Create new groups
+            $this->createGroups($groupsToCreate,$sesInfo,$test);
+            //Update other groups
+            $this->updateGroups($groupsToUpdate,$test);
+
+            return $res;
 
         }
 
@@ -265,7 +277,30 @@ namespace IOFrame{
          * @param int mainOwner ID of the new main owner of the object, should you choose to assign one.
          * @param string $addOwners JSON array of the form {"id":"id"} where the ID's are of the owners you want to add
          * @param string $remOwners JSON array of the form {"id":"id"} where the ID's are of the owners you want to remove
-         * @param bool $safeStr Will convert content to Safe String, as defined in IOFrame helper safeSTR file.
+         * @param array $params        - Object array of the form:
+         *                               'safeStr' => bool, default true. Whether to convert the object to safeString upon db insertion.
+         *                               'extraColumns' => 1.5D array, default [], of the form:
+         *                                                  [[<column name>,<default value>], ...]
+         *                                                  where <default value> is null if a value is required. Example:
+         *                                                  [
+         *                                                  ['Extra_Col_Name',null],
+         *                                                  ['Extra_Number',0],
+         *                                                  ]
+         *                                                 Specifies whether any extra columns are added to the
+         *                                                 db query. Notice that if it's set, a matching 'extraContent'
+         *                                                 array has to be validated in the API layer, else a critical
+         *                                                 error may occur.
+         * DIFFERENT THAN addObjects ===> 'extraContent' => 2D array, default []. Of dimensions NxE, where E is the number of
+         *                                                 (at least the required) extra columns in extraColumns, and N
+         *                                                 is the number of objects arrays. Example:
+         *                                                 [
+         *                                                 9 => ['Extra Content 1', 02101],
+         *                                                 7 => ['Extra Content 2', 01],
+         *                                                 15 => ['Extra Content 2']
+         *                                                 ]
+         *                                                 Notice that this has to be validated - invalid input causes an
+         *                                                 exception to be thrown. This example, for instance, only works if
+         *                                                 the number of objects is 3.
          * @param bool $test Will not perform any DB actions if test isn't false, and instead echo messages.
          * @returns int
          *              0 on success.
@@ -273,11 +308,21 @@ namespace IOFrame{
          *              2 if insufficient authorization to modify the object.
          *              3 if object can't be moved into the requested group, for group auth reasons
          *              4 object doesn't exist
-         *              5 different error
+         *              5 Extra Content related error
          * */
-        function updateObject(int $id, string $content = '', $group = '', int $newVRank = null, int $newMRank = null,
-                              int $mainOwner = null, array $addOwners = [], array $remOwners = [], bool $safeStr = true, bool $test = false){
-            $res = $this->updateObjects([[$id,$content,$group,$newVRank,$newMRank,$mainOwner,$addOwners,$remOwners]],$safeStr,$test);
+        function updateObject(
+            int $id,
+            string $content = '',
+            $group = null,
+            int $newVRank = null,
+            int $newMRank = null,
+            int $mainOwner = null,
+            array $addOwners = [],
+            array $remOwners = [],
+            array $params = [],
+            bool $test = false
+        ){
+            $res = $this->updateObjects([[$id,$content,$group,$newVRank,$newMRank,$mainOwner,$addOwners,$remOwners]],$params,$test);
             if(is_array($res))
                 return $res[$id];
             else
@@ -291,7 +336,7 @@ namespace IOFrame{
          *          and the array of errors otherwise.
          * TODO *SHOULD* be remade using a stored procedure - doesn't support cuncurrent use at current state
          */
-        function updateObjects($inputs, $safeStr = true, $test = false){
+        function updateObjects($inputs, $params = [], $test = false){
 
             //You must be logged in to use this handler, as it checks the caller's rank and ID.
             if(!assertLogin())
@@ -300,20 +345,43 @@ namespace IOFrame{
             $res = [];          //Final result
             $groups = [];       //Groups to retrieve
             $objectsToGet = []; //objects to retrieve
-            $gCreate = [];      //groups to create, of the form groupName => [newSize, newMinMRank, newMinVRank]
-            $gChange = [];      //Groups to change, of the form groupName => [deltaSize, newMinMRank, newMinVRank]
+            $groupsToUpdate = [];
+            $groupsToCreate = [];
+            $gChange = [];      //Groups to change
+            $gCreate = [];      //Groups to create
             $objectsToSet = []; //array of objects to set, and how to set them
             $sesInfo = json_decode($_SESSION['details'], true);
             $updateTime = time();
-            $tableName = $this->sqlHandler->getSQLPrefix().'OBJECT_CAHE';
+            $tableName = $this->sqlHandler->getSQLPrefix().'OBJECT_CACHE';
+
+            //set default params
+            if(!isset($params['safeStr']))
+                $safeStr = true;
+            else
+                $safeStr = $params['safeStr'];
+
+            if(!isset($params['extraColumns']))
+                $extraColumns = [];
+            else
+                $extraColumns = $params['extraColumns'];
+            //Extract the actual names
+            $extraColumnNames = [];
+            foreach($extraColumns as $columnPair){
+                array_push($extraColumnNames,$columnPair[0]);
+            }
+
+            if(!isset($params['extraContent']))
+                $extraContent = [];
+            else
+                $extraContent = $params['extraContent'];
 
             //First check all inputs, and
             foreach($inputs as $key=>$input){
                 //default values
                 if(!isset($input[1]))
                     $input[1] = '';
-                if(!isset($input[2]) && $input[2]!==null)
-                    $input[2] = '';
+                if(!isset($input[2]))
+                    $input[2] = null;
                 if(!isset($input[3]))
                     $input[3] = null;
                 if(!isset($input[4]))
@@ -324,18 +392,20 @@ namespace IOFrame{
                     $input[6] = [];
                 if(!isset($input[7]))
                     $input[7] = [];
-                //Else, mark it for retrieval from the DB
-                else{
-                    array_push($objectsToGet,$input[0]);
-                    $objectsToSet[$input[0]] = $input;
-                    //Mark objects new group for retrieval, if it has one and we didn't mark one for retrieval yet
-                    if(!in_array($input[2],$groups) && $input[2]!='')
-                        array_push($groups,$input[2]);
-                }
+                // mark it for retrieval from the DB
+                array_push($objectsToGet,$input[0]);
+                $objectsToSet[$input[0]] = $input;
+                //Mark objects new group for retrieval, if it has one and we didn't mark one for retrieval yet
+                if(!in_array($input[2],$groups) && $input[2]!=null)
+                    array_push($groups,$input[2]);
+
             }
 
             //Retrieve db objects
-            $objectsReceived = $this->retrieveObjects($objectsToGet,[],$test);
+            $columnsToGet = array_merge(
+                ['ID','Ob_Group','Last_Updated', 'Owner', 'Owner_Group', 'Min_Modify_Rank','Min_View_Rank','Object','Meta']
+            );
+            $objectsReceived = $this->retrieveObjects($objectsToGet,$columnsToGet,$test);
 
             if($objectsReceived == 1){
                 foreach($objectsToGet as $objId){
@@ -417,14 +487,31 @@ namespace IOFrame{
                         $objectsToSet[$objId]['Min_Modify_Rank'] = $objectsToSet[$objId][4];
                         $objectsToSet[$objId]['Min_View_Rank'] = $objectsToSet[$objId][3];
                         $objectsToSet[$objId]['Object'] = $objectsToSet[$objId][1];
+                        //Handle the extra columns
+                        foreach($extraColumns as $index=>$pair){
+                            if(isset($extraContent[$objId][$index]))
+                                $objectsToSet[$objId][$pair[0]] = $extraContent[$objId][$index];
+                            else{
+                                if($pair[1]!==null)
+                                    $objectsToSet[$objId][$pair[0]] = $pair[1];
+                                else{
+                                    $res[$input[0]] = 5;
+                                    unset($objectsToSet[$objId]);
+                                    continue;
+                                }
+                            }
+                        }
+                        //If we unset the object, go on to the next one.
+                        if(!isset($objectsToSet[$objId]))
+                            continue;
                         //Mark objects old group for retrieval too, if it has one and we didn't mark one for retrieval yet
-                        if(!in_array($object['Ob_Group'],$groups)  && ($object['Ob_Group'] != null)){
+                        if(!in_array($object['Ob_Group'],$groups)  && ($object['Ob_Group'] != '')){
                             array_push($groups,$object['Ob_Group']);
                         }
                     }
                 }
                 //Unset all inputs
-                for($i = 0; $i<8; $i++){
+                for($i = 0; $i<8+count($extraColumnNames); $i++){
                     unset($objectsToSet[$objId][$i]);
                 }
                 //If it's en empty array, it means we only had inputs
@@ -439,7 +526,9 @@ namespace IOFrame{
                 $newGroup = $object['Ob_Group'][1];
                 //For each object still left to set, check if user is moving it to a different group
                 if($oldGroup !== $newGroup){
+                    //If the new group is '', it means we are deleting the old group
                     if($newGroup !== ''){
+                        //If the new group is not null, we are changing something, else we are changing nothing
                         if($newGroup !== null){
                             //See if intended group exists
                             if($groups[$newGroup]!=1){
@@ -448,94 +537,85 @@ namespace IOFrame{
                                     $res[$objId] = 3;
                                     continue;
                                 }
-                                //Increase the intended group size, and set new minV/minM if needed
-                                //See if we already marked that group for a different object
-                                if(isset($gChange[$newGroup])){
-                                    $newMM = min($object['Min_Modify_Rank'],$gChange[$newGroup][1]);
-                                    if($object['Min_View_Rank']>0)
-                                        $newMV = min($object['Min_View_Rank'],$gChange[$newGroup][1]);
-                                    else
-                                        $newMV = $gChange[$newGroup][1];
-                                    $gChange[$newGroup] = [$gChange[$newGroup][0]+1, $newMM, $newMV];
-                                }
-                                //If not, mark new group for addition
-                                else
-                                    $gChange[$newGroup] = [1, $object['Min_Modify_Rank'], $object['Min_View_Rank']];
                             }
                             //If intended group does not exist, create it
                             else{
                                 //See if we already created it for a different object
-                                if(isset($gCreate[$newGroup])){
-                                    $newMM = min($object['Min_Modify_Rank'],$gCreate[$newGroup][1]);
-                                    if($object['Min_View_Rank']>0)
-                                        $newMV = min($object['Min_View_Rank'],$gCreate[$newGroup][1]);
-                                    else
-                                        $newMV = $gCreate[$newGroup][1];
-                                    $gCreate[$newGroup] = [$gCreate[$newGroup][0]+1, $newMM, $newMV];
+                                if(!isset($gCreate[$newGroup])){
+                                    $gCreate[$newGroup] = true;
+                                    array_push($groupsToCreate,[$newGroup,$sesInfo['ID']]);
                                 }
-                                //If not, mark new group for creation
-                                else
-                                    $gCreate[$newGroup] = [1, $groups[$oldGroup]['Min_Modify_Rank'], $groups[$oldGroup]['Min_View_Rank']];
                             }
                         }
-                        //Remove from the old group
-                        //See if we already marked that group for a different object
-                        if(isset($gChange[$oldGroup])){
-                            $gChange[$oldGroup] = [$gChange[$oldGroup][0]-1, $gChange[$oldGroup][1], $gChange[$oldGroup][2]];
-                        }
-                        //If not, mark new group for subtraction
-                        else
-                            $gChange[$oldGroup] = [-1, $object['Min_Modify_Rank'], $object['Min_View_Rank']];
                     }
                 }
-                //If the object stays in the same group, see if we need to update the min ranks
-                else{
-                    if($newGroup !== ''){
-                        //See if we already marked that group for a different object
-                        if(isset($gChange[$newGroup])){
-                            $newMM = min($object['Min_Modify_Rank'],$gChange[$newGroup][1]);
-                            if($object['Min_View_Rank']>0)
-                                $newMV = min($object['Min_View_Rank'],$gChange[$newGroup][1]);
-                            else
-                                $newMV = $gChange[$newGroup][1];
-                            $gChange[$newGroup] = [$gChange[$newGroup][0], $newMM, $newMV];
-                        }
-                        //If not, mark new group for addition
-                        else
-                            $gChange[$newGroup] = [0, $object['Min_Modify_Rank'], $object['Min_View_Rank']];
+
+                //This means we don't want to change the group
+                if($newGroup === null){
+                    $objectsToSet[$objId]['Ob_Group'][1] = $oldGroup;
+                    $newGroup = $objectsToSet[$objId]['Ob_Group'][1];
+                }
+
+                //Mark relevant groups to be updated if they exist
+                if($newGroup !== '' && !isset($gCreate[$newGroup])){
+                    //See if we already marked that group
+                    if(!isset($gChange[$newGroup])){
+                        $gChange[$newGroup] = true;
+                        array_push($groupsToUpdate,$newGroup);
                     }
                 }
-                //This means we dont want to change the group
-                if($object['Ob_Group'][1] === '')
-                    $objectsToSet[$objId]['Ob_Group'][1] = $objectsToSet[$objId]['Ob_Group'][0];
+                if($oldGroup !== ''){
+                    //See if we already marked that group
+                    if(!isset($gChange[$oldGroup])){
+                        $gChange[$oldGroup] = true;
+                        array_push($groupsToUpdate,$oldGroup);
+                    }
+                }
+
+                //Finally, if we are deleting a group, set it to null, not ''
+                if($newGroup === ''){
+                    $objectsToSet[$objId]['Ob_Group'][1] = null;
+                }
+
             }
 
             //---- At this point, we have all the objects we want to update, and all the groups we need to create/update/delete
             $updateParams = [];
             foreach($objectsToSet as $id=>$obj){
+                $updateArray = [
+                    $id,
+                    [$obj['Ob_Group'][1],'STRING'],
+                    [(string)$updateTime,'STRING'],
+                    $obj['Owner'],
+                    [$obj['Owner_Group'],'STRING'],
+                    $obj['Min_Modify_Rank'],
+                    $obj['Min_View_Rank'],
+                    [$obj['Object'],'STRING']
+                ];
+                foreach($extraColumnNames as $colName){
+                    if(gettype($obj[$colName] == 'string'))
+                        array_push($updateArray,[$obj[$colName],'STRING']);
+                    else
+                        array_push($updateArray,$obj[$colName]);
+                }
                 array_push(
                     $updateParams,
-                    [
-                        $id,
-                        [$obj['Ob_Group'][1],'STRING'],
-                        [(string)$updateTime,'STRING'],
-                        $obj['Owner'],
-                        [$obj['Owner_Group'],'STRING'],
-                        $obj['Min_Modify_Rank'],
-                        $obj['Min_View_Rank'],
-                        [$obj['Object'],'STRING']
-                    ]
+                    $updateArray
                 );
             }
             //Update relevant objects
-            $res = $this->sqlHandler->insertIntoTable(
-                $tableName,
+            $columnsToSet = array_merge(
                 ['ID','Ob_Group','Last_Updated','Owner','Owner_Group','Min_Modify_Rank','Min_View_Rank','Object'],
+                $extraColumnNames
+            );
+            $request = $this->sqlHandler->insertIntoTable(
+                $tableName,
+                $columnsToSet,
                 $updateParams,
                 ['onDuplicateKey'=>true],
                 $test
             );
-            if($res !== true){
+            if($request !== true){
                 //If we failed, return 5 for all objects that weren't set yet
                 foreach($objectsToSet as $val){
                     if(!isset($res[$val[0]]))
@@ -545,30 +625,9 @@ namespace IOFrame{
             }
 
             //Create new groups
-            $createParams = [];
-            foreach($gCreate as $gName=>$params){
-                array_push($createParams, [$gName,$sesInfo['ID'],$params[1],$params[2],$params[0]] );
-            }
-            $this->createGroups($createParams,$test);
-            //Update/Delete other groups
-            /*
-            $gCreate = [];      //groups to create, of the form groupName => [newSize, newMinMRank, newMinVRank]
-            $gChange = [];      //Groups to change, of the form groupName => [deltaSize, newMinMRank, newMinVRank]
-            $this->addToGroups([[$groupExt, $howMany, $minModifyRank, $minViewRank]],$test);
-            $this->decreaseGroupSizes([[$groupExt,$num,$minModifyRank,$minViewRank]],$test)[$groupExt['Group_Name']];
-            */
-            $decreaseParams = [];
-            $increaseParams = [];
-            foreach($gChange as $gName=>$params){
-                if($params[0]>=0)
-                    array_push($increaseParams, [$groups[$gName],$params[0],$params[1],$params[2]] );
-                else
-                    array_push($decreaseParams, [$groups[$gName],(-$params[0]),$params[1],$params[2]] );
-            }
-            if($increaseParams !=[])
-                $this->addToGroups($increaseParams,$test);
-            if($decreaseParams !=[])
-                $this->decreaseGroupSizes($decreaseParams,$test);
+            $this->createGroups($groupsToCreate,$sesInfo,$test);
+            //Update other groups
+            $this->updateGroups($groupsToUpdate,$test);
 
             if($res === [])
                 $res = 0;
@@ -579,20 +638,28 @@ namespace IOFrame{
         /* Retrieves an object , where $id is the object ID and $updated is the time before which you don't need a new object -
          * meaning, if you set $updated = 1500000001, and the last time an object was updated is 1500000000,
          * you wont get that object. If you want to get an object either way, set $updated = 0.
-         * $fromSafeStr specifies if the object needs to be converted from SafeString or not
-         * Returns:     Array of the form {object:"<(object)>",group:"<groupName>"} - not that the object IS encoded in SafeSTR
+         * @param array $params of the form:
+         *              'safeStr' => bool, Defualt true. Converts object content to normal string from safeString.
+         *              'extraColumns' => array, default []. Gets additional columns of an object.
+         *                                  Meant for extensions to this module.
+         *
+         * Returns:     Array of the form {<objectID>:"<object>",group:"<groupName>"} - not that the object IS encoded in SafeSTR
          *              0 if you can view the object yet $updated is bigger than the object's Last_Updated field.
          *              1 if object of specified ID doesn't exist.
          *              2 if insufficient authorization to view the object.
          *              3 general error
         */
-        function getObject($id,$updated = 0, $fromSafeStr = true, $test = false){
-            $res = $this->getObjects([[$id,$updated,$fromSafeStr]],$test);
-            if(!isset($res[$id])){
-                $res = $res['Errors'][$id];
+        function getObject(int $id, int $updated = 0, array $params = [], $test = false){
+            //Default params are set in getObjects
+            $obj = $this->getObjects([[$id,$updated]],$params,$test);
+            if(!isset($obj[$id])){
+                $res = $obj['Errors'][$id];
             }
             else{
-                $res = [ 'object'=>$res[$id]['Object'] , 'group'=>$res[$id]['Ob_Group'] ];
+                $res = [ $id=>$obj[$id]['Object'] , 'group'=>$obj[$id]['Ob_Group'] ];
+                foreach($params['extraColumns'] as $colName){
+                    $res[$colName] = $obj[$id][$colName];
+                }
             }
             return $res;
         }
@@ -604,15 +671,24 @@ namespace IOFrame{
          *          the structure {"ObjectID1":"Contents","ObjectID2":"Contents"..., "Errors":"{"ObjectID":"ErrorID"}" }.
          *          Note that 0 is considered an error in this context.
          *          Note that the combined array length of the main JSON array and the Errors array is the size of $arr.
-         * TODO *SHOULD* be remade using a stored procedure - doesn't support cuncurrent use at current state
             */
-        function getObjects($inputs, $test = false){
+        function getObjects($inputs, $params = [], $test = false){
 
             $ids = [];          //Requested IDs
             $res = [];          //Results, of the array form {<ObjectID>=><objectData>}
             $errors = [];
-            $fromSafeStrArr = [];//Array of $fromSafeStr parameters
             $times = [];        //Times for each object
+
+            //set default params
+            if(!isset($params['safeStr']))
+                $safeStr = true;
+            else
+                $safeStr = $params['safeStr'];
+
+            if(!isset($params['extraColumns']))
+                $extraColumns = [];
+            else
+                $extraColumns = $params['extraColumns'];
 
             foreach($inputs as $key => $input){
                 if(!isset($inputs[$key][1]))
@@ -621,13 +697,18 @@ namespace IOFrame{
                     $inputs[$key][2] = true;
                 array_push($ids,$inputs[$key][0]);
                 $times[$inputs[$key][0]] = $inputs[$key][1];
-                $fromSafeStrArr[$inputs[$key][0]] = $inputs[$key][2];
                 $errors[$inputs[$key][0]] = 1;
             }
             //Get objects from db
-            $objs = $this->retrieveObjects($ids,
+            $columnsToGet = array_merge(
                 ['ID','Ob_Group','Last_Updated', 'Owner', 'Owner_Group', 'Min_Modify_Rank','Min_View_Rank','Object','Meta'],
-                $test);
+                $extraColumns
+            );
+            $objs = $this->retrieveObjects(
+                $ids,
+                $columnsToGet,
+                $test
+            );
 
             //In case no objects were found, what can we do..
             if($objs == 1){
@@ -660,7 +741,7 @@ namespace IOFrame{
                             //An object with no group is mapped to "@"
                             if($obj['Ob_Group'] == null)
                                 $obj['Ob_Group'] = '@';
-                            if($fromSafeStrArr[$objID])
+                            if($safeStr)
                                 $obj['Object'] = safeStr2Str($obj['Object']);
                             //Push to result
                             $res[$objID] = $obj;
@@ -685,19 +766,17 @@ namespace IOFrame{
          * */
         function deleteObject(int $id, int $time = 0, bool $after = true, $test = false){
             $res = $this->deleteObjects([[$id,$time,$after]],$test);
-            if(is_json($res))
-                $res = json_decode($res,true)[$id];
+            $res = $res[$id];
             return $res;
         }
 
 
         /* Basically runs deleteObject on array $arr where $arr[i] is the $id.
-         * Returns  0 if no errors occured,
-         *          and the JSON array of errors otherwise.
+         * Returns    array of result codes.
          */
         function deleteObjects($inputs, $test = false){
 
-            $tableName = $this->sqlHandler->getSQLPrefix().'OBJECT_CAHE';
+            $tableName = $this->sqlHandler->getSQLPrefix().'OBJECT_CACHE';
             //You must be logged in to use this handler, as it checks the caller's rank and ID.
             if(!assertLogin())
                 return -1;
@@ -705,8 +784,7 @@ namespace IOFrame{
             //Requested IDs, and IDs you in fact need to delete, and result
             $ids = [];          //Requested IDs
             $idsToDelete = [];  //IDs you in fact need to delete
-            $groupsToDecrease = [];
-            $groupsToFetch = [];
+            $groupsToUpdate = [];
             $res = [];          //Result
             $times = [];        //Times for each object
             foreach($inputs as $input){
@@ -735,6 +813,7 @@ namespace IOFrame{
                     $res[$objID] = 1;
                 }
                 else{
+                    //Check if the object is in the requested time frame
                     if($times[$objID][1])
                         $objInTime = ((int)$obj['Last_Updated'] >= $times[$objID][0]) ? true : false;
                     else
@@ -755,11 +834,7 @@ namespace IOFrame{
                     //Finally, this means you may delete the object
                     else{
                         array_push($idsToDelete,['ID',$objID,'=']);
-                        if(!isset($groupsToDecrease[$obj['Ob_Group']]))
-                            $groupsToDecrease[$obj['Ob_Group']] = 1;
-                        else
-                            $groupsToDecrease[$obj['Ob_Group']]++;
-                        array_push($groupsToFetch,$obj['Ob_Group']);
+                        array_push($groupsToUpdate,$obj['Ob_Group']);
                     }
                 }
             }
@@ -772,20 +847,21 @@ namespace IOFrame{
                             $res[$key] = 0;
                     }
                     //Now, handle updating the group sizes
-                    $groups = $this->retrieveGroups($groupsToFetch,[],$test);
-                    $groupSizeArray = [];
-                    foreach($groups as $group){
-                        array_push($groupSizeArray,[$group,$groupsToDecrease[$group['Group_Name']]]);
-                    }
-                    $this->decreaseGroupSizes($groupSizeArray,$test);
+                    $this->updateGroups($groupsToUpdate,$test);
                 }
             }
 
-            return json_encode($res);
+            return $res;
         }
 
         /* Returns objects, but this time by groups.
-         * Will only return objects whose "Last_Updated" is bigger than $updated.
+         * @param array $params of the form:
+         *              'updated', => number default 0. Will only return objects whose "Last_Updated" is bigger than updated.
+         *              'safeStr' => bool, Default true. Converts object content to normal string from safeString.
+         *              'protectedView' => bool, default true. Hides unauthorized objects from showing.
+         *              'extraColumns' => array, default []. Gets additional columns of an object.
+         *                                  Meant for extensions to this module.
+         *
          * Will convert from safeString to normal string if $fromSafeStr is true.
          * Returns either an integer, or almost the same array as "getObjects", where:
          *              Integer codes:
@@ -796,11 +872,59 @@ namespace IOFrame{
          *                  1 - CANNOT BE RETURNED. If You are missing an object ID, it means that object isn't part of the group anymore or was deleted.
          *                  2 if insufficient authorization to view the object.
          * */
-        function getObjectsByGroup($groupName, $updated = 0, $fromSafeStr = true, $protectedView = true, $test = false){
+        function getObjectsByGroup($groupName, $params = [], $test = false){
 
             $errors = [];
             $res = [];
 
+            //set default params
+            if(!isset($params['updated']))
+                $updated = 0;
+            else
+                $updated = $params['updated'];
+
+            if(!isset($params['safeStr']))
+                $safeStr = true;
+            else
+                $safeStr = $params['safeStr'];
+
+            if(!isset($params['protectedView']))
+                $protectedView = [];
+            else
+                $protectedView = $params['protectedView'];
+
+            if(!isset($params['extraColumns']))
+                $extraColumns = [];
+            else
+                $extraColumns = $params['extraColumns'];
+            //For objects that are not up to date (thus returned)
+            $notUpToDateCol = array_merge(
+                ['ID','Owner','Owner_Group','Min_Modify_Rank','Min_View_Rank','Object','false as upToDate'],
+                $extraColumns
+            );
+
+            //From here on out, objects are either up-to-date and not returned, or they do not exist.
+            foreach($extraColumns as $k=>$columnName){
+                $extraColumns[$k] = 'null as '.$columnName;
+            }
+
+            //For objects that are up to date (thus not returned)
+            $upToDateCol = array_merge(
+                ['ID','Owner','Owner_Group','Min_Modify_Rank','Min_View_Rank','null as Object','true as upToDate'],
+                $extraColumns
+            );
+
+            //For groups which are up-to-date
+            $upToDateGroupCol = array_merge(
+                ['-1 as ID','-1 as Owner','null as Owner_Group','-1 as Min_Modify_Rank','-1 as Min_View_Rank','null as Object','true as upToDate'],
+                $extraColumns
+            );
+
+            //For groups which do not exist
+            $groupDoesNotExistCol = array_merge(
+                ['-2 as ID','-2 as Owner','null as Owner_Group','-2 as Min_Modify_Rank','-2 as Min_View_Rank','null as Object','false as upToDate'],
+                $extraColumns
+            );
 
             //Get objects from db
             $objectName = $this->sqlHandler->getSQLPrefix().'OBJECT_CACHE';
@@ -824,7 +948,7 @@ namespace IOFrame{
                         ],
                         'AND'
                     ],
-                    ['ID','Owner','Owner_Group','Min_Modify_Rank','Min_View_Rank','Object','false as upToDate'],
+                    $notUpToDateCol,
                     ['justTheQuery'=>true],
                     false
                 ).
@@ -848,7 +972,7 @@ namespace IOFrame{
                         ],
                         'AND'
                     ],
-                    ['ID','Owner','Owner_Group','Min_Modify_Rank','Min_View_Rank','null as Object','true as upToDate'],
+                    $upToDateCol,
                     ['justTheQuery'=>true],
                     false).
                 ' UNION '
@@ -882,7 +1006,7 @@ namespace IOFrame{
                         ],
                         'AND'
                     ],
-                    ['-1 as ID','-1 as Owner','null as Owner_Group','-1 as Min_Modify_Rank','-1 as Min_View_Rank','null as Object','true as upToDate'],
+                    $upToDateGroupCol,
                     ['justTheQuery'=>true],
                     false).
                 ' UNION '
@@ -903,7 +1027,7 @@ namespace IOFrame{
                         ]
                         ,'NOT'
                     ],
-                    ['-2 as ID','-2 as Owner','null as Owner_Group','-2 as Min_Modify_Rank','-2 as Min_View_Rank','null as Object','false as upToDate'],
+                    $groupDoesNotExistCol,
                     ['justTheQuery'=>true],
                     false)
             ;
@@ -921,14 +1045,6 @@ namespace IOFrame{
                 return 0;
 
             foreach($objects as $k=>$v){
-                //Remove the trash
-                unset($objects[$k][0]);
-                unset($objects[$k][1]);
-                unset($objects[$k][2]);
-                unset($objects[$k][3]);
-                unset($objects[$k][4]);
-                unset($objects[$k][5]);
-                unset($objects[$k][6]);
                 //If we don't have auth to view the object, stick it into the error group.
                 if(!$this->checkObAuth($objects[$k],1,0)){
                     //If we are not hiding unauthorized objects from showing, do this.
@@ -940,18 +1056,13 @@ namespace IOFrame{
                         $errors[$objects[$k]['ID']] = 0;
                     else{
                         //If object is not null and $fromSafeStr is true, convert it
-                        if($objects[$k]['Object']!== null && $fromSafeStr)
+                        if($objects[$k]['Object']!== null && $safeStr)
                             $objects[$k]['Object'] = safeStr2Str($objects[$k]['Object']);
-                        $res[$objects[$k]['ID']] = $objects[$k]['Object'];
+                        $res[$objects[$k]['ID']] = $objects[$k];
                     }
                 }
             }
 
-            if($test){
-                echo 'Objects response:';
-                var_dump($objects);
-            }
-            $errors = json_encode($errors);
             $res['Errors']= $errors;
             return $res;
         }
@@ -1018,18 +1129,19 @@ namespace IOFrame{
 
         // Checks if the object could be legally inserted into / removed from the group.
         function checkObAddGroupAuth($groupInfo, $sesInfo, $toAdd ,$test = false){
+            //Maybe it's allowed to add objects to this group
+            if($toAdd){
+                $allowAddition = $groupInfo['Allow_Addition'];
+                //Check for the group allowing addition
+                if($allowAddition)
+                    return true;
+            }
+            //Maybe you are the owner
             $owner = $groupInfo['Owner'];
             //If the user is the owner, return true.
             if($owner == $sesInfo['ID'])
                 return true;
 
-            //Check if the group's modifyRank is higher than users rank
-            if($groupInfo['Allow_Addition']  && ($groupInfo['Min_Modify_Rank'] >= $sesInfo['Rank'])){
-                return true;
-            }
-            //If we are removing an object, we may remove it based on just Min_Modify_Rank
-            if(!$toAdd && ($groupInfo['Min_Modify_Rank'] >= $sesInfo['Rank']))
-                return true;
             if($test){
                 echo 'User '.$sesInfo['ID'].' does not have the auth to modify group '.$groupInfo['Group_Name'].EOL;
             }
@@ -1128,21 +1240,25 @@ namespace IOFrame{
          * Returns 0 on success,
          *         1 on faliure.
          * */
-        function createGroup($group, $ownerID, $minModifyRank, $minViewRank,$newSize = 1, $test = false){
-            return $this->createGroups([[$group, $ownerID, $minModifyRank, $minViewRank,$newSize]],$test);
+        function createGroup($group, $sesInfo, $test = false){
+            return $this->createGroups([$group], $sesInfo,$test);
         }
 
         /* Creates inputs, where each group is an array of inputs like those in createGroup.
          * Returns 0 on success,
          *         1 on faliure.
          * */
-        function createGroups($groups, $test = false){
+        function createGroups($groups,$sesInfo, $test = false){
             $tableName = $this->sqlHandler->getSQLPrefix().'OBJECT_CACHE_META';
-            $cols = ['Group_Name','Owner','Min_Modify_Rank','Min_View_Rank','Group_Size','Last_Updated'];
+            $cols = ['Group_Name','Owner','Last_Updated'];
             $values = [];
             $timeUpdated = strval(time());
+            //If there is nothing to do..
+            if($groups == [])
+                return 0;
+            //Else create the groups
             foreach($groups as $group){
-                array_push($values,[[$group[0],'STRING'],[$group[1],'STRING'],$group[2],$group[3],$group[4],[$timeUpdated,'STRING']]);
+                array_push($values,[[$group,'STRING'],$sesInfo['ID'],[$timeUpdated,'STRING']]);
             }
             //execute
             if($values!=[])
@@ -1153,172 +1269,31 @@ namespace IOFrame{
                 0 : 1;
         }
 
-        /* Decreases group size by 1, deletes the group if size reaches 0.
-         * May choose to update  $minModifyRank, $minViewRank of the group as well, to save queries
-         * Returns  the new size of the group (0 means it was deleted),
-         *          -1 on a different error
-         * */
-        function decreaseGroupSize($groupExt, $num = 1, $minModifyRank = null, $minViewRank = null, $test = false){
-            return $this->decreaseGroupSizes([[$groupExt,$num,$minModifyRank,$minViewRank]],$test)[$groupExt['Group_Name']];
-        }
-
-        /* Decreases group size by 1, deletes the group if size reaches 0
-         * Returns an associated array of the form [<groupName> => <result as in decreaseGroupSize docs>]
-         * TODO *SHOULD* be remade using a stored procedure - doesn't support cuncurrent use at current state
-         * */
-        function decreaseGroupSizes($inputs, $test = false){
-
-            $tableName = $this->sqlHandler->getSQLPrefix().'OBJECT_CACHE_META';
-            $groupsToDelete = [];
-            $groupsToUpdate = [];
-            $timeUpdated = strval(time());
-            $res = array();
-            foreach($inputs as $input){
-                $gName = $input[0]['Group_Name'];
-                $gSize = $input[0]['Group_Size'];
-                $owner = $input[0]['Owner'];
-
-                //Set rank values
-                if(isset($input[2])){
-                    if($input[2] == null)
-                        $input[2] = $input[0]['Min_Modify_Rank'];
-                }
-                else
-                    $input[2] = $input[0]['Min_Modify_Rank'];
-                if(isset($input[3])){
-                    if($input[3] == null)
-                        $input[3] = $input[0]['Min_View_Rank'];
-                }
-                else
-                    $input[3] = $input[0]['Min_View_Rank'];
-
-                //If group is of size smaller than $num+1, mark it for deletion
-                if($gSize - $input[1] < 1){
-                    array_push($groupsToDelete,$gName);
-                }
-                //If group is of size larger than $num, update its size to $size - $num and mark for update
-                else {
-                    $groupsToUpdate[$gName] = [$input[1],$input[2],$input[3],$owner];
-                }
-            }
-
-            //Delete inputs that need to be deleted
-            $deleteCond = [];
-            foreach($groupsToDelete as $name){
-                array_push($deleteCond,['Group_Name',$name,'=']);
-            }
-            if(count($deleteCond)>0){
-                array_push($deleteCond,'OR');
-                //Update sizes of affected inputs in the result to 0
-                if($this->sqlHandler->deleteFromTable($tableName,$deleteCond, [],$test) === true)
-                    foreach($groupsToDelete as $name){
-                        $res[$name] = 0;
-                    };
-            }
-
-            //Update inputs that need to be updated
-            $updateCol = ['Group_Name','Group_Size','Min_Modify_Rank','Min_View_Rank','Owner','Last_Updated'];
-            $updateValues = [];
-            $updateCond = ['Group_Size = (Group_Size - VALUES( Group_Size )), Last_Updated = VALUES( Last_Updated )','ASIS'];
-            foreach($groupsToUpdate as $name => $arr){
-                array_push($updateValues,[[$name,'STRING'],$arr[0],$arr[1],$arr[2],$arr[3],[$timeUpdated,'STRING']]);
-            }
-            if($updateValues != []){
-                //Update sizes of affected inputs in the result
-                if($this->sqlHandler->insertIntoTable(
-                        $tableName,
-                        $updateCol,
-                        $updateValues,
-                        ['onDuplicateKey'=>true, 'onDuplicateKeyExp'=>$updateCond]
-                        ,$test)
-                    === true)
-                    foreach($groupsToUpdate as $name => $newSize){
-                        $res[$name] = $newSize;
-                    };
-            }
-
-            //The is result now complete, unless something went wrong (in which case some inputs could be assigned/deleted, but still be -1
-            return $res;
-        }
-
-        /* Adds an object to the group. Will raise group modify/view rank if the object's according ranks are higher than
-         * the group's.
-         * Returns      0 on success
-         *              1 on failure
-         * */
-        function addToGroup($groupExt,  $howMany = 1, $minModifyRank, $minViewRank, $test = false){
-            return $this->addToGroups([[$groupExt, $howMany, $minModifyRank, $minViewRank]],$test);
-        }
-
-        /* Adds objects to the inputs. Will raise group modify/view rank if the object's according ranks are higher than
-         * the group's, and update group sizes.
-         * Returns      0 on success
-         *              1 on failure
-         * */
-        function addToGroups($inputs, $test = false){
-            return $this->groupUpdateTemplate($inputs,$test);
-        }
-
-
         /* Updates group - usually invoked when an object in the group has changed.
-         * $group is an assoc array one gets using retrieveGroup()
-         * $newMRank and $newVRank are potential ranks of the object that triggered this update.
+         * $group is a group name
          * Returns true on success, false on failure
          * */
-        function updateGroup($group, $newMRank = null, $newVRank = null, $test = false){
-            return $this->updateGroups([[$group, 0, $newMRank, $newVRank]],$test);
+        function updateGroup(string $group, $test = false){
+            return $this->updateGroups([$group],$test);
         }
 
         /* Updates group - usually invoked when an object in the group has changed.
-         * $group is an assoc array one gets using retrieveGroup()
-         * $newMRank and $newVRank are potential ranks of the object that triggered this update.
+         * $group is an array of group names
          * Returns true on success, false on failure
          * */
-        function updateGroups($inputs, $test = false){
-            return $this->groupUpdateTemplate($inputs, $test);
-        }
-
-        /* Since both updating the group and adding something to it are more or less the same, both functions use this template.
-         * TODO *SHOULD* be remade using a stored procedure - doesn't support cuncurrent use at current state
-         * */
-        private function groupUpdateTemplate($inputs, $test = false){
-
+        function updateGroups($groups, $test = false){
             $tableName = $this->sqlHandler->getSQLPrefix().'OBJECT_CACHE_META';
-            $cols = ['Group_Name','Group_Size','Min_Modify_Rank','Min_View_Rank','Last_Updated'];
+            $cols = ['Group_Name','Last_Updated'];
             $groupMap = [];
             $timeUpdated = strval(time());
-            foreach($inputs as $key => $input){
-                //Adding an object with a higher rank (aka lower number) to the group, makes that rank apply to the whole group.
-                //Can be used to deny access to inputs if misused.
-                //Remember that minViewRank can be -1
-                if($input[2]>$input[0]['Min_Modify_Rank'])
-                    $inputs[$key][2] = $input[0]['Min_Modify_Rank'];
-                if( ($input[3] == -1) || ($input[3]>$input[0]['Min_View_Rank'] && $input[0]['Min_View_Rank']>=0))
-                    $inputs[$key][3] = $input[0]['Min_View_Rank'];
-                //If we are adding something, indicate it here
-                if(isset($input[1]))
-                    $toAdd = (int)$input[1];
-                else
-                    $toAdd = 0;
-
-                $gName = $input[0]['Group_Name'];
+            //If there is nothing to do..
+            if($groups == [])
+                return 0;
+            //Else update the groups
+            foreach($groups as $group){
                 //Update global map
-                if(!isset($groupMap[$gName])){
-                    //If we are adding something, upgrade size, else.. dont.
-                    if($toAdd)
-                        $groupMap[$gName] = [[$gName,'STRING'],$input[0]['Group_Size']+$toAdd,$input[2],$input[3],[$timeUpdated,'STRING']];
-                    else
-                        $groupMap[$gName] = [[$gName,'STRING'],$input[0]['Group_Size'],$input[2],$input[3],[$timeUpdated,'STRING']];
-                }
-                else{
-                    //Make sure the global Min Modify/View is not already lower than current one, like we did locally
-                    if($groupMap[$gName][2]>$input[2])
-                        $groupMap[$gName][2] = $input[2];
-                    if( ($groupMap[$gName][3] == -1) || ($groupMap[$gName][3]>$input[3] && $input[3]>=0))
-                        $groupMap[$gName][3] = $input[3];
-                    //update the size
-                    if($toAdd)
-                        $groupMap[$gName][1] = $groupMap[$gName][1]+$toAdd;
+                if(!isset($groupMap[$group])){
+                    $groupMap[$group] = [[$group,'STRING'],[$timeUpdated,'STRING']];
                 }
             }
             //group values

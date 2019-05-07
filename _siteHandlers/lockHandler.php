@@ -1,5 +1,6 @@
 <?php
 namespace IOFrame{
+    define('lockHandler',true);
 
     /**Handles local cross platform concurrency in IOFrame
     * @author Igal Ogonov <igal1333@hotmail.com>

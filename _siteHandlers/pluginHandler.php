@@ -1,8 +1,11 @@
 <?php
 namespace IOFrame{
+    define('pluginHandler',true);
 
-    require_once 'abstractDBWithCache.php';
-    require_once 'fileHandler.php';
+    if(!defined('abstractDBWithCache'))
+        require 'abstractDBWithCache.php';
+    if(!defined('fileHandler'))
+        require 'fileHandler.php';
     use Monolog\Logger;
     use Monolog\Handler\IOFrameHandler;
 
@@ -605,7 +608,7 @@ namespace IOFrame{
                     echo 'Exception :'.$e.EOL;
                     try{
                         $options = [];
-                        require_once $url.'quickUninstall.php';
+                        require $url.'quickUninstall.php';
                         $plugList->setSetting($name,null,true);
                     }
                     catch (\Exception $e){
@@ -617,12 +620,12 @@ namespace IOFrame{
             }
             //-------Finally, include the install file
             try{
-                require_once $url.'quickInstall.php';
+                require $url.'quickInstall.php';
             }catch
             (\Exception $e){
                 try{
                     $options = [];
-                    require_once $url.'quickUninstall.php';
+                    require $url.'quickUninstall.php';
                     $plugList->setSetting($name,null,true);
                 }
                 catch (\Exception $e){
@@ -673,7 +676,7 @@ namespace IOFrame{
             $url = $this->settings->getSetting('absPathToRoot').PLUGIN_FOLDER_PATH.PLUGIN_FOLDER_NAME.$name.'/';   //Plugin folder
             $depUrl = $this->settings->getSetting('absPathToRoot').PLUGIN_FOLDER_PATH.PLUGIN_FOLDER_NAME.'_dependency.map/';
             $lockHandler = new lockHandler($url);
-            $plugList = new settingsHandler($this->settings->getSetting('absPathToRoot').SETTINGS_DIR_FROM_ROOT.'/plugins//');
+            $plugList = new settingsHandler($this->settings->getSetting('absPathToRoot').SETTINGS_DIR_FROM_ROOT.'/plugins/');
             $plugName = $this->getInfo($name)[0];
             //-------Check if the plugin is absent - or if override is false while the plugin isn't listed installed.
             $goOn = ($plugName['status'] != 'absent');
@@ -712,7 +715,7 @@ namespace IOFrame{
                 return 4;
             //-------Call quickUninstall.php - REMEMBER - OPTIONS ARRAY MUST BE FILTERED
             try{
-                require_once $url.'quickUninstall.php';
+                require $url.'quickUninstall.php';
             }
             catch(\Exception $e){
                 if($test)
