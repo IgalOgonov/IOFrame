@@ -23,8 +23,10 @@ namespace IOFrame{
         /** Reads a file $fileName at url $url after waiting $sec seconds for a mutex.
          * @param string $url Url of specified file
          * @param string $fileName  Name of specified file
-         * @param int $sec seconds to wait for lock - @lockHandler
-         * @param lockHandler $lockHandler Use an existing lockHandler - do not to waste resources when it's not needed.
+         * @param array $params of the form:
+         *              'sec' - int, default 2 - seconds to wait for lock @lockHandler
+         *              'lockHandler' - lockHandler, default null - Use an existing lockHandler - do not waste resources
+         *                              when it's not needed. If null, will create a new one.
          *
          * @throws \Exception If lock file can't be opened, mutex was locked over the wait specified duration.
          *
@@ -75,12 +77,15 @@ namespace IOFrame{
          *
          * @param string $url Url of specified file
          * @param string $fileName  Name of specified file
-         * @param int $sec seconds to wait for lock - @lockHandler
          * @param string $content content to write into the file
-         * @param bool $append set to true if you want to append to the file end, rather then rewrite file.
-         * @param bool $backUp set to true if you wish to back the file up with default $maxBackup
-         * @param bool $useNative If true, will use native PHP lock that is faster, but may not work across some platforms
-         * @param lockHandler $lockHandler Use an existing lockHandler - do not to waste resources when it's not needed.
+         * @param array $params of the form:
+         *              'sec' - int, default 2 - seconds to wait for lock @lockHandler
+         *              'append' - bool, default false - Whether you want to append to the file's end, or rewrite it.
+         *              'backUp' - bool, default false - set to true if you wish to back the file up with default $maxBackup
+         *              'useNative' - bool, default false - Whether to use native PHP lock that is faster, but may not
+         *                            work across some platforms
+         *              'lockHandler' - lockHandler, default null - Use an existing lockHandler - do not waste resources
+         *                              when it's not needed. If null, will create a new one.
          *
          * @throws \Exception Generally if either lock file can't be opened, mutex was locked over the wait specified duration.
          *
@@ -180,7 +185,8 @@ namespace IOFrame{
          *
          * @param string $url Url of specified file
          * @param string $fileName  Name of specified file
-         * @param int $maxBackup Deletes the $maxBackup-th backup, if the limit exists
+         * @param array $params of the forms:
+         *              'maxBackup' - int, default 10 -  Deletes the $maxBackup-th backup, if the limit exists
          * */
         function backupFile(string $url, string $filename, $params = []){
 

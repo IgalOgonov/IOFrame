@@ -1,2 +1,0 @@
-{"restore":{"name":"Example Option","type":"radio","list":{"Yes":1,"No":0},"desc":"No longer does anything, kept in for educational purposes","optional":true},
-  "maxObjectSize":{"name":"Example Option","type":"number","maxNum":1000000000,"placeholder":"e.g. 4,000,000","desc":"No longer does anything, kept in for educational purposes","optional":true}}

@@ -15,7 +15,7 @@ foreach($params as $groupName=>$value){
 if($test)
     echo 'Checking groups in array: '.json_encode($checkUpdatedGroups).EOL;
 
-$groups = $objHandler->checkGroupsUpdated($checkUpdatedGroups,$test);
+$groups = $objHandler->checkGroupsUpdated($checkUpdatedGroups,['test'=>$test]);
 
 foreach($params as $key=>$value){
     $upToDate = true;
@@ -39,6 +39,6 @@ foreach($params as $key=>$value){
 //Meant for extension by plugins
 if(!isset($executionParameters))
     $executionParameters = [];
-
+$executionParameters['test'] = $test;
 //Get all the objects requested
-$result = ($arr != [])? $objHandler->getObjects($arr, $executionParameters, $test) : [];
+$result = ($arr != [])? $objHandler->getObjects($arr, $executionParameters) : [];

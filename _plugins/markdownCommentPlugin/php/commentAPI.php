@@ -25,7 +25,7 @@
  * values. However, that object will never be parsed as a comment, because Date_Comment_Created cannot be changed by
  * updating, and that's the field used to determine whether an object is a comment.
  */
-require __DIR__ . '/../_Core/coreInit.php';
+require __DIR__ . '/../_main/coreInit.php';
 require __DIR__.'/../_siteHandlers/objectHandler.php';
 
 //Fix any values that are strings due to softly typed language bullshit

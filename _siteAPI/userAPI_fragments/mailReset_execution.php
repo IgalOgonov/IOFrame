@@ -8,15 +8,15 @@ if(!isset($userHandler))
 
 //Attempts to send a mail to the user requiring password reset.
 if(isset($inputs['mail'])){
-    $result = $userHandler->mailChangeSend($inputs['mail'],$test);
+    $result = $userHandler->mailChangeSend($inputs['mail'],['test'=>$test]);
 }
 
 //Checks if the info provided by the user was correct, if so authorizes the Session to reset the mail for a few minutes.
 //For now, depends on password reset time - due to it making sense (both are sensitive information with similar weight)
 else if(isset($inputs['id']) and isset($inputs['code']) ){
-    $result = $userHandler->mailChangeConfirm($inputs['id'], $inputs['code'],$test);
+    $result = $userHandler->mailChangeConfirm($inputs['id'], $inputs['code'],['test'=>$test]);
 
-    if( $result == 0 ){
+    if( $result ){
         $pageSettings = new IOFrame\settingsHandler(
             $settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/pageSettings/',
             $defaultSettingsParams

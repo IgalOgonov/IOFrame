@@ -18,7 +18,7 @@ if(isset($inputs['id']) and isset($inputs['code']) ){
             $defaultSettingsParams
         );
 
-    $result = $userHandler->confirmRegistration($inputs['id'], $inputs['code'],$test);
+    $result = $userHandler->confirmRegistration($inputs['id'], $inputs['code'],['test'=>$test]);
 
     if($pageSettings->getSetting('mailConfirmedPage')!='' and !isset($inputs['async']))
         header('Location: http://'.$_SERVER['SERVER_NAME'].'/'.$pageSettings->getSetting('mailConfirmedPage').'?res='.$res);

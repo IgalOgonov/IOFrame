@@ -69,11 +69,16 @@ namespace IOFrame{
          *              If IP isn't provided, defaults to getting it from IPHandler
          *              If an IP is provided and isTrueIP is not, isTrueIP defaults to 'true'.
          *              If only isTrueIP is provided, it's ignored.
-         * @param bool $test
+         * @param array $params
          *
          * @returns bool true if action succeeds, false if it fails (e.g. because the IP is invalid)
          */
-        function commitEventIP($eventCode, $params = [], $test = false){
+        function commitEventIP($eventCode, $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
             if(isset($params['IP'])){
                 $IP = $params['IP'];
                 $fullIP = isset($params['fullIP'])? $params['fullIP'] : $IP;
@@ -94,10 +99,9 @@ namespace IOFrame{
             if(!$test)
                 return $this->sqlHandler->exeQueryBindParam(
                     $query,
-                    $bindings,
-                    false
+                    $bindings
                 );
-            else{
+            if($verbose){
                 echo 'Query to send: '.$query.EOL;
                 echo 'Params: '.json_encode($bindings).EOL;
                 return true;
@@ -107,10 +111,14 @@ namespace IOFrame{
         /**  Commits an action by/on a user to the USER_ACTIONS table.
          * @param int $eventCode   The code of the event
          * @param int $id           The user ID
-         * @param bool $test
+         * @param array $params
          * @returns bool
          */
-        function commitEventUser($eventCode, $id, $test = false){
+        function commitEventUser($eventCode, $id, array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
 
             $query = 'SELECT '.$this->sqlHandler->getSQLPrefix().'commitEventUser(:ID,:Event_Type)';
             $bindings = [[':ID',$id],[':Event_Type',$eventCode]];
@@ -118,10 +126,9 @@ namespace IOFrame{
             if(!$test)
                 return $this->sqlHandler->exeQueryBindParam(
                     $query,
-                    $bindings,
-                    false
+                    $bindings
                 );
-            else{
+            if($verbose){
                 echo 'Query to send: '.$query.EOL;
                 echo 'Params: '.json_encode($bindings).EOL;
                 return true;
@@ -130,14 +137,13 @@ namespace IOFrame{
 
 
         /** Gets the whole Actions rulebook.
-         * @param array $filters of the form:
+         * @param array $params of the form:
          *              'Category' => Action Category filter - default ones are 0 for IP, 1 for User, but others may be defined
          *              'Type'     => Action Type filter
          *              'Offset' => Results offset
          *              'Limit' => Results limit
-         * @param mixed $test
          */
-        function getRulebook(array $params, $test = false){
+        function getRulebook( array $params = []){
 
         }
 
@@ -146,13 +152,12 @@ namespace IOFrame{
          * @param int $type         Action type
          * @param int $sq           Number of actions in sequence after which the rule applies -
          *                          if null, will update all existing ones
-         * @param array $filters of the form:
+         * @param array $params of the form:
          *              'blacklistFor' => For how long an IP/User will get blacklisted after the rule is reached (for default categories)
          *              'addTTL'     => For how long this action will prolong the "memory" of the current action sequence
          *              'override' => Will override an existing action (defined by $category,$type,$sq)
-         * @param mixed $test
          */
-        function setRulebook(int $category, int $type, int $sq, array $params, $test = false){
+        function setRulebook(int $category, int $type, int $sq, array $params = []){
 
         }
 
@@ -161,9 +166,9 @@ namespace IOFrame{
          * @param int $type         Action type
          * @param int $sq           Number of actions in sequence after which the rule applies.
          *                          If null, deletes all relevant actions.
-         * @param mixed $test
+         * @param array $params
          */
-        function deleteRulebook(int $category, int $type, int $sq, $test = false){
+        function deleteRulebook(int $category, int $type, int $sq, array $params = []){
 
         }
 

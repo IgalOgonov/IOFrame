@@ -179,14 +179,14 @@
  *
  */
 
-require __DIR__ . '/../_Core/coreInit.php';
+require __DIR__ . '/../_main/coreInit.php';
 require __DIR__.'/../_siteHandlers/objectHandler.php';
 
 //Fix any values that are strings due to softly typed language bullshit
 require 'defaultInputChecks.php';
 
 //Session Info
-$sesInfo = json_decode($_SESSION['details'],true);
+$sesInfo = isset($_SESSION['details'])? json_decode($_SESSION['details'],true) : null;
 
 //You must specify the type of operation
 if(!isset($_REQUEST["action"])) {
@@ -225,7 +225,7 @@ foreach($params as $param)
     if($param == '')
         $param = null;
 
-$objHandler = new IOFrame\objectHandler($settings,['sqlHandler'=>$sqlHandler,'logger'=>$logger]);
+$objHandler = new IOFrame\objectHandler($settings,$defaultSettingsParams);
 
 if(!isset($siteSettings))
     $siteSettings = new IOFrame\settingsHandler($settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/siteSettings/');
@@ -270,7 +270,7 @@ switch($action){
     case "ga":
         require 'objectAPI_fragments/ga_checks.php';
         require 'objectAPI_fragments/ga_execution.php';
-        echo json_encode($result, JSON_HEX_QUOT | JSON_HEX_TAG);
+        echo json_encode($result);
         break;
     default:
         echo 'Incorrect operation type!';

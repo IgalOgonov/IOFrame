@@ -18,7 +18,7 @@ namespace IOFrame{
 
         /* @var settingsHandler $userSettings User settings handler
          * */
-         public $userSettings;
+        public $userSettings;
 
         /* @var settingsHandler $siteSettings Site settings handler
          * */
@@ -27,7 +27,7 @@ namespace IOFrame{
         /**
          * Basic construction function - as in abstractDBWithCache
          * @param settingsHandler $localSettings Settings handler containing LOCAL settings.
-         * @param array $params An potentially containing an sqlHandler and/or a logger and/or a redisHandler.
+         * @param array $params Potentially containing siteSettings
          */
         public function __construct(settingsHandler $localSettings, $params = []){
             parent::__construct($localSettings,$params);
@@ -61,8 +61,11 @@ namespace IOFrame{
          *      1 - failed - username already in use
          *      2 - failed - email already in use
          *      3 - failed - server error
-        */
-        function regUser(array $inputs, $test=false){
+         */
+        function regUser(array $inputs, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
 
             //Hash the password
             $pass = $inputs["p"];
@@ -70,7 +73,7 @@ namespace IOFrame{
 
             //First, check to see if email or username are taken, and for extra conditions
             if($inputs["u"] != ''){
-                $res = $this->reg_checkExistingUserOrMail($inputs,$test);
+                $res = $this->reg_checkExistingUserOrMail($inputs,['test'=>$test,'verbose'=>$verbose]);
                 if($res !== 0)
                     return $res;
             }
@@ -78,7 +81,7 @@ namespace IOFrame{
             else{
                 $hex = bin2hex(openssl_random_pseudo_bytes(8,$hex_secure));
                 $inputs["u"] =$hex;
-                $res = $this->reg_checkExistingUserOrMail($inputs,$test);
+                $res = $this->reg_checkExistingUserOrMail($inputs,['test'=>$test,'verbose'=>$verbose]);
                 //Duplicate mail is final
                 if($res === 2)
                     return $res;
@@ -87,27 +90,27 @@ namespace IOFrame{
                     while($res === 1){
                         $hex = bin2hex(openssl_random_pseudo_bytes(8,$hex_secure));
                         $inputs["u"] =$hex;
-                        $res = $this->reg_checkExistingUserOrMail($inputs,$test);
+                        $res = $this->reg_checkExistingUserOrMail($inputs,['test'=>$test,'verbose'=>$verbose]);
                     }
                 }
             }
 
             //Make user if all good
-            $res = $this->reg_makeUserCore($inputs, $hash, $test);
+            $res = $this->reg_makeUserCore($inputs, $hash, ['test'=>$test,'verbose'=>$verbose]);
             if($res !== 0)
                 return $res;
 
             //Add user extra data
-            $res = $this->reg_makeUserExtra($inputs,$test);
+            $res = $this->reg_makeUserExtra($inputs,['test'=>$test,'verbose'=>$verbose]);
             if($res !== 0)
                 return $res;
 
             //Make an empty Auth table entry for the user
-            $res = $this->reg_makeUserAuth($inputs,$test);
+            $res = $this->reg_makeUserAuth($inputs,['test'=>$test,'verbose'=>$verbose]);
             if($res !== 0)
                 return $res;
 
-            if($test)
+            if($verbose)
                 echo "Test User Added!".' Values are :'.$inputs["u"].', '.$hash.', '.$inputs["m"].'.';
 
             return 0;
@@ -117,29 +120,32 @@ namespace IOFrame{
 
         /** Checks if mail or username are taken
          * @param string[] $inputs array of inputs needed to log in.
-         * @param bool $test
+         * @param array $params
          *
          * @returns int description in main function
          */
-        private function reg_checkExistingUserOrMail(array $inputs, bool $test = false){
+        private function reg_checkExistingUserOrMail(array $inputs, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             try{
                 $checkRes=$this->sqlHandler->selectFromTable($this->sqlHandler->getSQLPrefix().'USERS',[['Email', $inputs["m"],'='],['Username', $inputs["u"],'='],'OR'],
-                    [],['noValidate'=>true],$test);
+                    [],['noValidate'=>true,'test'=>$test,'verbose'=>$verbose]);
             }
             catch(\Exception $e){
                 //TODO LOG
-                return;
+                return 3;
             }
             if(is_array($checkRes)){
                 if($checkRes[0]['Email'] == $inputs["m"]){
                     //Email
-                    if($test)
+                    if($verbose)
                         echo 'Duplicate email!';
                     return 2;
                 }
                 else{
                     //Username
-                    if($test)
+                    if($verbose)
                         echo  'Duplicate username!: ';
                     return 1;
                 }
@@ -150,50 +156,53 @@ namespace IOFrame{
         /** Makes core user
          * @param string[] $inputs array of inputs needed to log in.
          * @param string $hash password hash
-         * @param bool $test
+         * @param array $params
          *
          * @returns int description in main function
          */
-        private function reg_makeUserCore(array $inputs, string $hash, bool $test = false){
+        private function reg_makeUserCore(array $inputs, string $hash, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             $query = "INSERT INTO ".$this->sqlHandler->getSQLPrefix().
                 "USERS(Username, Password, Email, Active, Rank, SessionID)
              VALUES (:Username, :Password, :Email,:Active, :Rank,:SessionID)";
-            $params = [];
-            array_push($params,[':Username', $inputs["u"]],[':Password', $hash],[':Email', $inputs["m"]]);
+            $queryBind = [];
+            array_push($queryBind,[':Username', $inputs["u"]],[':Password', $hash],[':Email', $inputs["m"]]);
             //Decides whether to activate user on creation or not
             if($this->userSettings->getSetting('regConfirmMail') && !isset($_SESSION['INSTALLING']) ){
-                array_push($params,[':Active', 0]);
+                array_push($queryBind,[':Active', 0]);
             }
             else
-                array_push($params,[':Active', 1]);
+                array_push($queryBind,[':Active', 1]);
             //Deciding whether to give a user a specific rank or not
             if (isset($inputs["r"])){
                 if ( ($inputs["r"] < json_decode($_SESSION['details'],true)['Rank']))
-                    array_push($params,[':Rank', $inputs["r"]]);
+                    array_push($queryBind,[':Rank', $inputs["r"]]);
                 else
-                    array_push($params,[':Rank', 9999]);
+                    array_push($queryBind,[':Rank', 9999]);
             }
             else {
                 if(isset($_SESSION['INSTALLING'])){
                     if($_SESSION['INSTALLING'] = true)
-                        array_push($params,[':Rank', 0]);
+                        array_push($queryBind,[':Rank', 0]);
                     else
-                        array_push($params,[':Rank', 9999]);
+                        array_push($queryBind,[':Rank', 9999]);
                 }
                 else
-                    array_push($params,[':Rank', 9999]);
+                    array_push($queryBind,[':Rank', 9999]);
             }
             //Push the session ID
-            array_push($params,[':SessionID', session_id()]);
+            array_push($queryBind,[':SessionID', session_id()]);
             if(!$test)
                 try{
-                    $this->sqlHandler->exeQueryBindParam($query,$params);
+                    $this->sqlHandler->exeQueryBindParam($query,$queryBind);
                 }
                 catch(\Exception $e){
                     //TODO LOG
                     return 3;
                 }
-            else
+            if($verbose)
                 echo 'Executing query '.$query.EOL;
             return 0;
         }
@@ -201,11 +210,14 @@ namespace IOFrame{
 
         /** Adds the auth info for the user - by default, it starts with just the ID and empty columns.
          * @param string[] $inputs array of inputs needed to log in.
-         * @param bool $test
+         * @param array $params
          *
          * @returns int description in main function
          */
-        private function reg_makeUserAuth(array $inputs, bool $test = false){
+        private function reg_makeUserAuth(array $inputs, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             $query = "INSERT INTO ".$this->sqlHandler->getSQLPrefix()."USERS_AUTH(ID) SELECT ID FROM ".$this->sqlHandler->getSQLPrefix()."USERS WHERE Username=:Username";
             //Add extra data
             if(!$test)
@@ -216,23 +228,28 @@ namespace IOFrame{
                     //TODO LOG
                     return 3;
                 }
-            else
+            if($verbose)
                 echo 'Executing query '.$query.EOL;
             return 0;
         }
 
         /** Adds extra value to table - changed from app to app
          * @param string[] $inputs array of inputs needed to log in.
-         * @param bool $test
+         * @param array $params
          *
          * @returns int description in main function
          */
-        private function reg_makeUserExtra(array $inputs, bool $test = false){
+        private function reg_makeUserExtra(array $inputs, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             //Need to fetch the ID of the user we just created in order to add meta-data
 
             //Get the ID of the user we just created
             try{
-                $res = $this->sqlHandler->selectFromTable($this->sqlHandler->getSQLPrefix().'USERS',['Username',$inputs["u"],'='],[],['noValidate'=>true])[0];
+                $res = $this->sqlHandler->selectFromTable(
+                    $this->sqlHandler->getSQLPrefix().'USERS',['Username',$inputs["u"],'='],[],['noValidate'=>true,'test'=>$test,'verbose'=>$verbose]
+                )[0];
             }
             catch(\Exception $e){
                 //TODO LOG
@@ -253,7 +270,7 @@ namespace IOFrame{
                     //TODO LOG
                     return 3;
                 }
-            else
+            if($verbose)
                 echo 'Executing query '.$query.EOL;
             //If the user needs confirm his mail, we generate the confirmation code here and send the relevant mail to the user
             if(isset($_SESSION['INSTALLING']))
@@ -261,7 +278,7 @@ namespace IOFrame{
                     return 0;
 
             if($this->userSettings->getSetting('regConfirmMail')){
-                $this->accountActivation($uMail,$uId,true,$test);
+                $this->accountActivation($uMail,$uId,['test'=>$test,'verbose'=>$verbose]);
             }
 
             return 0;
@@ -271,21 +288,25 @@ namespace IOFrame{
         /** Changes the password
          * @param int $userID User ID
          * @param string $plaintextPassword User mail
-         * @param mixed $test
+         * @param array $params
          *
          * @returns int 0 on success
          *              1 if userID does not exist
          */
-        function changePassword(int $userID,string $plaintextPassword, $test = false){
+        function changePassword(int $userID,string $plaintextPassword, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             $hash = password_hash($plaintextPassword, PASSWORD_DEFAULT);
-            $userInfo = $this->sqlHandler->selectFromTable($this->sqlHandler->getSQLPrefix().'USERS',['ID',$userID,'='],['ID'],[],$test);
+            $userInfo = $this->sqlHandler->selectFromTable(
+                $this->sqlHandler->getSQLPrefix().'USERS',['ID',$userID,'='],['ID'],['test'=>$test,'verbose'=>$verbose]
+            );
             if(is_array($userInfo)){
                 $this->sqlHandler->updateTable(
                     $this->sqlHandler->getSQLPrefix().'USERS',
                     ['Password = "'.$hash.'"'],
                     ['ID',$userID,'='],
-                    [],
-                    $test
+                    ['test'=>$test,'verbose'=>$verbose]
                 );
                 return 0;
             }
@@ -296,24 +317,26 @@ namespace IOFrame{
         /** Changes the email
          * @param int $userID User ID
          * @param string $newEmail User mail
-         * @param mixed $test
+         * @param array $params
          *
          * @returns int 0 on success
          *              1 if userID does not exist
          *              2 Email already in use
          */
-        function changeMail(int $userID,string $newEmail, $test = false){
+        function changeMail(int $userID,string $newEmail, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             $tname = $this->sqlHandler->getSQLPrefix().'USERS';
             $userInfo = $this->sqlHandler->selectFromTable($tname,
-                    [
-                        ['ID',$userID,'='],
-                        ['Email',$newEmail,'='],
-                        'OR'
-                    ],
-                    ['ID','Email'],
-                    [],
-                    $test
-                );
+                [
+                    ['ID',$userID,'='],
+                    ['Email',$newEmail,'='],
+                    'OR'
+                ],
+                ['ID','Email'],
+                ['test'=>$test,'verbose'=>$verbose]
+            );
             if(is_array($userInfo)){
 
                 //Check for the case where we got a different user with an existing new email
@@ -327,8 +350,7 @@ namespace IOFrame{
                     $this->sqlHandler->getSQLPrefix().'USERS',
                     ['Email = "'.$newEmail.'"'],
                     ['ID',$userID,'='],
-                    [],
-                    $test
+                    ['test'=>$test,'verbose'=>$verbose]
                 );
                 return 0;
             }
@@ -338,16 +360,24 @@ namespace IOFrame{
 
 
         /** Creates (and potentially resets) the account activation parameters, as well as sends a (new) mail
-         * @param int $uId User ID
          * @param string $uMail User mail
-         * @param mixed $test
+         * @param int $uId User ID
+         * @param array $params of the form
+         *                          async' - bool, default true - If true, will try to send the mail asynchronously
          *
          * @returns int description in main function
          */
-        function accountActivation(string $uMail, int $uId = null, bool $async = true,  $test = false){
+        function accountActivation(string $uMail, int $uId = null, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            isset($params['async'])?
+                $async = $params['async'] : $async = true;
             //Find user ID if it was not provided
             if($uId === null)
-                $uId = $this->sqlHandler->selectFromTable($this->sqlHandler->getSQLPrefix().'USERS',['Email',$uMail,'='],['ID'],[],$test)[0]['ID'];
+                $uId = $this->sqlHandler->selectFromTable(
+                    $this->sqlHandler->getSQLPrefix().'USERS',['Email',$uMail,'='],['ID'],['test'=>$test,'verbose'=>$verbose]
+                )[0]['ID'];
 
             $confirmCode = GeraHash(50);
             //Set the new code
@@ -357,20 +387,20 @@ namespace IOFrame{
                 time()+$this->userSettings->getSetting('mailConfirmExpires')*60*60,
                 'MailConfirm',
                 'MailConfirm_Expires',
-                $test
+                ['test'=>$test,'verbose'=>$verbose]
             ))
                 return -3;
             $templateNum = $this->userSettings->getSetting('regConfirmTemplate');
             $siteName = $this->siteSettings->getSetting('siteName');
             $title = 'Account activation - '.$siteName;
-            $this->sendConfirmationMail($uMail,$uId,$confirmCode,$templateNum,$title,$async,$test);
+            $this->sendConfirmationMail($uMail,$uId,$confirmCode,$templateNum,$title,$async,['test'=>$test,'verbose'=>$verbose]);
             return 0;
         }
 
         /**Confirms user registration
          * @param int $id User ID
          * @param string $code Activation code
-         * @param mixed $test
+         * @param array $params
          * @returns int
          *      0 - All good.
          *      1 - User ID doesn't exist.
@@ -378,23 +408,28 @@ namespace IOFrame{
          *      3 - Confirmation code expired.
          */
 
-        function confirmRegistration(int $id, string $code,$test = false){
-            $res = $this->confirmCode($id,$code,'MailConfirm','MailConfirm_Expires',$test);
+        function confirmRegistration(int $id, string $code, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            $res = $this->confirmCode($id,$code,'MailConfirm','MailConfirm_Expires',['test'=>$test,'verbose'=>$verbose]);
             if($res === 0){
                 try{
                     $query = "UPDATE ".$this->sqlHandler->getSQLPrefix()."USERS
                                   SET Active = 1
                                   WHERE ID=:ID;";
                     $params = [[':ID',$id]];
+
                     if(!$test)
                         $this->sqlHandler->exeQueryBindParam($query,$params);
-                    else
+                    if($verbose)
                         echo 'Query to send '.$query.', with parameters: '.json_encode($params).EOL;
+
                     if(!$test)
                         $this->sqlHandler->exeQueryBindParam("UPDATE ".$this->sqlHandler->getSQLPrefix()."USERS_EXTRA
                                       SET MailConfirm = NULL, MailConfirm = NULL
                                       WHERE ID=:ID",[[':ID', $id]]);
-                    else
+                    if($verbose)
                         echo 'Query to send: UPDATE '.$this->sqlHandler->getSQLPrefix().'USERS_EXTRA
                                       SET MailConfirm = NULL, MailConfirm_Expires = NULL
                                       WHERE ID='.$id.EOL;
@@ -410,14 +445,17 @@ namespace IOFrame{
 
         /** Sends out a password reset mail to the user
          * @param string $uMail User mail
-         * @param mixed $test
+         * @param array $params
          * @returns int
          *      -2 - internal server error
          *      0 - All good.
          *      1 - User Mail isn't registered.
          *      3 - Mail failed to send!
          */
-        function pwdResetSend(string $uMail, $test = false){
+        function pwdResetSend(string $uMail, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             $confirmCode = GeraHash(50);
             //See if user with said mail exists, if yes save his ID
             try{
@@ -427,19 +465,21 @@ namespace IOFrame{
                      ON '.$this->sqlHandler->getSQLPrefix().'USERS.ID = '.$this->sqlHandler->getSQLPrefix().'USERS_EXTRA.ID
                      WHERE '.$this->sqlHandler->getSQLPrefix().'USERS.Email = :Email';
 
-                if($test)
+                if($verbose)
                     echo 'Query to send: '.$query.EOL;
 
                 $currentUserSettings = $this->sqlHandler->exeQueryBindParam(
                     $query,
-                    [[':Email',$uMail]],true);
+                    [[':Email',$uMail]],
+                    ['fetchAll'=>true]
+                );
             }
             catch(\Exception $e){
                 //TODO LOG
                 return -2;
             }
             if(count($currentUserSettings)==0){
-                if($test)
+                if($verbose)
                     echo 'No users found!'.EOL;
                 return 1;
             }
@@ -455,7 +495,7 @@ namespace IOFrame{
                 time()+$this->userSettings->getSetting('mailConfirmExpires')*60*60,
                 'PWDReset',
                 'PWDReset_expires',
-                $test
+                ['test'=>$test,'verbose'=>$verbose]
             ))
                 return -2;
 
@@ -468,34 +508,36 @@ namespace IOFrame{
                     $this->userSettings->getSetting('pwdResetTemplate'),
                     'Password Reset - '.$this->siteSettings->getSetting('siteName'),
                     false,
-                    $test
+                    ['test'=>$test,'verbose'=>$verbose]
                 );
             }
-            else{
+            if($verbose)
                 echo 'Sending mail from template pwdResetTemplate to '.$uMail.EOL;
-                return 0;
-            }
+            return true;
         }
 
         /** Confirms a password reset code
          * @param int $id user ID
          * @param string $code confirmation code
-         * @param mixed $test
+         * @param array $params
          * @return int
          *      0 - All good.
          *      1 - User ID doesn't exist.
          *      2 - Confirmation code wrong.
          *      3 - Confirmation code expired.
          */
-        function pwdResetConfirm(int $id, string $code, $test=false){
-            $res = $this->confirmCode($id,$code,'PWDReset','PWDReset_Expires',$test);
+        function pwdResetConfirm(int $id, string $code, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            $res = $this->confirmCode($id,$code,'PWDReset','PWDReset_Expires',['test'=>$test,'verbose'=>$verbose]);
             if($res === 0){
                 try{
                     if(!$test)
                         $this->sqlHandler->exeQueryBindParam("UPDATE ".$this->sqlHandler->getSQLPrefix()."USERS_EXTRA
                                       SET PWDReset = NULL, PWDReset_Expires = NULL
                                       WHERE ID=:ID",[[':ID', $id]]);
-                    else
+                    if($verbose)
                         echo 'Query to send: UPDATE '.$this->sqlHandler->getSQLPrefix().'USERS_EXTRA
                                       SET PWDReset = NULL, PWDReset_Expires = NULL
                                       WHERE ID='.$id.EOL;
@@ -511,14 +553,17 @@ namespace IOFrame{
 
         /** Sends out a mail change mail to the user
          * @param string $uMail User mail
-         * @param mixed $test
+         * @param array $params
          * @returns int
          *      -2 - internal server error
          *      0 - All good.
          *      1 - User Mail isn't registered.
          *      3 - Mail failed to send!
          */
-        function mailChangeSend(string $uMail, $test = false){
+        function mailChangeSend(string $uMail, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             $confirmCode = GeraHash(50);
             //See if user with said mail exists, if yes save his ID
             try{
@@ -528,19 +573,21 @@ namespace IOFrame{
                      ON '.$this->sqlHandler->getSQLPrefix().'USERS.ID = '.$this->sqlHandler->getSQLPrefix().'USERS_EXTRA.ID
                      WHERE '.$this->sqlHandler->getSQLPrefix().'USERS.Email = :Email';
 
-                if($test)
+                if($verbose)
                     echo 'Query to send: '.$query.EOL;
 
                 $currentUserSettings = $this->sqlHandler->exeQueryBindParam(
                     $query,
-                    [[':Email',$uMail]],true);
+                    [[':Email',$uMail]],
+                    ['fetchAll'=>true]
+                );
             }
             catch(\Exception $e){
                 //TODO LOG
                 return -2;
             }
             if(count($currentUserSettings)==0){
-                if($test)
+                if($verbose)
                     echo 'No users found!'.EOL;
                 return 1;
             }
@@ -556,12 +603,12 @@ namespace IOFrame{
                 time()+$this->userSettings->getSetting('mailConfirmExpires')*60*60,
                 'MailConfirm',
                 'MailConfirm_expires',
-                $test
+                ['test'=>$test,'verbose'=>$verbose]
             ))
                 return -2;
 
             //Now, send the mail to the user.
-            if(!$test){
+            if(!$test)
                 return $this->sendConfirmationMail(
                     $uMail,
                     $uId,
@@ -569,34 +616,35 @@ namespace IOFrame{
                     $this->userSettings->getSetting('emailChangeTemplate'),
                     'Email Change - '.$this->siteSettings->getSetting('siteName'),
                     false,
-                    $test
+                    ['test'=>$test,'verbose'=>$verbose]
                 );
-            }
-            else{
+            if($verbose)
                 echo 'Sending mail from template emailChangeTemplate to '.$uMail.EOL;
-                return 0;
-            }
+            return true;
         }
 
         /** Confirms a mail change code
          * @param int $id user ID
          * @param string $code confirmation code
-         * @param mixed $test
+         * @param array $params
          * @return int
          *      0 - All good.
          *      1 - User ID doesn't exist.
          *      2 - Confirmation code wrong.
          *      3 - Confirmation code expired.
          */
-        function mailChangeConfirm(int $id, string $code, $test=false){
-            $res = $this->confirmCode($id,$code,'MailConfirm','MailConfirm_Expires',$test);
+        function mailChangeConfirm(int $id, string $code, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            $res = $this->confirmCode($id,$code,'MailConfirm','MailConfirm_Expires',['test'=>$test,'verbose'=>$verbose]);
             if($res === 0){
                 try{
                     if(!$test)
                         $this->sqlHandler->exeQueryBindParam("UPDATE ".$this->sqlHandler->getSQLPrefix()."USERS_EXTRA
                                       SET MailConfirm = NULL, MailConfirm = NULL
                                       WHERE ID=:ID",[[':ID', $id]]);
-                    else
+                    if($verbose)
                         echo 'Query to send: UPDATE '.$this->sqlHandler->getSQLPrefix().'USERS_EXTRA
                                       SET MailConfirm = NULL, MailConfirm_Expires = NULL
                                       WHERE ID='.$id.EOL;
@@ -612,10 +660,13 @@ namespace IOFrame{
         /** Confirms a code
          * @param int $id user ID
          * @param string $code confirmation code
-         * @param mixed $test
+         * @param array $params
          * @return true on success, false on failure
          */
-        function createCode(int $id, string $code, int $expiryTime, string $correctField, string $expireField, $test=false){
+        function createCode(int $id, string $code, int $expiryTime, string $correctField, string $expireField, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             $query = "UPDATE ".$this->sqlHandler->getSQLPrefix()."USERS_EXTRA
                                   SET ".$correctField."=:".$correctField.", ".$expireField."=:".$expireField."
                                   WHERE ID=:ID";
@@ -623,7 +674,7 @@ namespace IOFrame{
             try{
                 if(!$test)
                     $this->sqlHandler->exeQueryBindParam($query,$params);
-                else
+                if($verbose)
                     echo 'Query to send: '.$query.' with parameters: '.json_encode($params).EOL;
             }
             catch(\Exception $e){
@@ -638,15 +689,20 @@ namespace IOFrame{
          * @param string $code confirmation code
          * @param string $correntField confirmation code feild
          * @param string $expireField confirmation code expiery field
-         * @param mixed $test
+         * @param array $params
          * @return int
          *      0 - All good.
          *      1 - User ID doesn't exist.
          *      2 - Confirmation code wrong.
          *      3 - Confirmation code expired.
          */
-        function confirmCode(int $id, string $code, string $correntField, string $expireField, $test=false){
-            $userInfo = $this->sqlHandler->selectFromTable($this->sqlHandler->getSQLPrefix().'USERS_EXTRA',['ID',$id,'='],[],[],$test);
+        function confirmCode(int $id, string $code, string $correntField, string $expireField, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            $userInfo = $this->sqlHandler->selectFromTable(
+                $this->sqlHandler->getSQLPrefix().'USERS_EXTRA',['ID',$id,'='],[],['test'=>$test,'verbose'=>$verbose]
+            );
             if(is_array($userInfo)){
                 $userInfo = $userInfo[0];
                 $correct = $userInfo[$correntField];
@@ -671,13 +727,17 @@ namespace IOFrame{
          * @param string $confirmCode Confirmation code needed to send async mail
          * @param int $templateNum Template to use
          * @param string $title Mail title
-         * @param bool $test
+         * @param array $params
          *
          * @returns int description in main function
          */
         function sendConfirmationMail(
-            string $uMail, int $uId, string $confirmCode, int $templateNum, string $title, bool $async, bool $test = false
-        ){
+            string $uMail, int $uId, string $confirmCode, int $templateNum, string $title, bool $async, array $params = [])
+        {
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
             if(!defined('mailHandler'))
                 require __DIR__.'/../_siteHandlers/mailHandler.php';
             $mail = new mailHandler($this->settings,['sqlHandler'=>$this->sqlHandler,'logger'=>$this->logger]);
@@ -707,7 +767,7 @@ namespace IOFrame{
                     return 3;
                 }
             }
-            else
+            if($verbose)
                 echo 'Sending async email about account activation'.EOL;
             return 0;
         }
@@ -716,13 +776,16 @@ namespace IOFrame{
          *  If $minutes is 0, will ban for 1,000,000,000 minutes.
          * @param int $minutes Minutes to ban - 0 up to 1,000,000,000
          * @param mixed $identifier Either an ID (Int) or a mail (String)
-         * @param mixed $test
+         * @param array $params
          *
          * @returns int
          *          0 - All good (whether the user was found or not)
          *          1 - No user found.
-        */
-        function banUser(int $minutes, $identifier, $test=false){
+         */
+        function banUser(int $minutes, $identifier, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             //Sanitation
             if($minutes = 0 || $minutes > 1000000000)
                 $minutes = 1000000000;
@@ -737,11 +800,10 @@ namespace IOFrame{
             }
 
             $res = $this->sqlHandler->updateTable(
-                    $this->sqlHandler->getSQLPrefix().'USERS_EXTRA',
-                    ['Banned_Until ='.(time()+60*$minutes)],
-                    $cond,
-                    ['returnRows'=>true],
-                    $test
+                $this->sqlHandler->getSQLPrefix().'USERS_EXTRA',
+                ['Banned_Until ='.(time()+60*$minutes)],
+                $cond,
+                ['returnRows'=>true,'test'=>$test,'verbose'=>$verbose]
             );
             //Rows affected are opposite to our return code
             if($res == 1)
@@ -756,15 +818,19 @@ namespace IOFrame{
 
         /**LogOut function - logs user out as long as his session is registered.
         TODO remember! Once distributed mode is implemented, a synchronizer will be needed
-         *@param bool $sesOnly Controls whether we only reset local session data, or update DB.
-         *@param bool $forgetMe Control whether we reset the authDetails in the users table, which'd make the server forget all
-         *                      user reconnect tokens - if @$sesOnly is false, this does not matter.
-         *@param string|null $oldSesID If present, will cause a remote logOut of a user with said sessionID
-         *                       ON THIS NODE ONLY - UNTIL distributed mode is implemented
-         *@param bool $test test mode
+         * @param array $params of the form:
+         *                      'oldSesID' string|null, default '' - if not empty, will cause a remote logOut
+         *                                 of a user with said sessionID ON THIS NODE / REDIS SERVER ONLY!
+         *                      'forgetMe' bool, default true - Control whether we reset the authDetails in the users table,
+         *                                  which'd make the server forget all user reconnect tokens - if
+         *                                  @$sesOnly is false, this does not matter.
+         *                      'sesOnly' bool, default false - Controls whether we only reset local session data, or update DB.
+         *
          */
-        function logOut($params = [], bool $test = false){
-
+        function logOut($params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             //Set defaults
             if(!isset($params['oldSesID']))
                 $oldSesID = '';
@@ -819,7 +885,7 @@ namespace IOFrame{
                     session_regenerate_id();
                 $_SESSION['discard_after'] = time() + $this->siteSettings->getSetting('maxInacTime');
             }
-            else
+            if ($verbose)
                 echo 'Test user with session '.$oldSesID.' logged out!'.EOL;
 
         }
@@ -827,7 +893,7 @@ namespace IOFrame{
 
         /** Main login function
          * @param string[] $inputs array of inputs needed to log in.
-         * @param bool $test
+         * @param array $params
          *
          * @returns mixed
          *
@@ -838,8 +904,10 @@ namespace IOFrame{
          *      32-byte hex encoded session ID string - The token for your next automatic relog, if you logged automatically.
          *      JSON encoded array of the form {'iv'=><32-byte hex encoded string>,'sesID'=><32-byte hex encoded string>}
          */
-        function logIn(array $inputs, $test = false){
-
+        function logIn(array $inputs, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             $log = $inputs["log"];
             if($this->userSettings->getSetting('rememberMe') < 1)
                 unset($inputs["userID"]);
@@ -855,8 +923,7 @@ namespace IOFrame{
                 $prefix.'USERS JOIN '.$prefix.'USERS_EXTRA ON '.$prefix.'USERS.ID = '.$prefix.'USERS_EXTRA.ID',
                 ['Email', $inputs["m"],'='],
                 [],
-                ['noValidate'=>true],
-                $test
+                ['noValidate'=>true,'test'=>$test,'verbose'=>$verbose]
             );
             // Check if it found something
             if (is_array($checkRes)) {
@@ -895,7 +962,7 @@ namespace IOFrame{
                 ){
                     //-----------------------Logout any user with the current old sessionID out-------------------------
                     //Only erases their Session data on the server, not data in DB
-                    $this->logOut(['oldSesID' => $checkRes[0]['SessionID'],'forgetMe' => false,'sesOnly' => true],$test);
+                    $this->logOut(['oldSesID' => $checkRes[0]['SessionID'],'forgetMe' => false,'sesOnly' => true,'test'=>$test,'verbose'=>$verbose]);
 
                     //------------------Regenerate session ID and update user table to current user ID------------------
                     if(!$test)
@@ -944,10 +1011,9 @@ namespace IOFrame{
                         $query = 'UPDATE '.$this->sqlHandler->getSQLPrefix().'USERS SET
                         authDetails=:authFullDetails WHERE Email=:Email';
                         //If it was test, test results well be echoed later, nothing left to do.
-                        if (!$test){
+                        if (!$test)
                             $this->sqlHandler->exeQueryBindParam($query,[[':authFullDetails', $authFullDetails],[':Email', $inputs["m"]]]);
-                        }
-                        else
+                        if ($verbose)
                             echo 'Executing '.$query.EOL;
                     }
 
@@ -964,28 +1030,23 @@ namespace IOFrame{
                         $res = json_encode(array('iv' => $iv, 'sesID' => $hex));
 
                     //---------Fetch all the extra user data and update current session-------------
-                    $this->login_updateSessionCore($checkRes, false, $test);
+                    $this->login_updateSessionCore($checkRes, ['test'=>$test,'verbose'=>$verbose]);
                     //--------------------------Update login history------------------------------
-                    $this->login_updateHistory($checkRes, $test);
+                    $this->login_updateHistory($checkRes, ['test'=>$test,'verbose'=>$verbose]);
                     return $res;
                 }
                 else{
-                    if (!$test) {
-                        return 1;
-                    } else {
+                    if($verbose)
                         echo "Test User with mail \"" . $inputs["m"] . "\" doesn't exist - or password/session key is wrong!";
-                        return 1;
-                    }
+                    return 1;
                 }
             }
             //if no matching password is found, report it and exit
             else{
-                if ($test) {
-                    return 1;
-                } else {
+
+                if($verbose)
                     echo "Test User with mail \"" . $inputs["m"] . "\" doesn't exist - or password/session key is wrong!";
-                    return 1;
-                }
+                return 1;
             }
 
         }
@@ -993,10 +1054,16 @@ namespace IOFrame{
 
         /** Updates session with core values
          * @param array $checkRes results gotten from the DB in an earlier stage
-         * @param bool $override whether to reuse all earlier session details, or completely override them.
-         * @param bool $test
+         * @param array $params array of the form:
+         *                     'override' => bool, default false - whether to reuse all earlier session details,
+         *                      or completely override them
          */
-        private function login_updateSessionCore(array $checkRes, bool $override=false, bool $test = false){
+        private function login_updateSessionCore(array $checkRes,array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            isset($params['override'])?
+                $override = $params['override'] : $override = false;
             //Update current session - this is how the rest of the app knows the user is logged in
             $_SESSION['logged_in']=true;
             $data = [];
@@ -1017,16 +1084,18 @@ namespace IOFrame{
             }
             if(!$test)
                 $_SESSION['details']=json_encode($data);
-            else{
+            if($verbose)
                 echo 'Setting new session details:'.json_encode($data).EOL;
-            }
         }
 
         /** Updates login history TODO - once number of logins exceeds 200, delete the oldest 100 and send them to archive.
          * @param array $checkRes results gotten from the DB in an earlier stage
-         * @param bool $test
+         * @param array $params
          */
-        private function login_updateHistory(array $checkRes, bool $test = false){
+        private function login_updateHistory(array $checkRes,array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             //First save country code
             require_once $this->settings->getSetting('absPathToRoot').'_siteHandlers/ext/GeoIP/vendor/autoload.php';
 
@@ -1041,13 +1110,13 @@ namespace IOFrame{
                     $countryRes=$record->country->isoCode;
                 }
                 catch(\Exception $e){
-                    if($test)
+                    if($verbose)
                         echo 'IP not in country db!'.EOL;
                     $countryRes='Unkonwn';
                 }
             }
             catch(\Exception $e){
-                if($test)
+                if($verbose)
                     echo 'Country DB Does not exist!'.EOL;
                 $countryRes='Unkonwn';
             }
@@ -1057,8 +1126,8 @@ namespace IOFrame{
             $checkRes = $this->sqlHandler->selectFromTable($this->sqlHandler->getSQLPrefix().'LOGIN_HISTORY',
                 [['Username', $u,'='],['IP', [$_SERVER['REMOTE_ADDR'],'STRING'],'='],'AND'],
                 [],
-                [],
-                $test);
+                ['test'=>$test,'verbose'=>$verbose]
+            );
             //if yes update them
             if (is_array($checkRes)) {
                 if(!defined('hArray'))
@@ -1072,7 +1141,7 @@ namespace IOFrame{
                 array_push($params,[':Login_History', $lHist->hArrGet()],[':Username', $u],[':IP', $_SERVER['REMOTE_ADDR']]);
                 if(!$test)
                     $this->sqlHandler->exeQueryBindParam($query,$params);
-                else
+                if($verbose)
                     echo 'Updating login history for User/IP '.$u.'/'.$_SERVER['REMOTE_ADDR'].EOL;
             }
             else{
@@ -1083,7 +1152,7 @@ namespace IOFrame{
                 array_push($params,[':Login_History', $hInit.'#'],[':Username', $u],[':IP', $_SERVER['REMOTE_ADDR']],[':Country', $countryRes]);
                 if(!$test)
                     $this->sqlHandler->exeQueryBindParam($query,$params);
-                else
+                if($verbose)
                     echo 'Creating new login history for User/IP '.$u.'/'.$_SERVER['REMOTE_ADDR'].EOL;
             }
         }
@@ -1099,9 +1168,14 @@ namespace IOFrame{
          *  @returns int
          *          0 - User is eligible to be logged into
          *          1 - User can't be logged into due to being "Suspicious"
-         *          2 - User is "Suspicious", but may be logged into due to some condition (2FA, Whitelisted IP, etc)
-        */
-        function checkUserLogin($identifier, array $params = [], $test = false){
+         *          2 - User is "Suspicious", but may be logged into due to some condition (2FA, Whitelisted IP, etc).
+         *              Notice that "User Does Not Exist" is an acceptable condition here.
+         */
+        function checkUserLogin($identifier, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
             $prefix = $this->sqlHandler->getSQLPrefix();
 
             //Works both with user mail and ID
@@ -1125,24 +1199,42 @@ namespace IOFrame{
                     'AND'
                 ],
                 ['Suspicious_Until', '"User" AS Allowed'],
-                ['justTheQuery'=>true],
-                false
+                ['justTheQuery'=>true,'test'=>false]
             );
+            //This will return -1 / -1 if the user does not exist
+            $query .=' UNION '.
+                $this->sqlHandler->selectFromTable(
+                    $prefix.'USERS',
+                    [
+                        [
+                            [
+                                $prefix.'USERS',
+                                $identityCond,
+                                [],
+                                [],
+                                'SELECT'
+                            ],
+                            'EXISTS'
+                        ],
+                        'NOT'
+                    ],
+                    ['-1 AS Suspicious_Until', '-1 AS Allowed'],
+                    ['justTheQuery'=>true,'test'=>false]
+                );
             //Whitelisted IP Check
             if(isset($params['allowWhitelistedIP']))
                 $query .=' UNION '.
                     $this->sqlHandler->selectFromTable(
-                    $prefix.'IP_LIST,'.$prefix.'USERS INNER JOIN '.$prefix.'USERS_EXTRA ON '.$prefix.'USERS.ID = '.$prefix.'USERS_EXTRA.ID',
-                    [
-                        $identityCond,
-                        [$prefix.'IP_LIST.IP',$params['allowWhitelistedIP'],'='],
-                        [$prefix.'IP_LIST.IP_Type',1,'='],
-                        'AND'
-                    ],
-                    ['Suspicious_Until', '"IP" AS Allowed'],
-                    ['justTheQuery'=>true],
-                    false
-                );
+                        $prefix.'IP_LIST,'.$prefix.'USERS INNER JOIN '.$prefix.'USERS_EXTRA ON '.$prefix.'USERS.ID = '.$prefix.'USERS_EXTRA.ID',
+                        [
+                            $identityCond,
+                            [$prefix.'IP_LIST.IP',$params['allowWhitelistedIP'],'='],
+                            [$prefix.'IP_LIST.IP_Type',1,'='],
+                            'AND'
+                        ],
+                        ['Suspicious_Until', '"IP" AS Allowed'],
+                        ['justTheQuery'=>true,'test'=>false]
+                    );
             //Code check
             if(isset($params['allowCode']))
                 $query .=' UNION '.
@@ -1160,15 +1252,14 @@ namespace IOFrame{
                             'AND'
                         ],
                         ['Suspicious_Until', '"Code" AS Allowed'],
-                        ['justTheQuery'=>true],
-                        false
+                        ['justTheQuery'=>true,'test'=>false]
                     );
 
-            if($test)
+            if($verbose)
                 echo 'Query to send: '.$query.EOL;
-            $tempRes = $this->sqlHandler->exeQueryBindParam($query,[],true);
+            $tempRes = $this->sqlHandler->exeQueryBindParam($query,[],['fetchAll'=>true]);
 
-            if($test){
+            if($verbose){
                 var_dump($tempRes);
             }
 

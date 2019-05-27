@@ -1,10 +1,5 @@
 <?php
 
-if (php_sapi_name() == "cli")
-    $cli = true;
-else
-    $cli = false;
-
 if(!defined('helperFunctions'))
     require $this->settings->getSetting('absPathToRoot').'_util/helperFunctions.php';
 
@@ -33,7 +28,7 @@ foreach($foldersToRemove as $url){
 }
 
 //The following changes the system state, as such it must not be executed in cli mode (which is local changes only)
-if(!$cli){
+if(!$local){
 
     if(!isset($this->sqlHandler))
         $sqlHandler = new IOFrame\sqlHandler($this->settings);
@@ -55,7 +50,7 @@ if(!$cli){
 
 
     //Delete the auth action needed to make trusted comments
-    $res = $sqlHandler->deleteFromTable($prefix.'ACTIONS_AUTH',['Auth_Action','MAKE_TRUSTED_COMMENTS','='],[],$test);
+    $res = $sqlHandler->deleteFromTable($prefix.'ACTIONS_AUTH',['Auth_Action','MAKE_TRUSTED_COMMENTS','='],['test'=>$test]);
 }
 
 ?>

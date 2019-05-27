@@ -1,5 +1,9 @@
-function startObjectDB(update = true){
+/* Resolves true on success, rejects false on failure, or resolves the list of changed objects if we updated and got new objects
+* */
+
+function startObjectDB( params = []){
     return new Promise(function(resolve, reject) {
+        var updatePage = (params['updatePage'] !== undefined)? params['updatePage'] : false;
         /*INDEXED-DB RELATED*/
         window.indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
         window.IDBKeyRange = window.IDBKeyRange || window.webkitIDBKeyRange || window.msIDBKeyRange;
@@ -54,45 +58,97 @@ function startObjectDB(update = true){
 
             //What to do if the DB already exists
             request.onsuccess = function(event){
+                db = event.target.result;
                 //Only relevant if the user has localStorage
                 if(hasStorage){
-                    if(localStorage.getItem("pageMap")== null)
-                        localStorage.setItem("pageMap",'');
-                    db = event.target.result;
-                    //Check to see if there were changes to the objects assigned to this page
-                    pageObjects = checkPageObjects(document.currentPage).then(function(res){
-                        //-console.log('Got objects: ',res);
-                        //Page is up to date.
-                        if(res == 0){
-                            updateObjects(document.currentPage,db).then(function(res){
-                                resolve(true);
-                                return true;
-                            });
-                        }
-                        //Page doesn't exist! So we can do no caching here...
-                        else if(res == 1){
-                            assignNewObjects(document.currentPage, timenow ,'');
-                            resolve(true);
-                            return true;
-                        }
-                        //We either got back a legit JSON array, or a different error
-                        else{
-                            if(!IsJsonString(res))
-                                console.log('Error getting object map for page, got '+res);
-                            assignNewObjects(document.currentPage, timenow, res);
-                            updateObjects(document.currentPage,db).then(function(res){
-                                resolve(true);
-                                return true;
-                            },function(rej){
-                                console.log('Object update failed!');
-                                resolve(false);
-                                return false;
-                            });
-                        }
-                    });
+                    //If we are not updating the page, we are done
+                    if(!updatePage){
+                        db.close();
+                        resolve(true);
+                        return true;
+                    }
+                    else{
+                        populatePageMap(db,params).then(function(res){
+                            db.close();
+                            resolve(res);
+                            return res;
+                        },
+                        function(rej){
+                            db.close();
+                            reject(rej);
+                            return rej;
+                        });
+                    }
+                }
+                else{
+                    db.close();
+                    resolve(false);
+                    return false;
                 }
             };
         }
+    });
+}
+
+/* Populates an existing indxed db with objects from the page map.
+ * */
+function populatePageMap(db,params = []){
+    return new Promise(function(resolve, reject){
+        var updateObjects = (params['updateObjects'] !== undefined)? params['updateObjects'] : false;
+        var extraPages = (params['extraPages'] !== undefined)? params['extraPages'] : [];
+        var timenow = new Date().getTime();
+        timenow = Math.floor(timenow/1000);
+        if(localStorage.getItem("pageMap")== null)
+            localStorage.setItem("pageMap",'');
+        //Check to see if there were changes to the objects assigned to this page
+        extraPages.push(document.currentPage);
+        //console.log(extraPages);
+        checkPageObjects(extraPages).then(function(res){
+            //console.log(res);
+            //We either got back a legit JSON array, or a different error
+            if(!IsJsonString(res) || typeof JSON.parse(res) != 'object'){
+                console.log('Error getting object map for page, got '+res);
+                db.close();
+                reject(false);
+                return false;
+            }
+
+            var parsedResponse = JSON.parse(res);
+            var pagesToUpdate = [];
+            extraPages.forEach(function(pageName){
+                //Page doesn't exist! So we can do no caching...
+                if(parsedResponse[pageName] == 1){
+                    assignNewObjects(pageName, timenow ,null);
+                    delete(parsedResponse[pageName]);
+                }
+                //Page is up to date. Keep as is
+                else if(parsedResponse[pageName] == 0){
+                    pagesToUpdate.push(pageName);
+                }
+                else{
+                    assignNewObjects(pageName, timenow ,JSON.parse(parsedResponse[pageName]));
+                    pagesToUpdate.push(pageName);
+                }
+            });
+            //Either we have to update the objects or we don't
+            if(updateObjects && pagesToUpdate!=[]){
+                updatePageObjects(pagesToUpdate,db).then(function(res){
+                    db.close();
+                    resolve(res);
+                    return true;
+                },function(rej){
+                    console.log('Object update failed!');
+                    db.close();
+                    resolve(false);
+                    return false;
+                });
+            }
+            else{
+                db.close();
+                resolve(true);
+                return true;
+            }
+        });
     });
 }
 
@@ -102,36 +158,40 @@ function startObjectDB(update = true){
  *              1 - page doesn't exist on the server end, or is NULL (no objects are assigned to it)
  *              JSON Array of the form {"<ObjID>":"ObjID"} containing all the objects assigned to "page" - otherwise
  * */
-function checkPageObjects(page){
+function checkPageObjects(requestedPages = []){
 
     return new Promise(function(resolve, reject) {
-        let pages = localStorage.getItem('pageMap');
+        let storedPages = localStorage.getItem('pageMap');
+        requestedPages.push('@');
+        var timesUpdated = [];
         //See if our page map even exists
-        IsJsonString(pages)?
-            pages = JSON.parse(pages): pages == null;
-        //In case our page exists/does not exist, get/set timeUpdated
-        if(!pages.hasOwnProperty(page))
-            var timeUpdated = 0;
-        else{
-            currPage = pages[page];
-            var timeUpdated = currPage.timeUpdated;
-        }
+        IsJsonString(storedPages)?
+            storedPages = JSON.parse(storedPages): storedPages == null;
 
         //Prepare to check the server for the actual objects assigned to the current page
         var header =  {
             'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8;'
         };
         //Set parameters to send to the api
-        let params = {};
-        params.page = page;
-        params.date = timeUpdated;
+        let params = {
+            pages:{}
+        };
+        //In case our page exists/does not exist, get/set timeUpdated
+        requestedPages.forEach(function(page){
+            if(storedPages[page] === undefined)
+                params.pages[page] = 0;
+            else{
+                params.pages[page] = storedPages[page].timeUpdated;
+            }
+        });
         let action;
-        action = "type=ga&params="+JSON.stringify(params);
+        action = "action=ga&params="+JSON.stringify(params);
         // url
         let url=document.pathToRoot+"_siteAPI\/objectAPI.php";
         //Request itself
         var xhr = new XMLHttpRequest();
         xhr.open('GET', url+'?'+action);
+        //console.log(url+'?'+action);
         xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
         xhr.send(null);
         xhr.onreadystatechange = function () {
@@ -141,6 +201,7 @@ function checkPageObjects(page){
                 if (xhr.status === OK){
                     let response = xhr.responseText;
                     resolve(response);
+                    //console.log(response);
                     return 0;
                 }
             } else {
@@ -160,11 +221,9 @@ function checkPageObjects(page){
  * Replaces the objects on that page with the object string given.
  * IF objJSON = '', deletes the page from localStorage, as it contains no objects.
  * */
-function assignNewObjects(page, timenow, objJSON){
-    //console.log('Here! p:'+page+', obJSON:'+objJSON);    //TODO REMOVE
-
+function assignNewObjects(page, timenow, obj){
     //If objJSON is '', remove the page entry for that page
-    if(objJSON == ''){
+    if(obj == null){
         let pageMap = localStorage.getItem('pageMap');
         (pageMap == '' || pageMap == '{}')?
             pageMap = {}  : pageMap = JSON.parse(pageMap);
@@ -173,60 +232,61 @@ function assignNewObjects(page, timenow, objJSON){
         localStorage.setItem('pageMap',JSON.stringify(pageMap));
     }
     //Else, update pageMap on that page
-    else{
-        objArr = JSON.parse(objJSON);
+    else if(typeof obj == 'object'){
         let pageMap = localStorage.getItem('pageMap');
         (pageMap == '' || pageMap == '{}')?
             pageMap = {}  : pageMap = JSON.parse(pageMap);
         (pageMap.hasOwnProperty(page))?
             currPage = pageMap[page] : currPage =  {};
         currPage.timeUpdated = timenow;
-        currPage.objects = objJSON;
+        currPage.objects = obj;
         pageMap[page] = currPage;
         localStorage.setItem('pageMap',JSON.stringify(pageMap));
     }
 }
 
-/* Gets the objects, whose IDs are listed under "page" in localStorage, from the server,
+/* Gets the objects, whose IDs are listed under "page"s in localStorage, from the server,
  * Then updates the objects in the offline database depending on the results.
+ * Resolves 0 if no objects were updated, array of updated object IDs otherwise.
  * */
-function updateObjects(page,db){
+function updatePageObjects(pages,db){
     return new Promise(function(resolve, reject) {
-        //console.log('Here! p:'+page+', db:'+db);                //TODO REMOVE
+        //console.log('Here! p:',pages);                //TODO REMOVE
 
         var timenow = new Date().getTime();
         timenow = Math.floor(timenow/1000);
         //get the pageMap, and see which objects this page should have
         let pageMap = JSON.parse(localStorage.getItem('pageMap'));
-        let objectList = pageMap[page];
-        objectList = JSON.parse(objectList.objects);
-
+        // We'll create a temporary array first, to see which objects we need to check
+        let objectsIDs = [];
+        let objectExist = {};
+        pages.forEach(function(page){
+            for(let objID in pageMap[page].objects){
+                if(objectExist[objID] === undefined){
+                    objectExist[objID] = 1;
+                    objectsIDs.push(objID);
+                }
+            }
+        });
+        //console.log(objectsIDs);
         /*We will need an object, representing a 2D array.
          The object will be of the form
          "#": "{"<objectID1>":"<timeObj1Updated>", ...}",
          "<groupName>": "{"@":"<timeGroupUpdated>", "<objectID2>":"<timeObj2Updated>", ...}",
          where timeGroupUpdated is the earliest time an object was updated on the group.
          */
-        let objects = {"?":false};
-        // We'll create a temporary array first, to see which objects we need to check
-        let objectsIDs = [];
-        for (var k in objectList){
-            if (objectList.hasOwnProperty(k)) {
-                objectsIDs.push(k);
-            }
-        }
 
         //Prepare to get what we need from the database
         var transaction = db.transaction(["objects"], "readonly");
         var objectStore = transaction.objectStore("objects");
 
         //Fetch the objects
+        var objects = {};
         objectsIDs.forEach(function(item){
             //console.log(item);               //TODO DELETE
             var request = objectStore.get(item);
 
             request.onsuccess = function(event) {
-                //console.log(request);               //TODO DELETE
                 //Since the item exists on the client side, put it in the right place
                 if(request.result !== undefined){
                     let objGroup;
@@ -251,26 +311,21 @@ function updateObjects(page,db){
                         objects['@']={};
                     objects['@'][item] = 0;
                 }
+                //console.log(objects);               //TODO DELETE
             };
         });
 
         transaction.oncomplete = function(event) {
-            //Stringify everything
-            for (let key in objects){
-                if (objects.hasOwnProperty(key)) {
-                    objects[key] = JSON.stringify(objects[key]);
-                }
-            }
             objects = JSON.stringify(objects);
-            //-console.log(objects);
             //Prepare to query the DB for the objects
             let action;
-            action = "type=r&params="+objects;
+            action = "action=r&params="+objects;
             // url
             let url=document.pathToRoot+"_siteAPI\/objectAPI.php";
             //Request itself
             var xhr = new XMLHttpRequest();
             xhr.open('GET', url+'?'+action);
+            //console.log(url+'?'+action);               //TODO DELETE
             xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
             xhr.send(null);
             xhr.onreadystatechange = function () {
@@ -279,18 +334,26 @@ function updateObjects(page,db){
                 if (xhr.readyState === DONE) {
                     if (xhr.status === OK){
                         let response = xhr.responseText;
+                        let resp = {};
                         //console.log(response);               //TODO DELETE
-                        let resp = JSON.parse(response);
+                        if(IsJsonString(response))
+                            resp = JSON.parse(response);
+                        else
+                            console.log('Unexpected response:',response);
+
+                        //console.log(resp);               //TODO DELETE
+
                         //Get the lists of errors and group map
                         let errorList = resp['Errors'];
                         let groupMap = resp['groupMap'];
+                        delete(resp['Errors']);
+                        delete(resp['groupMap']);
 
                         let objectList = {};                    //List of objects to update
                         //Put every object and error in its place
                         for (let key in resp) {
                             if (resp.hasOwnProperty(key)) {
-                                if (key != 'errors' && key!= 'groupMap')
-                                    objectList[key] = resp[key];
+                                objectList[key] = resp[key];
                             }
                         }
                         //console.log(objectList);               //TODO DELETE
@@ -320,6 +383,7 @@ function updateObjects(page,db){
 
                         //Add new objects
                         var objectStore2 = transaction2.objectStore("objects");
+                        //console.log(objectList);                  //TODO DELETE
                         for (let key in objectList) {
                             if (objectList.hasOwnProperty(key)) {
                                 var objectStoreRequest = objectStore2.put({id:key, content:objectList[key], group:groupMap[key],
@@ -352,7 +416,7 @@ function updateObjects(page,db){
                     }
                 } else {
                     if(xhr.status < 200 || xhr.status > 299 ){
-                        console.log('Failed to get objects!'+response);
+                        console.log('Failed to get objects!',xhr);
                         reject();
                         return false;
                     }

@@ -8,7 +8,7 @@ if($params == null){
         echo 'Params must be set!';
     exit('-1');
 }
-if($_REQUEST['action'] == 'deleteActions')
+if($action == 'deleteActions')
     $expectedParam = 'actions';
 else
     $expectedParam = 'groups';

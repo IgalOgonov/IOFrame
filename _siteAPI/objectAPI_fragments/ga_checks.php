@@ -1,12 +1,15 @@
 <?php
 
-if(!isset($params['page'])){
+if(!isset($params['pages'])){
     if($test)
-        echo 'You must specify a page!';
+        echo 'You must specify pages!';
     exit('-1');
 }
 if(!isset($params['date'])){
     $params['date'] = 0;
+}
+else{
+    $params['date'] = (int)$params['date'];
 }
 
 foreach($params as $key=>$value){
@@ -18,16 +21,23 @@ foreach($params as $key=>$value){
                 exit('-1');
             }
             break;
-        case 'page':
-            if(filter_var($value,FILTER_VALIDATE_URL)){
-                if($test)
-                    echo 'Illegal page name!';
-                exit('-1');
-            }
-            if(strlen($value)<1){
-                if($test)
-                    echo 'You need a non empty page address if you want to create it!';
-                exit('-1');
+        case 'pages':
+            foreach($value as $pageName=>$time){
+                if(preg_match_all('/\w|\/|\./',$pageName)<strlen($pageName) && $pageName != '@'){
+                    if($test)
+                        echo 'Illegal page name!';
+                    exit('-1');
+                }
+                if(strlen($pageName)<1){
+                    if($test)
+                        echo 'You need a non empty page address if you want to create it!';
+                    exit('-1');
+                }
+                if(!filter_var($time,FILTER_VALIDATE_INT) && $time!=0){
+                    if($test)
+                        echo 'Illegal update time!';
+                    exit('-1');
+                }
             }
             break;
     }

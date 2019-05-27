@@ -185,6 +185,7 @@ function autoLogin(pathToRoot,timeout,test = false){
         xhr.onreadystatechange = function () {
             var DONE = 4; // readyState 4 means the request is done.
             var OK = 200; // status 200 is a successful return.
+            d = new Date();
             if (xhr.readyState === DONE) {
                 if (xhr.status === OK){
                     let response = xhr.responseText;
@@ -192,7 +193,6 @@ function autoLogin(pathToRoot,timeout,test = false){
                     //-return;
                     //Notify the console we got a response! React to each case accodingly.
                     //console.log('Got response trying to auto log in! Response '+response);
-                    d = new Date();
                     switch(response){
                         case '-1':
                             sessionStorage.setItem('autologDebug_'+d.getTime(),'User auto-login failed - incorrect input');

@@ -3,13 +3,13 @@
 if(!defined('validator'))
     require __DIR__.'/../../_util/validator.php';
 
-if(!\IOFrame\validator::validateSQLTableName($_REQUEST["target"])){
+if(!\IOFrame\validator::validateSQLTableName($target)){
     if($test)
         echo 'Target must be a valid settings file name - which is a valid sql table name!'.EOL;
     exit('-1');
 }
 
-if($_REQUEST['action'] == 'getSetting'){
+if($action == 'getSetting'){
     $expectedParam = 'settingName';
     if($params == null){
         if($test)

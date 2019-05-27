@@ -9,7 +9,7 @@ if(!isset($userHandler))
         $defaultSettingsParams
     );
 
-$result = $userHandler->banUser($_REQUEST['minutes'],$_REQUEST['id'],$test);
+$result = $userHandler->banUser($inputs['minutes'],$inputs['id'],['test'=>$test]);
 
 
 

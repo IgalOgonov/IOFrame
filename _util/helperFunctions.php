@@ -112,8 +112,8 @@ namespace IOFrame{
      * @param string $str
      * @returns boolean
     */
-    function is_json(string $str){
-        return json_decode($str) != null;
+    function is_json($str){
+        return ( gettype($str) === 'string' ) && ( json_decode($str) != null );
     }
 
     /** Use instead of base_convert for large strings

@@ -33,10 +33,10 @@ namespace IOFrame{
             else
                 $secure = $params['secure'];
 
-            if(!isset($params['debug']))
-                $debug = false;
+            if(!isset($params['verbose']))
+                $verbose = false;
             else
-                $debug = $params['debug'];
+                $verbose = $params['verbose'];
 
             parent::__construct($settings,$params);
 
@@ -49,12 +49,12 @@ namespace IOFrame{
             $this->mail->isSMTP(); // Set mailer to use SMTP
             $this->mail->SMTPAuth = true;                               // Enable SMTP authentication
             $this->mail->isHTML(true);
-            $this->updateMailSettings($secure, $debug);
+            $this->updateMailSettings($secure, $verbose);
         }
 
         //An extantion of the construct function - but this has to be called before sending each mail, in case the settings
         //Changed
-        function updateMailSettings($secure, $debug){
+        function updateMailSettings($secure, $verbose){
 
             if (!$this->mailSettings->getSetting('mailHost') or !$this->mailSettings->getSetting('mailEncryption') or
                 !$this->mailSettings->getSetting('mailUsername') or !$this->mailSettings->getSetting('mailPassword') or
@@ -67,7 +67,7 @@ namespace IOFrame{
                 $this->mail->Username = $this->mailSettings->getSetting('mailUsername');        // SMTP username
                 $this->mail->Password = $this->mailSettings->getSetting('mailPassword');        // SMTP password
                 $this->mail->Port = $this->mailSettings->getSetting('mailPort');                // TCP port to connect to
-                if($debug)
+                if($verbose)
                     $this->mail->SMTPDebug = 2;
                 if(!$secure){
                     $this->mail->SMTPOptions = array(

@@ -2491,7 +2491,7 @@ namespace IOFrame{
                         if (!isset($exp[$i]))
                             $exp[$i] = [];
                     $exp[3]['justTheQuery'] = true;
-                    $res .= $this->selectFromTable($exp[0], $exp[1], $exp[2], $exp[3], false);
+                    $res .= $this->selectFromTable($exp[0], $exp[1], $exp[2], $exp[3]);
                     break;
                 //Due to similarities, function and connector share this case
                 case 'function':
@@ -2618,7 +2618,7 @@ namespace IOFrame{
         }
 
 
-        function selectFromTable(string $tableName, array $cond = [], array $columns = [], array $param = [], bool $test = false){
+        function selectFromTable(string $tableName, array $cond = [], array $columns = [], array $param = []){
 
             //Read $params
             isset($param['useBrackets'])?

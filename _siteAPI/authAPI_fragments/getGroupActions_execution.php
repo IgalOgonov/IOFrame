@@ -1,3 +1,4 @@
 <?php
-$result = $auth->getGroupActions($params, $test);
+$params['test'] = $test;
+$result = $auth->getGroupActions($params);
 

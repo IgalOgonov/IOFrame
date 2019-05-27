@@ -92,7 +92,7 @@ namespace IOFrame{
         /**
          * Tries to determine the "real" client IP
          * @param string[] $trustedProxies An array of trusted proxies BEHIND expectedProxy.
-         *                              Each member of the array is a string that's a string of  an IP address
+         *                              Each member of the array is a string that's an IP address
          * @returns array
          *          'directIP'  => The resulting "direct" client IP (the first one we assume is under his control)
          *          'fullIP'    => The full CSV list of IPs - INCLUDING the expectedProxy
@@ -114,7 +114,6 @@ namespace IOFrame{
                 $expectedProxyList = '';
             else{
                 $expectedProxyList = preg_replace('/\s+/', '', $expectedProxyList);
-                $expectedProxyList = explode(',',$expectedProxyList);
             }
 
             //First, get the full IP
@@ -133,7 +132,7 @@ namespace IOFrame{
             //Remove the expected proxy IPs
             if($expectedProxyList !== ''){
                 $offset = strlen($fullIP)-strlen($expectedProxyList);
-                if(strpos($fullIP,$expectedProxyList,$offset))
+                if(@strpos($fullIP,$expectedProxyList,$offset))
                     $fullIP = substr($fullIP,0,strpos($fullIP,$expectedProxyList,$offset)-1);
             }
 
@@ -169,12 +168,15 @@ namespace IOFrame{
          * @param array $params of the form 'ip' => string representing user IP. Defaults to $this->directIP
          *                                  'checkRange' => whether to check range list too. Defaults to false
          *                                  'blacklisted' => Whether to check for blacklisted (default) or whitelisted IPs.
-         * @param mixed $test
-         *
          * @returns bool
          */
-        function checkIP(array $params = [], $test = false){
+        function checkIP(array $params = []){
             //set defaults
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
             if(isset($params['ip']))
                 $ip = $params['ip'];
             else
@@ -225,8 +227,7 @@ namespace IOFrame{
                     'AND'
                 ],
                 ['IP_Type','Expires','0 as Level','0 as IP_Range','"'.$prefix.'" as IP_Range_Start'],
-                ['justTheQuery'=>true],
-                false
+                ['justTheQuery'=>true,'test'=>false]
             );
             if($checkRange){
                 //If we were given an IPV4 address, we may query the range table
@@ -262,22 +263,21 @@ namespace IOFrame{
                                     'AND'
                                 ],
                                 ['IP_Type','Expires',(4-$i).' as Level',$t_range.'.IP_To - '.$t_range.'.IP_From as IP_Range', 'IP_From as IP_Range_Start'],
-                                ['justTheQuery'=>true],
-                                false
+                                ['justTheQuery'=>true,'test'=>false]
                             );
                     }
             }
 
-            if($test)
+            if($verbose)
                 echo 'Query to send: '.$query.EOL;
 
             $resArray = [];
 
-            $res = $this->sqlHandler->exeQueryBindParam($query,[],true);
+            $res = $this->sqlHandler->exeQueryBindParam($query,[],['fetchAll'=>true]);
 
             foreach($res as $k=>$v){
-                //For $test convenience
-                if($test)
+                //For $verbose convenience
+                if($verbose)
                     for($i=0;$i<5;$i++)
                         unset($res[$k][$i]);
 
@@ -318,15 +318,13 @@ namespace IOFrame{
                     }
                 }
             }
-            /*
-            */
-            if($test){
+
+            if($verbose){
                 echo 'Hits:';
                 var_dump($res);
             }
 
-
-            if($test){
+            if($verbose){
                 echo 'Final Results:';
                 var_dump($resArray);
             }
@@ -336,7 +334,7 @@ namespace IOFrame{
                     if($i==0 && $this->useCache){
                         if(!$test)
                             $this->redisHandler->call('setEx',['_IP_'.$ip,$resArray[$i]['expires']-time(),$resArray[$i]['type']]);
-                        else
+                        if($verbose)
                             echo 'Setting cache '.'_IP_'.$ip.' to '.$resArray[$i]['type'].' for '.($resArray[$i]['expires']-time()).EOL;
                     }
                     //Build a 2x2 truth table to understand this return statement
@@ -350,47 +348,76 @@ namespace IOFrame{
         /* Adds a new IP to the list
          * @param string $ip            IP represented in a string
          * @param bool $type            Whitelist/Blacklist
-         * @param int $ttl              How long the listing should exist before it expires. 0 means indefinitely
-         * @param bool $reliable        Whether the IP is considered reliable
-         * @param bool $override        Whether to override existing IPs - default false
-         * @param mixed $test
+         * @param array $params of the form:
+         *              'override' - bool, default false - Whether to override existing IPs - default false
+         *              'reliable' - bool, default true - Whether the IP is considered reliable
+         *              'ttl' - int, default 0 - How long the listing should exist before it expires. 0 means indefinitely
          *
          * @returns bool
          *          true - Success
          *          false - $override is false and an IP already exists
          * */
-        function addIP(string $ip, bool $type ,int $ttl = 0, bool $reliable = true, bool $override = false, $test = false){
+        function addIP(string $ip, bool $type , array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
+            isset($params['override'])?
+                $override = $params['override'] : $override = false;
+
+            isset($params['reliable'])?
+                $reliable = $params['reliable'] : $reliable = true;
+
+            isset($params['ttl'])?
+                $ttl = (int)$params['ttl'] : $ttl = 0;
+
+            $expires = time()+
+            ($ttl!==0)? $ttl : 1000000000 ;
 
             $res = $this->sqlHandler->insertIntoTable(
                 $this->sqlHandler->getSQLPrefix().'IP_LIST',
                 ['IP_Type','Reliable','IP','Expires'],
-                [[(int)$type,$reliable,[$ip,'STRING'], time()+$ttl]],
-                ['onDuplicateKey'=>$override],
-                $test
+                [[(int)$type,$reliable,[$ip,'STRING'], (int)$expires]],
+                ['onDuplicateKey'=>$override,'test'=>$test,'verbose'=>$verbose]
             );
 
             return $res;
         }
 
-        /* Updates an IP in the list with a new $ttl or $type or reliability
+        /** Updates an IP in the list with a new $ttl or $type or reliability
          * @param string $ip            IP to update represented in a string
          * @param bool $type            Whitelist/Blacklist
-         * @param int $ttl              How long the listing should exist before it expires. 0 means indefinitely
-         * @param bool $reliable        Whether the IP is considered reliable
-         * @param mixed $test
+         * @param array $params of the form:
+         *              'reliable' - bool, default true - Whether the IP is considered reliable
+         *              'ttl' - int, default 0 - How long the listing should exist before it expires. 0 means indefinitely
          *
          * @returns bool
          *          true - Success
          *          false - IP does not exist
          * */
-        function updateIP(string $ip, bool $type = null ,int $ttl = null, bool $reliable = null, $test = false){
+        function updateIP(string $ip, bool $type = null , array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
+            isset($params['reliable'])?
+                $reliable = $params['reliable'] : $reliable = true;
+
+            isset($params['ttl'])?
+                $ttl = (int)$params['ttl'] : $ttl = 0;
+
+            $expires = time()+
+                ($ttl!==0)? $ttl : 1000000000 ;
+
             $assignments = [];
 
             if($type !== null)
                 array_push($assignments,'IP_Type = '.(int)$type);
 
             if($ttl !== null)
-                array_push($assignments,'Expires = '.(time() + $ttl));
+                array_push($assignments,'Expires = '.$expires);
 
             if($reliable !== null)
                 array_push($assignments,'Reliable = '.($reliable?'TRUE':'FALSE'));
@@ -403,8 +430,7 @@ namespace IOFrame{
                 ['IP',[$ip,'STRING'],'=']
                 ,
                 [],
-                [],
-                $test
+                ['test'=>$test,'verbose'=>$verbose]
             );
 
             if($ip == 0)
@@ -414,8 +440,7 @@ namespace IOFrame{
                 $this->sqlHandler->getSQLPrefix().'IP_LIST',
                 $assignments,
                 ['IP',[$ip,'STRING'],'='],
-                [],
-                $test
+                ['test'=>$test,'verbose'=>$verbose]
             );
 
             return $res;
@@ -423,22 +448,23 @@ namespace IOFrame{
         }
 
         /** Deletes an $ip from the list
-         * @param string $ip            IPV4 to update represented in a string
-         * @param mixed $test
+         * @param string $ip IP to delete, represented in a string
+         * @param array $params
          *
          * @returns bool
          *          true - Success
          *          false - IP does not exist
          */
-        function deleteIP(string $ip, $test = false){
-            $ipArray = explode('.',$ip);
+        function deleteIP(string $ip, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
 
             $ip = $this->sqlHandler->selectFromTable(
                 $this->sqlHandler->getSQLPrefix().'IP_LIST',
                 ['IP',[$ip,'STRING'],'='],
                 [],
-                [],
-                $test
+                ['test'=>$test,'verbose'=>$verbose]
             );
 
             if($ip == 0)
@@ -447,8 +473,7 @@ namespace IOFrame{
             $res = $this->sqlHandler->deleteFromTable(
                 $this->sqlHandler->getSQLPrefix().'IP_LIST',
                 ['IP',[$ip,'STRING'],'='],
-                [],
-                $test
+                ['test'=>$test,'verbose'=>$verbose]
             );
 
             return $res;
@@ -461,47 +486,65 @@ namespace IOFrame{
          * @param int $to               Range (0-255)
          * @param bool $type            Whitelist/Blacklist
          * @param int $ttl              How long the listing should exist before it expires. 0 means indefinitely
-         * @param bool $override        Whether to override existing IPs - default false
-         * @param mixed $test
+         * @param array $params         Array of the form:
+         *                      'override' - bool, default false - Whether to override existing IPs - default false
          *
          * @returns bool true on success, false if override is false and IP exists
          * */
-        function addIPRange(string $prefix, int $from, int $to, bool $type, int $ttl, bool $override = false, $test = false){
+        function addIPRange(string $prefix, int $from, int $to, bool $type, int $ttl, array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
+            isset($params['override'])?
+                $override = $params['override'] : $override = false;
+
+            $expires = time()+
+                ($ttl!==0)? $ttl : 1000000000 ;
 
             $res = $this->sqlHandler->insertIntoTable(
                 $this->sqlHandler->getSQLPrefix().'IPV4_RANGE',
                 ['IP_Type','Prefix','IP_From','IP_To','Expires'],
-                [[(int)$type,[$prefix,'STRING'], $from, $to, time()+$ttl]],
-                ['onDuplicateKey'=>$override],
-                $test
+                [[(int)$type,[$prefix,'STRING'], $from, $to, $expires]],
+                ['onDuplicateKey'=>$override,'test'=>$test,'verbose'=>$verbose]
             );
 
             return $res;
         }
 
-        /* Updates a range in the list
+        /** Updates a range in the list
          *
          * @param string $prefix        IPV4 Prefix ('','xxx','xxx.xxx','xxx.xxx.xxx')
          * @param int $from             Range (0-255)
          * @param int $to               Range (0-255)
          * @param array $params         Array of the form
-         *                                              ['from' => int 0-255,
-         *                                               'to' => int 0-255,
-         *                                               'type' => true/false,
-         *                                               'ttl' => int]
-         * @param mixed $test
+         *                      [
+         *                          'from' => int 0-255,
+         *                          'to' => int 0-255,
+         *                          'type' => true/false for white/black list,
+         *                          'ttl' => int, time-to-live in Seconds. 0 means indefinitely
+         *                      ]
          *
+         * @returns bool
          *
          * */
-        function updateIPRange(string $prefix, int $from, int $to, $params = [], $test = false){
+        function updateIPRange(string $prefix, int $from, int $to, $params = []){
 
             $assignments = [];
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
 
             if(isset($params['type']))
                 array_push($assignments,'IP_Type = '.(int)$params['type']);
 
-            if(isset($params['ttl']))
-                array_push($assignments,'Expires = '.(time()+$params['ttl']));
+            if(isset($params['ttl'])){
+                $expires = time()+
+                    ($params['ttl']!==0)? $params['ttl'] : 1000000000 ;
+                array_push($assignments,'Expires = '.$expires);
+            }
 
             if(isset($params['from']))
                 array_push($assignments,'IP_From = '.$params['from']);
@@ -521,8 +564,7 @@ namespace IOFrame{
                     'AND'
                 ],
                 [],
-                [],
-                $test
+                ['test'=>$test,'verbose'=>$verbose]
             );
 
             if($ip == 0)
@@ -537,8 +579,7 @@ namespace IOFrame{
                     ['IP_To',$to,'='],
                     'AND'
                 ],
-                [],
-                $test
+                ['test'=>$test,'verbose'=>$verbose]
             );
 
             return $res;
@@ -549,9 +590,14 @@ namespace IOFrame{
          * @param string $prefix        IPV4 Prefix ('','xxx','xxx.xxx','xxx.xxx.xxx')
          * @param int $from             Range (0-255)
          * @param int $to               Range (0-255)
-         * @param mixed $test
+         * @param array $params
+         * @returns bool
          */
-        function deleteIPRange(string $prefix, int $from, int $to,  $test = false){
+        function deleteIPRange(string $prefix, int $from, int $to, array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
 
             $ip = $this->sqlHandler->selectFromTable(
                 $this->sqlHandler->getSQLPrefix().'IPV4_RANGE',
@@ -562,8 +608,7 @@ namespace IOFrame{
                     'AND'
                 ],
                 [],
-                [],
-                $test
+                ['test'=>$test,'verbose'=>$verbose]
             );
 
             if($ip == 0)
@@ -577,26 +622,33 @@ namespace IOFrame{
                     ['IP_To',$to,'='],
                     'AND'
                 ],
-                [],
-                $test
+                ['test'=>$test,'verbose'=>$verbose]
             );
 
             return $res;
         }
 
-        /** Deletes an $ip from the list
-         * @param bool $range   Whether to delete from the range table (default is from the IP list table)
-         * @param mixed $test
+        /** Deletes expired IPs
+         * @param array $params of the form:
+         *      'range' bool, default false - whether to delete from the IP_RANGE table or IP_LIST
+         * @returns bool
          */
-        function deleteExpired(bool $range = false, $test = false){
+        function deleteExpired(array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
+            isset($params['range'])?
+                $range = $params['range'] : $range = false;
+
             $tname = $range?
                 $this->sqlHandler->getSQLPrefix().'IPV4_RANGE' : $this->sqlHandler->getSQLPrefix().'IP_LIST' ;
 
-            $this->sqlHandler->deleteFromTable(
+            return $this->sqlHandler->deleteFromTable(
                 $tname,
                 [['Expires',time(),'<=']],
-                [],
-                $test
+                $params
             );
         }
 

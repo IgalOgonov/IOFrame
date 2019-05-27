@@ -10,7 +10,7 @@ if(!isset($userHandler))
         $defaultSettingsParams
     );
 
-$result = $userHandler->changePassword($id,$inputs['newPassword'],$test);
+$result = $userHandler->changePassword($id,$inputs['newPassword'],['test'=>$test]);
 
 if(!$test){
     unset($_SESSION['PWD_RESET_ID']);

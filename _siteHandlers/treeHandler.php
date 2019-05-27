@@ -141,8 +141,8 @@ namespace IOFrame{
             //Initiate if we need to
             if($params['initiate']){
 
-                $this->getFromCache($target);
-                $this->getFromDB($target,['ignorePrivate'=>$params['ignorePrivate']]);
+                $this->getFromCache($target,$params);
+                $this->getFromDB($target,$params);
             }
         }
 
@@ -303,13 +303,15 @@ namespace IOFrame{
          *              ],
          * ...
          * ]
-         * @param bool $test
          * @throws \Exception on invalid tree name.
          *
          * @returns mixed 0 on success for all, otherwise an array of the form {"treeName" => ErrorCode}, where the error codes are:
          *          1 - Cannot override existing tree!
         */
-        function addTrees($inputs = [],$test = false){
+        function addTrees($inputs = [], array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             $res = [];
             foreach($inputs as $treeName=>$params){
                 //Set default
@@ -332,9 +334,8 @@ namespace IOFrame{
                 if(!in_array($treeName,$this->treeNames) || $override){
                     //Check the content
                     $type = $this->getTreeType($params['content']);
-                    if($test){
+                    if($verbose)
                         echo 'Tree type '.$type.EOL;
-                    }
                     //Set euler/assoc trees accordingly
                     if($type == 1){
                         $eulerTree = $params['content'];
@@ -359,7 +360,7 @@ namespace IOFrame{
                         $this->isInitArray[$treeName] = true;
                         $this->isPrivate[$treeName] = $private;
                     }
-                    else{
+                    if($verbose){
                         echo 'Updating tree '.$treeName.' at '.time().', dumping Euler and Associated trees:'.EOL;
                         var_dump($eulerTree);
                         var_dump($assocTree);
@@ -372,22 +373,24 @@ namespace IOFrame{
                             $dbParams['override'] = $override;
                         if(isset($params['private']))
                             $dbParams['private'] = $private;
+                        $dbParams['test'] = $test;
+                        $dbParams['verbose'] = $verbose;
 
-                        $res[$treeName] = $this->updateDB($treeName,$dbParams,$test);
-                        if($res[$treeName] == 0)
+                        $res[$treeName] = $this->updateDB($treeName,$dbParams);
+                        if($res[$treeName] === true)
                             unset($res[$treeName]);
                     }
                 }
                 //In case we cannot override, set the result appropriately and continue.
                 if(in_array($treeName,$this->treeNames)){
                     $res[$treeName] = 1;
-                    if($test)
+                    if($verbose)
                         echo 'Cannot override existing tree!'.EOL;
                 }
             }
 
             //Update the cache
-            $this->updateCache([],$test);
+            $this->updateCache(['test'=>$test,'verbose'=>$verbose]);
 
             if($res !== [])
                 return $res;
@@ -407,11 +410,14 @@ namespace IOFrame{
          *              ],
          * ...
          * ]
-         * @params mixed $test
+         * @param array $params
          * @returns mixed 0 on success for all, otherwise an array of the form {"treeName" => ErrorCode}, where the error codes are:
          *          1 - Cannot override existing tree!
          * */
-        function removeTrees($inputs = [],$test = false){
+        function removeTrees($inputs = [], array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             $res = [];
 
             foreach($inputs as $treeName=>$params){
@@ -430,7 +436,7 @@ namespace IOFrame{
                     unset($this->isInitArray[$treeName]);
                     $res[$treeName] = 0;
                     //Update the cache
-                    $this->updateCache(['remove'=>$treeName], $test);
+                    $this->updateCache(['remove'=>$treeName,'test'=>$test,'verbose'=>$verbose]);
                 }
                 if($updateDB){
                     //Set default
@@ -438,9 +444,11 @@ namespace IOFrame{
                         $params = ['onlyEmpty'=>$params['onlyEmpty'],'mode'=>'delete'];
                     else
                         $params = ['mode'=>'delete'];
-                    $res[$treeName] = $this->updateDB($treeName,$params, $test);
+                    $params['test'] = $test;
+                    $params['verbose'] = $verbose;
+                    $res[$treeName] = $this->updateDB($treeName,$params);
 
-                    if($res[$treeName] == 0)
+                    if($res[$treeName] === true)
                         unset($res[$treeName]);
                     else{
                         if($res[$treeName] == 2)
@@ -461,10 +469,18 @@ namespace IOFrame{
          *
          * @params array $nodeArray - Array of nodes to update of the form [ [<NodeID>,<NewContent>], ... ]
          * @params string $treeName - Name of the tree
-         * @params bool $updateDB - whether to delete the trees in the DB (if they exist) or only in the handler/cache
-         * @params mixed $test
+         * @param array $params of the form:
+         *                      'updateDB' - bool, default true - whether to update the trees in the DB or only in the handler/cache
+         *
+         * @return int 0
         */
-        function updateNodes(array $nodeArray, string $treeName, bool $updateDB = true, $test = false){
+        function updateNodes(array $nodeArray, string $treeName, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            $res = true;
+            isset($params['updateDB'])?
+                $updateDB = $params['updateDB'] : $updateDB = true;
             //Either updates the handler, the db, or both the handler and the db.
             if(isset($this->treeNames[$treeName])){
                 foreach($nodeArray as $updatePair){
@@ -480,34 +496,40 @@ namespace IOFrame{
                     array_push($updateTriplets,[$updatePair[0],[(string)$updatePair[1], 'STRING'], [$changeTime, 'STRING'],0,0]);
                 }
                 //Make sure to NOT actually update smallestEdge and largestEdge - set onDuplicateKeyExp manually
-                $this->sqlHandler->insertIntoTable(
+                $res = $this->sqlHandler->insertIntoTable(
                     $tname,
                     ['ID', 'content', 'lastChanged', 'smallestEdge', 'largestEdge'],
                     $updateTriplets,
-                    ['onDuplicateKey' => true,'onDuplicateKeyExp'=> 'ID=VALUES(ID), content=VALUES(content), lastChanged=VALUES(lastChanged)'],
-                    $test
+                    [
+                        'onDuplicateKey' => true,
+                        'onDuplicateKeyExp'=> 'ID=VALUES(ID), content=VALUES(content), lastChanged=VALUES(lastChanged)',
+                        'test'=>$test,
+                        'verbose'=>$verbose
+                    ]
                 );
                 //Update meta table
-                $this->sqlHandler->updateTable(
-                    $metaname,
-                    ['settingValue = '.time()],
-                    ['settingKey','_Last_Changed','='],
-                    [],
-                    $test
-                );
+                if($res)
+                    $res = $this->sqlHandler->updateTable(
+                        $metaname,
+                        ['settingValue = '.time()],
+                        ['settingKey','_Last_Changed','='],
+                        ['test'=>$test,'verbose'=>$verbose]
+                    );
             }
-            return 0;
+            return $res;
         }
 
         /** Syncs specified trees from the DB. By default - all trees that are currently in the handler.
          * NOTICE - Unlike most other functions, this function DOES update the handler state with $test on - $test only changes
          *          the output (verbose vs none)
          * @param array $treeNames is of the form ["treeName" => <smallest acceptable lastUpdated of the tree>]
-         * @param array $params is nothing as of yet
-         * @params mixed $test
+         * @param array $params of the form:
+         *                      'ignorePrivate' => bool, default true - will ignore private trees (update nothing with them)
         */
-        function getFromDB($treeNames = [],$params = [],$test = false){
-
+        function getFromDB($treeNames = [], array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             //Set defaults
             if(!isset($params['ignorePrivate']))
                 $ignorePrivate = true;
@@ -561,19 +583,18 @@ namespace IOFrame{
                 $testQuery.= $this->sqlHandler->selectFromTable($tname,
                         $queryCond,
                         ['ID','content','smallestEdge','largestEdge', '\''.$treeName.'\' as Source'],
-                        ['justTheQuery'=>true],
-                        false
+                        ['justTheQuery'=>true,'test'=>false]
                     ).' UNION ';
             }
 
             $testQuery =  substr($testQuery,0,-7);
             $updateTime = time();
 
-            if($test){
+            if($verbose){
                 echo 'Query to send: '.$testQuery.' at '.$updateTime.EOL;
             }
-            $temp = $this->sqlHandler->exeQueryBindParam($testQuery, [], true);
-            if($test)
+            $temp = $this->sqlHandler->exeQueryBindParam($testQuery, [], ['fetchAll'=>true]);
+            if($verbose)
                 var_dump($temp);
 
             $treesUpdated = [];
@@ -612,17 +633,23 @@ namespace IOFrame{
          *              [
          *               'override' => Whether to override the tree that already exists in the db (on creation), or not. Default false.
          *               'onlyEmpty'=> If true, will only delete empty trees. Default false
+         *               'private' => int, default 0 - If 1, the tree will be marked as 'private'.
+         *               'mode' => string, 'create'|'delete' - Whether we are creating a new tree, from what we have, or
+         *                         deleting an existing tree from DB. Defaults to 'create' if $treeName is set in the handler.
          *              ],
-         * @params mixed $test
          * @returns int
-         *          0 on success
+         *          true on success
          *          1 if trying to override an existing tree with override being false
          *          2 if trying to delete a non-empty tree when onlyEmpty is false
          */
         //
         //
         //
-        function updateDB(string $treeName, $params = [],$test = false){
+        function updateDB(string $treeName, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            $res = true;
             //Set defaults
             if(!isset($params['override']))
                 $override = false;
@@ -649,7 +676,7 @@ namespace IOFrame{
             $metaname = $tname.'_META';
             $mapname = strtoupper($this->sqlHandler->getSQLPrefix().'TREE_MAP');
             //Checks whether a table already exists
-            $potentialTree = $this->sqlHandler->selectFromTable($tname,[],[],['limit'=>1],$test);
+            $potentialTree = $this->sqlHandler->selectFromTable($tname,[],[],['limit'=>1,'test'=>$test,'verbose'=>$verbose]);
 
             //This means we are creating a new tree from something we have
             if($mode == 'create'){
@@ -659,28 +686,28 @@ namespace IOFrame{
                                                               ) ENGINE=InnoDB DEFAULT CHARSET = utf8;
                                                               ';
                 if(!$test){
-                    $this->sqlHandler->exeQueryBindParam($mapCreationQuery,[],false);
+                    $this->sqlHandler->exeQueryBindParam($mapCreationQuery,[]);
                 }
-                else
+                if($verbose)
                     echo 'Map creation query: '.$mapCreationQuery.EOL;
                 $needToInsertTreeToMap = true;
 
                 //If the tree exists, either stop or delete it if we are overriding
                 if($potentialTree != 0){
-                    if($test)
+                    if($verbose)
                         echo 'Tree '.$treeName.' already exists in the DB!'.EOL;
                     if(!$override){
-                        if($test)
+                        if($verbose)
                             echo 'Cannot override  exiting tree!'.EOL;
                         return 1;
                     }
                     else{
                         $needToInsertTreeToMap = false;
                         if(!$test){
-                            $this->sqlHandler->exeQueryBindParam('TRUNCATE TABLE '.$tname,[],false);
-                            $this->sqlHandler->exeQueryBindParam('TRUNCATE TABLE '.$metaname,[],false);
+                            $this->sqlHandler->exeQueryBindParam('TRUNCATE TABLE '.$tname,[]);
+                            $this->sqlHandler->exeQueryBindParam('TRUNCATE TABLE '.$metaname,[]);
                         }
-                        else{
+                        if($verbose){
                             echo 'Truncating tables '.$tname.', '.$metaname.EOL;
                             echo $treeName.' wont be inserted to tree map!'.EOL;
                         }
@@ -710,29 +737,41 @@ namespace IOFrame{
                     [['_Private',"STRING"],[(string)$private,"STRING"]]
                 ];
 
-                if($test){
+                if($verbose){
                     echo 'Creating tables for '.$tname.EOL;
                     echo 'Query to send: '.$createTableQuery.EOL;
                     echo 'Query to send: '.$createMetaQuery.EOL;
-                    echo 'Tree insert query: '.$this->sqlHandler->insertIntoTable($tname,['ID','content','smallestEdge','largestEdge'],$toInsert,['justTheQuery'=>true],false).EOL;
+                    echo 'Tree insert query: '.$this->sqlHandler->insertIntoTable(
+                            $tname,
+                            ['ID','content','smallestEdge','largestEdge'],
+                            $toInsert,
+                            ['justTheQuery'=>true,'test'=>false]
+                        ).EOL;
                     if($needToInsertTreeToMap)
-                        echo 'Meta information insert query: '.$this->sqlHandler->insertIntoTable($mapname,['treeName'],[[[$treeName,"STRING"]]],['justTheQuery'=>true],false).EOL;
-                    return 0;
+                        echo 'Meta information insert query: '.$this->sqlHandler->insertIntoTable(
+                                $mapname,['treeName'],[[[$treeName,"STRING"]]],['justTheQuery'=>true,'test'=>false]
+                            ).EOL;
                 }
 
+                if($test)
+                    return $res;
+                //--- FROM HERE TEST IS ALWAYS FALSE ---
+
                 //Create tree table
-                $this->sqlHandler->exeQueryBindParam(
+                $res = $this->sqlHandler->exeQueryBindParam(
                     $createTableQuery,
-                    [],
-                    false);
+                    []
+                    );
 
                 //Create meta information table
-                $this->sqlHandler->exeQueryBindParam(
-                    $createMetaQuery,
-                    [],
-                    false);
+                if($res)
+                    $res = $this->sqlHandler->exeQueryBindParam(
+                                $createMetaQuery,
+                                []
+                            );
 
-                $this->sqlHandler->insertIntoTable($metaname,['settingKey','settingValue'],$toInsert,[],false);
+                if($res)
+                    $res = $this->sqlHandler->insertIntoTable($metaname,['settingKey','settingValue'],$toInsert,['verbose'=>$verbose]);
 
                 //Insert the tree itself
                 $toInsert = [];
@@ -743,50 +782,55 @@ namespace IOFrame{
                     $largest = $val['largestEdge'];
                     array_push($toInsert,[$id,[$content,"STRING"],$smallest,$largest]);
                 }
-                $this->sqlHandler->insertIntoTable($tname,['ID','content','smallestEdge','largestEdge'],$toInsert,[],false);
+                if($res)
+                    $res = $this->sqlHandler->insertIntoTable($tname,['ID','content','smallestEdge','largestEdge'],$toInsert,['verbose'=>$verbose]);
 
                 //Insert tree into map (if needed)
                 if($needToInsertTreeToMap)
-                    $this->sqlHandler->insertIntoTable($mapname,['treeName'],[[[$treeName,"STRING"]]],[],false);
+                    if($res)
+                        $res = $this->sqlHandler->insertIntoTable($mapname,['treeName'],[[[$treeName,"STRING"]]],['verbose'=>$verbose]);
             }
 
             //That means we are asked to delete an existing tree
             else{
                 //If the tree exists
                 if($potentialTree != 0){
-                    if($test)
+                    if($verbose)
                         echo 'Tree '.$treeName.' exists in the DB!'.EOL;
                     if($onlyEmpty){
-                        if($test)
+                        if($verbose)
                             echo 'Cannot delete non-empty tree '.$treeName.EOL;
                         return 2;
                     }
                 }
                 //Try to delete the tree (it might not exist, but whatever)
                 $deleteQuery = 'DROP TABLE IF EXISTS '.$tname.', '.$metaname;
-                if($test){
+                if($verbose){
                     echo 'Deleting tree '.$treeName.EOL;
                     echo 'Querys to send: '.$deleteQuery.EOL.
-                        $this->sqlHandler->deleteFromTable($mapname,['treeName',[$treeName,"STRING"],'='],['justTheQuery'=>true],false).EOL;
+                        $this->sqlHandler->deleteFromTable($mapname,['treeName',[$treeName,"STRING"],'='],['justTheQuery'=>true,'test'=>false]).EOL;
                 }
-                else{
-                    $this->sqlHandler->exeQueryBindParam($deleteQuery);
-                    $this->sqlHandler->deleteFromTable($mapname,['treeName',[$treeName,"STRING"],'='],[],false);
+                if(!$test){
+                    $res =$this->sqlHandler->exeQueryBindParam($deleteQuery);
+                    if($res)
+                        $res = $this->sqlHandler->deleteFromTable($mapname,['treeName',[$treeName,"STRING"],'='],['test'=>false]);
                 }
             }
 
-            return 0;
+            return $res;
         }
 
         /** Tries to load all trees from the cache.
          *
-         * @param array $params Nothing for now.
-         * @param mixed $test
+         * @param array $params
          *
          * @returns true on success, false on failure
          *
         */
-        function getFromCache($treeNames = [],$test = false){
+        function getFromCache($treeNames = [], array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             //Exit if we're not using cache
             if(!$this->useCache)
                 return false;
@@ -809,7 +853,7 @@ namespace IOFrame{
 
                 //If the tree was updated earlier than the requested time, it means the user already has the up-to-date tree
                 if($treeMeta < $lastUpdated){
-                    if($test)
+                    if($verbose)
                         echo 'Tree '.$treeMeta.' is up to date! Last updated '.($lastUpdated-$treeMeta).' seconds ago. Not getting from cache.'.EOL;
                     continue;
                 }
@@ -823,15 +867,14 @@ namespace IOFrame{
                         $this->lastUpdateTimes[$treeName] = $treeMeta;
                         $this->isInitArray[$treeName] = true;
                     }
-                    else{
+                    if($verbose)
                         echo 'Tree '.$treeMeta.' updated from cache to '.$treeJSON.', freshness: '.$treeMeta.EOL;
-                    }
                 }
                 else
                     $res = false;
             }
             //If everything was found in cache, update return true. Else false.
-            if($test)
+            if($verbose)
                 echo ($res)? 'All trees are initiated!'.EOL : 'Not all trees are initiated!'.EOL ;
             return $res;
         }
@@ -839,24 +882,27 @@ namespace IOFrame{
 
         /** Tries to update the cache.
          *
-         * @param array $params Nothing for now.
-         * @param mixed $test
+         * @param array $params of the form:
+         *                      'remove' => mixed, if set will remove from cache, otherwise add to cache
          *
          * @returns true on success, false on failure
          *
          */
-        function updateCache($params = [], $test = false){
+        function updateCache( array $params = []){
             if(!$this->useCache)
                 return false;
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
 
             //Removes the tree from cache
             if(isset($params['remove'])){
                 if(!$test){
                     $this->redisHandler->call('del',['_tree_'.$params['remove'],'_tree_meta_'.$params['remove']]);
                 }
-                else{
+                if($verbose)
                     echo 'Removing cache of tree '.$params['remove'].EOL;
-                }
             }
             //Updates cache with current trees
             else{
@@ -869,12 +915,11 @@ namespace IOFrame{
                             $this->redisHandler->call('set',['_tree_'.$treeName,$treeJSON]);
                             $this->redisHandler->call('set',['_tree_meta_'.$treeName,$treeMeta]);
                         }
-                        else{
+                        if($verbose)
                             echo 'Updating cache of tree '.$treeName.' to '.$treeJSON.' at '.$treeMeta.EOL;
-                        }
                     }
                     else{
-                        if($test)
+                        if($verbose)
                             echo 'Tree cache '.$treeName.' is up to date!'.EOL;
                     }
                 }
@@ -883,19 +928,25 @@ namespace IOFrame{
         }
 
         /** Gets a subtree by ID.
-        // Will either returns the resulting Euler subtree or assoc subtree, depending on $returntype.
-        // Will always return the node offset relative to root (so node 3 becomes 0 - the new root - with offset 3, for example)
-        // The offset is not returned - the user can remember that the offset always equals the $nodeID they provided
+         * The offset is not returned - the user can remember that the offset always equals the $nodeID they provided
          *
          * @param string $treeName Name of tree to get subtree of
-         * @param int $nodeID ID of the node to get subtree of. If it's 0, returns the whole tree.
-         * @param string $returntype The resulting tree, either 'euler' (default) or 'assoc'.
-         * @param mixed $test
+         * @param array $params of the form:
+         *                              'returnType' string default 'euler' - The resulting tree, either 'euler' (default) or 'assoc'.
+         *                              'nodeID' int default 0 - ID of the node to get subtree of. If it's 0, returns the whole tree.
          *
          * @returns array A Euler/Associated tree array
          *
          */
-        function getSubtreeByID(string $treeName, int $nodeID = 0, string $returnType = 'euler',$test = false){
+        function getSubtreeByID(string $treeName, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            isset($params['returnType'])?
+                $returnType = $params['returnType'] : $returnType = 'euler';
+            isset($params['nodeID'])?
+                $nodeID = $params['nodeID'] : $nodeID = 0;
+
             if(!isset($this->treeArrays[$treeName]))
                 return 0;
             $eulerArray = $this->treeArrays[$treeName];
@@ -920,7 +971,7 @@ namespace IOFrame{
 
                 $tempEulerArray = [];
                 $childrenNumber = ($this->treeArrays[$treeName][$nodeID]['largestEdge'] - $this->treeArrays[$treeName][$nodeID]['smallestEdge'] - 1)/2;
-                if($test)
+                if($verbose)
                     echo 'Number of children for node '.$nodeID.' in tree '.$treeName.' is '.$childrenNumber.EOL;
                 //The new root is the given node
                 $tempEulerArray[0] = [
@@ -937,7 +988,7 @@ namespace IOFrame{
                 }
                 $eulerArray = $tempEulerArray;
             }
-            if($test){
+            if($verbose){
                 echo 'Resulting euler array for '.$nodeID.' in tree '.$treeName.' is :';
                 var_dump($eulerArray);
             }
@@ -1020,12 +1071,11 @@ namespace IOFrame{
          *               'childNum' => Which child to attach the nodes to. Default 0 -  Means it will be the leftmost (first).
          *               'updateDB'=> If true, will update the DB.
          *              ]
-         * @param mixed $test
          *
          * @return int 0 on success
          *             1 If the tree or specified node do not exist
          */
-        function linkNodesToID(string $treeName, array $newNodes, int $targetID, array $params = [],$test = false){
+        function linkNodesToID(string $treeName, array $newNodes, int $targetID, array $params = []){
 
             //Obviously we need an existing tree to link to
             if(array_search($treeName,$this->treeNames) === false)
@@ -1034,6 +1084,10 @@ namespace IOFrame{
                 return 1;
 
             //Set defaults
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
             if(!isset($params['childNum']))
                 $childNum = 0;
             else{
@@ -1087,8 +1141,7 @@ namespace IOFrame{
                 $this->sqlHandler->updateTable($tname,
                     ['largestEdge = largestEdge + '.(string)($offset*2)],
                     $offsetChainToRoot,
-                    [],
-                    $test
+                    ['test'=>$test,'verbose'=>$verbose]
                 );
             }
 
@@ -1109,8 +1162,7 @@ namespace IOFrame{
                         'largestEdge = largestEdge + '.(string)($offset*2)
                     ],
                     ['ID',$trueOffsetStart,'>'],
-                    ['orderBy'=>'ID','orderType'=>'desc'],
-                    $test
+                    ['orderBy'=>'ID','orderType'=>'desc','test'=>$test,'verbose'=>$verbose]
                 );
             }
 
@@ -1134,14 +1186,12 @@ namespace IOFrame{
                 $this->sqlHandler->insertIntoTable($tname,
                     ['ID', 'content', 'smallestEdge', 'largestEdge'],
                     $insertArray,
-                    [],
-                    $test
+                    ['test'=>$test,'verbose'=>$verbose]
                 );
                 $this->sqlHandler->updateTable($metaname,
                     ['settingValue = '.(string)(time())],
                     ['settingKey','_Last_Changed','='],
-                    [],
-                    $test
+                    ['test'=>$test,'verbose'=>$verbose]
                 );
             }
 
@@ -1151,7 +1201,7 @@ namespace IOFrame{
                 $this->assocTreeArrays[$treeName] = $this->eulerToAssoc($tempArr);
                 $this->numberedTreeArrays[$treeName] = $this->assocToNumbered($this->assocTreeArrays[$treeName]);
             }
-            else{
+            if($verbose){
                 echo 'Euler and Assoc arrays:'.EOL;
                 var_dump($tempArr);
                 var_dump($this->eulerToAssoc($tempArr));
@@ -1159,7 +1209,7 @@ namespace IOFrame{
             }
 
             //Update the cache
-            $this->updateCache([],$test);
+            $this->updateCache(['test'=>$test,'verbose'=>$verbose]);
             return 0;
         }
 
@@ -1170,10 +1220,10 @@ namespace IOFrame{
          * @param int $targetID Existing node is selected by ID.
          * @param array $params of the form:
          *              [
-         *               'link' => If it's set. The function called is linkNodesToID($link[0],$removedSubtree,$link[1],$link[2],$test)
+         *               'link' => If it's set. The function called is
+         *                      linkNodesToID($link[0],$removedSubtree,$link[1],['childNum'=>$link[2],'updateDB'=>$updateDB])
          *               'updateDB'=> If true, will update the DB.
          *              ]
-         * @param mixed $test
          *
          * @returns mixed
          *              The cut sub-tree, depending on returnType, if 'link' is not set
@@ -1181,8 +1231,9 @@ namespace IOFrame{
          *              1 If the tree to cut from does not exist
          *              2 If the tree to link to does not exist
          *              3 If you try to link to one of the nodes you removed in the same tree
+         *              4 DB Error
          */
-        function cutNodesByID($treeName,$targetID, $params = [],$test = false){
+        function cutNodesByID(string $treeName, int $targetID, array $params = []){
 
             //Obviously we need an existing tree to cut from
             if(array_search($treeName,$this->treeNames) === false)
@@ -1191,6 +1242,10 @@ namespace IOFrame{
                 return 1;
 
             //Set defaults
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
             if(!isset($params['link']))
                 $link = false;
             else{
@@ -1227,13 +1282,13 @@ namespace IOFrame{
                     unset($this->treeArrays[$treeName]);
                     unset($this->assocTreeArrays[$treeName]);
                     unset($this->numberedTreeArrays[$treeName]);
-                    $this->updateCache(['remove'=>$treeName],$test);
+                    $this->updateCache(['remove'=>$treeName,'test'=>$test,'verbose'=>$verbose]);
                 }
-                else{
+                if($verbose)
                     echo 'Deleting tree '.$treeName.'!'.EOL;
-                }
-                $this->updateDB($treeName,['onlyEmpty'=>false,'override'=>true],$test);
-                return $res;
+
+                $res = $this->updateDB($treeName,['onlyEmpty'=>false,'override'=>true,'test'=>$test,'verbose'=>$verbose]);
+                return $res===true ? 0 : 4;
             }
 
             //Number of nodes we are removing
@@ -1269,8 +1324,7 @@ namespace IOFrame{
                 $this->sqlHandler->updateTable($tname,
                     ['largestEdge = largestEdge - '.(string)($edgeOffset)],
                     $offsetChainToRoot,
-                    [],
-                    $test
+                    ['test'=>$test,'verbose'=>$verbose]
                 );
             }
 
@@ -1281,14 +1335,12 @@ namespace IOFrame{
             if($updateDB){
                 $this->sqlHandler->deleteFromTable($tname,
                     [['ID', $targetID, '>='],['ID', $targetID+$offset, '<'],'AND'],
-                    [],
-                    $test
+                    ['test'=>$test,'verbose'=>$verbose]
                 );
                 $this->sqlHandler->updateTable($metaname,
                     ['settingValue = '.(string)(time())],
                     ['settingKey','_Last_Changed','='],
-                    [],
-                    $test
+                    ['test'=>$test,'verbose'=>$verbose]
                 );
             }
 
@@ -1310,13 +1362,12 @@ namespace IOFrame{
                         'largestEdge = largestEdge - '.(string)($edgeOffset)
                     ],
                     ['ID',$trueOffsetStart,'>'],
-                    [],
-                    $test
+                    ['test'=>$test,'verbose'=>$verbose]
                 );
             }
 
             //Save subtree to be linked if we are linking the content later
-            $removedSubtree = $this->getSubtreeByID($treeName,$targetID,$returnType);
+            $removedSubtree = $this->getSubtreeByID($treeName,['returnType'=>$returnType,'nodeID'=>$targetID,'test'=>$test,'verbose'=>$verbose]);
 
             //var_dump($tempArr);
             if(!$test){
@@ -1324,7 +1375,7 @@ namespace IOFrame{
                 $this->assocTreeArrays[$treeName] = $this->eulerToAssoc($tempArr);
                 $this->numberedTreeArrays[$treeName] = $this->assocToNumbered($this->assocTreeArrays[$treeName]);
             }
-            else{
+            if($verbose){
                 echo 'Euler and Assoc arrays:'.EOL;
                 var_dump($tempArr);
                 var_dump($this->eulerToAssoc($tempArr));
@@ -1355,9 +1406,9 @@ namespace IOFrame{
                         }
                     }
                     $link[2]['updateDB'] = false;
-                    $res = $this->linkNodesToID('@tempTree',$removedSubtree,$link[1],$link[2],true);
+                    $res = $this->linkNodesToID('@tempTree',$removedSubtree,$link[1],['childNum'=>$link[2],'test'=>true,'updateDB'=>$updateDB,'verbose'=>$verbose]);
                     //Remove the temp tree
-                    $this->removeTrees(['@tempTree'=>['updateDB'=>false,'onlyEmpty'=>false]],false);
+                    $this->removeTrees(['@tempTree'=>['updateDB'=>false,'onlyEmpty'=>false]],['test'=>false]);
                     //The tree has to exist - so only the node may not exist!
                     return ($res == 0)? 0 : 2;
                 }
@@ -1374,7 +1425,7 @@ namespace IOFrame{
                         $link[1] -= $offset;
                     }
                 }
-                $res = $this->linkNodesToID($link[0],$removedSubtree,$link[1],$link[2],false);
+                $res = $this->linkNodesToID($link[0],$removedSubtree,$link[1],['childNum'=>$link[2],'updateDB'=>$updateDB]);
                 //The tree has to exist - so only the node may not exist!
                 return ($res == 0)? 0 : 2;
             }
@@ -1382,42 +1433,60 @@ namespace IOFrame{
             return $removedSubtree;
         }
 
-        //Returns all assoc trees
+        /** Returns all Assoc trees
+         * @returns string[] Array of available Assoc trees
+         */
         function getAssocTrees(){
             return $this->assocTreeArrays;
         }
 
-        //Returns all euler trees
+        /** Returns all Euler trees
+         * @returns string[] Array of available Euler trees
+         */
         function getTrees(){
             return $this->treeArrays;
         }
 
-        //Returns all numbered trees
+        /** Returns all Numbered trees
+         * @returns string[] Array of available Numbered trees
+         */
         function getNumberedTrees(){
             return $this->numberedTreeArrays;
         }
 
-        //Returns assoc tree $name
-        function getAssocTree($name){
+        /**
+         * @param string $name
+         * @returns array[] Assoc tree representation
+         */
+        function getAssocTree(string $name){
             return isset($this->assocTreeArrays[$name])? $this->assocTreeArrays[$name] : null;
         }
 
-        //Returns euler tree $name
-        function getTree($name){
+
+        /**
+         * @param string $name
+         * @returns array[] Euler tree representation
+         */
+        function getTree(string $name){
             return isset($this->treeArrays[$name])? $this->treeArrays[$name] : null;
         }
 
-        //Returns numbered tree $name
-        function getNumberedTree($name){
+        /**
+         * @param string $name
+         * @returns array[] Numbered tree representation
+         */
+        function getNumberedTree(string $name){
             return isset($this->numberedTreeArrays[$name])? $this->numberedTreeArrays[$name] : null;
         }
 
-        //Gets all available trees from the tree map
+        /** Gets all available trees from the tree map
+         * @returns string[] Array of all available trees (in the DB)
+        */
         function getTreeMap(){
             $res = [];
 
             $mapname = strtoupper($this->sqlHandler->getSQLPrefix().'TREE_MAP');
-            $trees = $this->sqlHandler->selectFromTable($mapname,[],[],[],false);
+            $trees = $this->sqlHandler->selectFromTable($mapname,[],[],['test'=>false]);
             foreach($trees as $treeArray){
                 array_push($res,$treeArray['treeName']);
             }

@@ -6,10 +6,10 @@
 function checkPageMapAuth($sesInfo, $auth){
     $res = false;
     //First, check if the rank of the user is 0
-    if($sesInfo['Rank'] == 0)
+    if($sesInfo!== null &&$sesInfo['Rank'] == 0)
         $res = true;
     //If not, check USER_AUTH for the action 'Assign_Objects'
-    if(!$res){
+    if(!$res && $sesInfo!== null){
         $res = $auth->hasAction('ASSIGN_OBJECT_AUTH');
     }
     return $res;
@@ -61,7 +61,7 @@ if(!isset($auth))
 //Check if the user is autorized to modify page/object assignments in general
 if(!checkPageMapAuth($sesInfo, $auth)){
     if($test)
-        echo 'User '.$sesInfo['ID'].' is not authorized to modify  page/object assignments! ';
+        echo 'User is not authorized to modify  page/object assignments! ';
     exit('3');
 }
 

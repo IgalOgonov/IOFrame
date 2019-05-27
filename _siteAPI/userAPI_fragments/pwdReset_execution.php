@@ -11,15 +11,15 @@ if(!isset($userHandler))
 
 //Attempts to send a mail to the user requiring password reset.
 if($inputs['mail'] !== null){
-    $result = $userHandler->pwdResetSend($inputs['mail'],$test);
+    $result = $userHandler->pwdResetSend($inputs['mail'],['test'=>$test]);
 }
 
 //Checks if the info provided by the user was correct, if so authorizes the Session to reset the password for a few minutes.
 else if($inputs['id'] !== null and $inputs['code'] !== null ){
 
-    $result = $userHandler->pwdResetConfirm($inputs['id'], $inputs['code'],$test);
+    $result = $userHandler->pwdResetConfirm($inputs['id'], $inputs['code'],['test'=>$test]);
 
-    if( $result == 0 ){
+    if($result){
         if(!isset($userSettings))
             $userSettings = new IOFrame\settingsHandler(
                 $settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/userSettings/',

@@ -29,7 +29,7 @@ if(!$test){
             $lockHandler = new IOFrame\lockHandler($url);
             $fileHandler = new IOFrame\fileHandler();
             $plugList = new IOFrame\settingsHandler($sqlHandler->getSQLPrefix().'_siteFiles/plugins/');
-            $plugName = $pluginHandler->getInfo($name)[0];
+            $plugName = $pluginHandler->getInfo(['name'=>$name])[0];
             //-------Check if the plugin is installed
             if($plugList->getSetting($name) == 'installed' || $plugList->getSetting($name) == 'zombie' || $plugList->getSetting($name) == 'installing'){
                 echo 'Plugin '.$name.' is either installed, installing or zombie!'.EOL;
@@ -56,7 +56,7 @@ if(!$test){
 
             foreach($dependencies as $dep => $versions){
                 //Remember - $versions[0] is min version, [1] max version.
-                $dep = $pluginHandler->getInfo($dep)[0];
+                $dep = $pluginHandler->getInfo(['name'=>$dep])[0];
                 ( $dep['status']=='active' && isset($dep['version']) && filter_var((int)$dep['version'],FILTER_VALIDATE_INT) )?
                     $ver = (int)$dep['version']:
                     $ver = -1;
@@ -67,17 +67,17 @@ if(!$test){
             }
             //-------Change plugin to "installing"
             if(!$test)
-                $plugList->setSetting($name,'installing',true);
+                $plugList->setSetting($name,'installing',['createNew'=>true]);
 
             //-------Time to validate (then update) definitions if the exist
             if(file_exists($url.'definitions.json')){
-                if(!$pluginHandler->validatePluginFile($url,'definitions',false,$test)){
+                if(!$pluginHandler->validatePluginFile($url,'definitions',['isFile'=>false,'test'=>$test])){
                     echo 'Definitions for '.$name.' are not valid!'.EOL;
                     return 5;
                 }
                 //Now add the definitions to the system definition file
                 try{
-                    $gDefUrl = $settings->getSetting('absPathToRoot').'_Core/definitions/';
+                    $gDefUrl = $settings->getSetting('absPathToRoot').'_siteFiles/definitions/';
                     //Read definition files - and merge them
                     $defFile = $fileHandler->readFileWaitMutex($url,'definitions.json',['lockHandler' => $lockHandler]);
                     if($defFile != null){       //If the file is empty, don't bother doing work
@@ -102,7 +102,7 @@ if(!$test){
                     try{
                         $options = [];
                         require $url.'quickUninstall.php';
-                        $plugList->setSetting($name,null,true);
+                        $plugList->setSetting($name,null,['createNew'=>true]);
                     }
                     catch (Exception $e){
                         echo 'Exception during definition inclusion of plugin '.$name.': '.$e.EOL;
@@ -138,10 +138,10 @@ if(!$test){
             }
 
             //-------Populate dependency map
-            $pluginHandler->populateDependencies($name,$dependencies,$test);
+            $pluginHandler->populateDependencies($name,$dependencies,['test'=>$test]);
             if(!$test){
                 //-------Change plugin to "installed"
-                $plugList->setSetting($name,'installed',true);
+                $plugList->setSetting($name,'installed',['createNew'=>true]);
                 //-------Add to order list
                 $pluginHandler->pushToOrder($name);
             }

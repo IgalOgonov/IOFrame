@@ -1,6 +1,6 @@
 <?php
 /*For now basic, this is the admin panel for this CMS framework*/
-if(!require __DIR__ . '/../_Core/coreInit.php')
+if(!require __DIR__ . '/../_main/coreInit.php')
     echo 'Core utils unavailable!'.'<br>';
 
     $dirToRoot = IOFrame\htmlDirDist($_SERVER['PHP_SELF'],$settings->getSetting('pathToRoot'));

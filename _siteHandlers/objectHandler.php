@@ -14,7 +14,28 @@ namespace IOFrame{
      * Object_Cache_Meta.
      */
 
+    //TODO optimize calls to redis - should use mGet/mSet instead of get/set for retrieving cached objects/groups/maps
+
     class objectHandler extends abstractDBWithCache {
+
+        /** @var String This variable indicates the name of the table to query.
+         *  The default system-wide table is 'OBJECTS_<CACHE/MAP/CACHE_META>', however different plugins
+         *  may create different object tables (for example - 'COMMENT_<CACHE/MAP/CACHE_META>').
+         *  This variable indicates the name of the table (group) we are operating on.
+        */
+        protected $tableName = 'OBJECT';
+
+
+        /**
+         * @var String Just a lowercase tableName for cache usege.
+         */
+        protected $cacheName = 'object';
+
+        /**
+         * @var Int Tells us for how long to cache stuff by default.
+         * 0 means indefinitely.
+        */
+        protected $cacheTTL = 3600;
 
         /**
          * Basic construction function, with added connection if it exists
@@ -26,6 +47,15 @@ namespace IOFrame{
         function __construct(settingsHandler $settings,  $params = []){
 
             parent::__construct($settings,$params);
+
+            //If we are operating on a different table than the default one, it must be passed to the Handler.
+            if(isset($params['tableName'])){
+                $this->tableName = strtoupper($params['tableName']);
+                $this->cacheName = strtolower($params['tableName']);
+            }
+            //If we are caching for a custom duration, this should stated here
+            if(isset($params['cacheTTL']))
+                $this->cacheTTL = $params['cacheTTL'];
         }
 
 
@@ -58,7 +88,6 @@ namespace IOFrame{
          *                                                 Notice that this has to be validated - invalid input causes an
          *                                                 exception to be thrown. This example, for instance, only works if
          *                                                 the number of objects is 3.
-         * @param bool $test           - Will not perform any DB actions if test isn't false, and instead echo messages.
          * @returns mixed Codes:
          *                  -2  Group exists, insufficient authorization to add object to group
          *                  -1 if you are not logged in
@@ -67,10 +96,8 @@ namespace IOFrame{
          *                OR
          *                  Array of the form ['ID' => <new object ID>] on success
          * */
-        function addObject(string $obj, string $group = '', int $minModifyRank = 0, int $minViewRank = -1,
-                           array $params = [], bool $test = false)
-        {
-            $res = $this->addObjects([[$obj,$group,$minModifyRank,$minViewRank]],$params,$test);
+        function addObject(string $obj, string $group = '', int $minModifyRank = 0, int $minViewRank = -1,array $params = []){
+            $res = $this->addObjects([[$obj,$group,$minModifyRank,$minViewRank]],$params);
             if(!is_array($res))
                 return $res;
             if(isset($res['ID']))
@@ -80,17 +107,16 @@ namespace IOFrame{
         }
 
 
-        /* Adds an object to the database, in safeString format.
+        /** Adds an object to the database, in safeString format.
          * @param array $inputs        - Inputs from adObject in the same order
-         * @param bool $params         -  Explained in addObject
-         * @param bool $test           - Will not perform any DB actions if test isn't false, and instead echo messages.
+         * @param array $params        -  Explained in addObject
          * @returns mixed Array of the form:
-         *                  "ID":<ID of the **FIRST OBJECT OF ALL THOSE INSERTED**> on Success
+         *                  "ID":<**CONSTANT** ID of the **FIRST OBJECT OF ALL THOSE INSERTED**> on Success
          *                  <Object number in input array>:<Error code> where the error codes ar from addObject
          *                OR
          *                1 if there is a conflict in the extra content/columns
          * */
-        function addObjects(array $inputs, $params = [], bool $test = false){
+        function addObjects(array $inputs, $params = []){
 
 
             //It would be better to do it all with 1 query, due to authentication this is not possible until stored-procedure reimplementation.
@@ -100,11 +126,16 @@ namespace IOFrame{
             $groupsToCreate = [];
             $gChange = [];      //Groups to change
             $gCreate = [];      //Groups to create
-            $sesInfo = json_decode($_SESSION['details'], true);
+            $sesInfo = isset($_SESSION['details'])? json_decode($_SESSION['details'], true) : null;
             $updateTime = time();
-            $tableName = $this->sqlHandler->getSQLPrefix().'OBJECT_CACHE';
+            $tableName = $this->sqlHandler->getSQLPrefix().$this->tableName.'_CACHE';
             $res = [];
             //set default params
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
             if(!isset($params['safeStr']))
                 $safeStr = true;
             else
@@ -126,7 +157,7 @@ namespace IOFrame{
                 $extraContent = $params['extraContent'];
 
             //You must be logged in to use this handler, as it checks the caller's rank and ID.
-            if(!assertLogin()){
+            if(!assertLogin() || $sesInfo == null){
                 foreach($inputs as $i=>$input){
                     $res[$i] = -1;
                 }
@@ -163,7 +194,7 @@ namespace IOFrame{
 
             //Retrieve all marked groups
             if($groups != [])
-                $groups = $this->retrieveGroups($groups,[],$test);
+                $groups = $this->retrieveGroups($groups,$params);
 
             //Group related
             foreach($objects as $inputOrderID => $obj){
@@ -176,8 +207,8 @@ namespace IOFrame{
                     //Check whether group exists
                     if($groupInfo != 1){
                         //Check user authorization
-                        if(!$this->checkObAddGroupAuth($groupInfo, $sesInfo,true, $test)){
-                            if($test)
+                        if(!$this->checkObAddGroupAuth($groupInfo, $sesInfo,true, ['test'=>$test,'verbose'=>$verbose])){
+                            if($verbose)
                                 echo 'Could not create object because user lacks authorization to add objects to group '.$groupName.'! ';
                             $res[$inputOrderID] = -2;
                         }
@@ -242,8 +273,7 @@ namespace IOFrame{
                     $tableName,
                     $columns,
                     $updateParams,
-                    [],
-                    $test
+                    ['test'=>$test,'verbose'=>$verbose]
                 );
             }
             else
@@ -260,9 +290,9 @@ namespace IOFrame{
             //Get last inserted ID
             $res = $this->sqlHandler->lastInsertId();
             //Create new groups
-            $this->createGroups($groupsToCreate,$sesInfo,$test);
+            $this->createGroups($groupsToCreate,$sesInfo,$params);
             //Update other groups
-            $this->updateGroups($groupsToUpdate,$test);
+            $this->updateGroups($groupsToUpdate,$params);
 
             return $res;
 
@@ -319,10 +349,9 @@ namespace IOFrame{
             int $mainOwner = null,
             array $addOwners = [],
             array $remOwners = [],
-            array $params = [],
-            bool $test = false
+            array $params = []
         ){
-            $res = $this->updateObjects([[$id,$content,$group,$newVRank,$newMRank,$mainOwner,$addOwners,$remOwners]],$params,$test);
+            $res = $this->updateObjects([[$id,$content,$group,$newVRank,$newMRank,$mainOwner,$addOwners,$remOwners]],$params);
             if(is_array($res))
                 return $res[$id];
             else
@@ -330,13 +359,15 @@ namespace IOFrame{
         }
 
 
-        /* Basically runs updateObject on array $arr where $arr[i][0]..[i][7] are $id, $content, $group, $newVRank, $newMRank,
-         * $mainOwner, $newOwners and $remOwners respectively.
-         * Returns  0 if no errors occured,
-         *          and the array of errors otherwise.
+        /* Basically runs updateObject on array $inputs where $inputs[i][0]..[i][7] are $id, $content, $group, $newVRank, $newMRank,
+         * $mainOwner, $newOwners and $remOwners respectively, and $params is the same as in updateObject().
+         * @param array $inputs
+         * @param array $params
+         * @returns  0 if no errors occured,
+         *          and the array of (<object ID> => <updateObject error code>) otherwise.
          * TODO *SHOULD* be remade using a stored procedure - doesn't support cuncurrent use at current state
          */
-        function updateObjects($inputs, $params = [], $test = false){
+        function updateObjects($inputs, $params = []){
 
             //You must be logged in to use this handler, as it checks the caller's rank and ID.
             if(!assertLogin())
@@ -352,9 +383,14 @@ namespace IOFrame{
             $objectsToSet = []; //array of objects to set, and how to set them
             $sesInfo = json_decode($_SESSION['details'], true);
             $updateTime = time();
-            $tableName = $this->sqlHandler->getSQLPrefix().'OBJECT_CACHE';
+            $tableName = $this->sqlHandler->getSQLPrefix().$this->tableName.'_CACHE';
 
             //set default params
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
             if(!isset($params['safeStr']))
                 $safeStr = true;
             else
@@ -374,6 +410,11 @@ namespace IOFrame{
                 $extraContent = [];
             else
                 $extraContent = $params['extraContent'];
+
+            if(isset($params['cacheTTL']))
+                $cacheTTL = $params['cacheTTL'];
+            else
+                $cacheTTL = $this->cacheTTL;
 
             //First check all inputs, and
             foreach($inputs as $key=>$input){
@@ -405,9 +446,10 @@ namespace IOFrame{
             $columnsToGet = array_merge(
                 ['ID','Ob_Group','Last_Updated', 'Owner', 'Owner_Group', 'Min_Modify_Rank','Min_View_Rank','Object','Meta']
             );
-            $objectsReceived = $this->retrieveObjects($objectsToGet,$columnsToGet,$test);
+            $params['columns'] = $columnsToGet;
+            $objectsReceived = $this->retrieveObjects($objectsToGet,$params);
 
-            if($objectsReceived == 1){
+            if($objectsReceived == []){
                 foreach($objectsToGet as $objId){
                     $res[$objId] = 4;
                 }
@@ -420,17 +462,17 @@ namespace IOFrame{
                 //If the object does not exist, set its result to 4 and unset it
                 if($object == 1){
                     $res[$objId] = 4;
-                    if($test){
+                    if($verbose){
                         echo 'Cannot update object '.$objId.', does not exist!'.EOL;
                     }
                 }
                 else{
                     //If we are modifying owners, we got to confirm strict ownership - else, normal ownership
                     $auth = ($objectsToSet[$objId][5] !== null || $objectsToSet[$objId][6] != [] || $objectsToSet[$objId][7] != [])?
-                        $this->checkObAuth($object, 1, 1) : $this->checkObAuth($object, 1, 0);
+                        $this->checkObAuth($object, ['type'=>1,'strict'=>1]) : $this->checkObAuth($object, ['type'=>1,'strict'=>0]);
                     if(!$auth){
                         $res[$objId] = 2;
-                        if($test){
+                        if($verbose){
                             echo 'User with id '.$sesInfo['ID'].' cannot update object '.$objId.EOL;
                         }
                     }
@@ -519,7 +561,7 @@ namespace IOFrame{
                     unset($objectsToSet[$objId]);
             }
             //Retrieve all marked groups
-            $groups = $this->retrieveGroups($groups,[],$test);
+            $groups = $this->retrieveGroups($groups,$params);
             //Group related
             foreach($objectsToSet as $objId => $object){
                 $oldGroup = $object['Ob_Group'][0];
@@ -531,9 +573,9 @@ namespace IOFrame{
                         //If the new group is not null, we are changing something, else we are changing nothing
                         if($newGroup !== null){
                             //See if intended group exists
-                            if($groups[$newGroup]!=1){
+                            if($groups!=[] && $groups[$newGroup]!=1 ){
                                 //See if we can add to the intended group
-                                if(!$this->checkObAddGroupAuth($groups[$newGroup],$sesInfo,true,$test)){
+                                if(!$this->checkObAddGroupAuth($groups[$newGroup],$sesInfo,true,['test'=>$test,'verbose'=>$verbose])){
                                     $res[$objId] = 3;
                                     continue;
                                 }
@@ -582,9 +624,10 @@ namespace IOFrame{
             //---- At this point, we have all the objects we want to update, and all the groups we need to create/update/delete
             $updateParams = [];
             foreach($objectsToSet as $id=>$obj){
+                $objectsToSet[$id]['Ob_Group'] = $objectsToSet[$id]['Ob_Group'][1];
                 $updateArray = [
                     $id,
-                    [$obj['Ob_Group'][1],'STRING'],
+                    [$objectsToSet[$id]['Ob_Group'],'STRING'],
                     [(string)$updateTime,'STRING'],
                     $obj['Owner'],
                     [$obj['Owner_Group'],'STRING'],
@@ -612,22 +655,34 @@ namespace IOFrame{
                 $tableName,
                 $columnsToSet,
                 $updateParams,
-                ['onDuplicateKey'=>true],
-                $test
+                ['onDuplicateKey'=>true,'test'=>$test,'verbose'=>$verbose]
             );
+
+            //If we failed, return 5 for all objects that weren't set yet
             if($request !== true){
-                //If we failed, return 5 for all objects that weren't set yet
                 foreach($objectsToSet as $val){
                     if(!isset($res[$val[0]]))
                         $res[$val[0]] = 5;
                 }
                 return $res;
             }
+            //If the request succeeded, add everything to cache
+            else{
+                //No need to continue if the system does not have a cache. or doesn't use it
+                if( isset($this->defaultSettingsParams['useCache']) && $this->defaultSettingsParams['useCache'] ){
+                    foreach($objectsToSet as $id=>$obj){
+                        if(!$test)
+                            $this->redisHandler->call('set',['ioframe_'.$this->cacheName.'_id_'.$id,json_encode($obj),$cacheTTL]);
+                        if($verbose)
+                            echo 'Adding object '.$id.' to cache for '.$cacheTTL.' seconds as '.json_encode($obj).EOL;
+                    }
+                }
+            }
 
             //Create new groups
-            $this->createGroups($groupsToCreate,$sesInfo,$test);
+            $this->createGroups($groupsToCreate,$sesInfo,$params);
             //Update other groups
-            $this->updateGroups($groupsToUpdate,$test);
+            $this->updateGroups($groupsToUpdate,$params);
 
             if($res === [])
                 $res = 0;
@@ -635,23 +690,26 @@ namespace IOFrame{
         }
 
 
-        /* Retrieves an object , where $id is the object ID and $updated is the time before which you don't need a new object -
-         * meaning, if you set $updated = 1500000001, and the last time an object was updated is 1500000000,
-         * you wont get that object. If you want to get an object either way, set $updated = 0.
+        /** Retrieves an object
+         * @param int $id object ID
+         * @param int $updated the time before which you don't need a new object -
+         *                     meaning, if you set $updated = 1500000001, and the last time an object was updated is 1500000000,
+         *                     you wont get that object. If you want to get an object either way, set $updated = 0.
          * @param array $params of the form:
-         *              'safeStr' => bool, Defualt true. Converts object content to normal string from safeString.
+         *              'safeStr' => bool, Default true. Converts object content to normal string from safeString.
          *              'extraColumns' => array, default []. Gets additional columns of an object.
          *                                  Meant for extensions to this module.
          *
-         * Returns:     Array of the form {<objectID>:"<object>",group:"<groupName>"} - not that the object IS encoded in SafeSTR
+         * @returns mixed
+         *              Array of the form {<objectID>:"<DB content>"} - note that object['conent'] IS encoded in SafeSTR by default
          *              0 if you can view the object yet $updated is bigger than the object's Last_Updated field.
          *              1 if object of specified ID doesn't exist.
          *              2 if insufficient authorization to view the object.
          *              3 general error
         */
-        function getObject(int $id, int $updated = 0, array $params = [], $test = false){
+        function getObject(int $id, int $updated = 0, array $params = []){
             //Default params are set in getObjects
-            $obj = $this->getObjects([[$id,$updated]],$params,$test);
+            $obj = $this->getObjects([[$id,$updated]],$params);
             if(!isset($obj[$id])){
                 $res = $obj['Errors'][$id];
             }
@@ -665,21 +723,34 @@ namespace IOFrame{
         }
 
 
-        /* Retrieve an array of objects, Returns array of {"ObjectID": "Content","ObjectID":"Content"..."Errors":"{...}"}
-           for
-         * Returns  Array of objects with an additional element "Errors" which is an array of error return codes in the format, of
-         *          the structure {"ObjectID1":"Contents","ObjectID2":"Contents"..., "Errors":"{"ObjectID":"ErrorID"}" }.
-         *          Note that 0 is considered an error in this context.
-         *          Note that the combined array length of the main JSON array and the Errors array is the size of $arr.
+        /** Retrieve an array of objects, Returns array
+         *  Where the
+         * @param array $inputs 2D array, where $inputs[i][0-1] are $id and $updated from getObject()
+         * @param array $params as in getObject()
+         * @returns array
+         *      An array of objects with an additional element "Errors" which is an array of error return codes from getObject(),
+         *      that looks like:
+         *      {
+         *      <ObjectID>:<Content>,
+         *      <ObjectID>:<Content> ...,
+         *      "Errors":{
+         *          <ObjectID>:<Error Code>,
+         *          ...
+         *      }
+         *      }
             */
-        function getObjects($inputs, $params = [], $test = false){
-
+        function getObjects(array $inputs, array $params = []){
             $ids = [];          //Requested IDs
             $res = [];          //Results, of the array form {<ObjectID>=><objectData>}
             $errors = [];
             $times = [];        //Times for each object
 
             //set default params
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
             if(!isset($params['safeStr']))
                 $safeStr = true;
             else
@@ -704,35 +775,34 @@ namespace IOFrame{
                 ['ID','Ob_Group','Last_Updated', 'Owner', 'Owner_Group', 'Min_Modify_Rank','Min_View_Rank','Object','Meta'],
                 $extraColumns
             );
+            $params['columns'] = $columnsToGet;
             $objs = $this->retrieveObjects(
                 $ids,
-                $columnsToGet,
-                $test
+                $params
             );
-
             //In case no objects were found, what can we do..
-            if($objs == 1){
-                if($test)
+            if($objs == []){
+                if($verbose)
                     echo 'No objects exist!'.EOL;
             }
             else
                 foreach($objs as $objID=>$obj){
                     //See if object exists
                     if ($obj == 1){
-                        if($test)
+                        if($verbose)
                             echo 'object '.$objID.' doesnt exist!'.EOL;
                         $errors[$objID] = 1;
                     }
                     else{
                         //Check if the user is authorized to view the object
-                        if(!$this->checkObAuth($obj,0)){
-                            if($test)
+                        if(!$this->checkObAuth($obj,['type'=>0])){
+                            if($verbose)
                                 echo 'User with id '.json_decode($_SESSION['details'], true)['ID'].' not authorized to view object '.$objID.EOL;
                             $errors[$objID] = 2;
                         }
                         //Check if the object has not been updated
                         elseif((int)$obj['Last_Updated'] < $times[$objID]){
-                            if($test)
+                            if($verbose)
                                 echo 'Object '.$objID.' has been last updated at '.$obj['Last_Updated'].', requested time was '.$times[$objID].EOL;
                             $errors[$objID] = 0;
                         }
@@ -757,26 +827,39 @@ namespace IOFrame{
         }
 
 
-        /* Deletes an object with ID $id.
-         * Returns: 0 on success.
+        /** Deletes an object with ID $id.
+         * For example, if time=100000, and $after = true, only objects last updated after unix time 100000 will be deleted.
+         * By default, only objects after time 0 will be deleted - so, any object.
+         *
+         * @param int $id ID of the object to delete
+         * @param int $time Time after/before objects will be deleted.
+         * @param bool $after Whether to allow deletion of objects before or after time
+         * @param array $params
+         * @returns int
+         *          0 on success.
          *          1 if id doesn't exists.
          *          2 if insufficient authorization to modify the object.
          *          3 object exists, too old/new to delete
          *          4 general error
          * */
-        function deleteObject(int $id, int $time = 0, bool $after = true, $test = false){
-            $res = $this->deleteObjects([[$id,$time,$after]],$test);
+        function deleteObject(int $id, int $time = 0, bool $after = true, array $params = []){
+            $res = $this->deleteObjects([[$id,$time,$after]],$params);
             $res = $res[$id];
             return $res;
         }
 
 
-        /* Basically runs deleteObject on array $arr where $arr[i] is the $id.
-         * Returns    array of result codes.
+        /** Basically deleteObject $inputs[i][j] is the j-th parameter in deleteObject.
+         * @param array $inputs 2D array, where each sub array is $id, $time and $after from deleteObject
+         * @param array $params
+         * @return array result codes of the form:
+         *              <id> => <deleteObject result code>.
          */
-        function deleteObjects($inputs, $test = false){
-
-            $tableName = $this->sqlHandler->getSQLPrefix().'OBJECT_CACHE';
+        function deleteObjects(array $inputs, $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            $tableName = $this->sqlHandler->getSQLPrefix().$this->tableName.'_CACHE';
             //You must be logged in to use this handler, as it checks the caller's rank and ID.
             if(!assertLogin())
                 return -1;
@@ -793,11 +876,12 @@ namespace IOFrame{
                 $times[$input[0]] = [$input[1],$input[2]];
             }
             //Get objects from db
-            $objs = $this->retrieveObjects($ids,['ID','Ob_Group','Last_Updated', 'Owner', 'Owner_Group', 'Min_Modify_Rank'],$test);
+            $params['columns'] = ['ID','Ob_Group','Last_Updated', 'Owner', 'Owner_Group', 'Min_Modify_Rank'];
+            $objs = $this->retrieveObjects($ids,$params);
 
             //In case no objects were found, what can we do..
-            if($objs == 1){
-                if($test)
+            if($objs == []){
+                if($verbose)
                     echo 'No objects exist!'.EOL;
                 foreach($res as $key=>$val){
                     $res[$key] = 1;
@@ -808,7 +892,7 @@ namespace IOFrame{
             foreach($objs as $objID=>$obj){
                 //See if object exists
                 if ($obj == 1){
-                    if($test)
+                    if($verbose)
                         echo 'object '.$objID.' doesnt exist!'.EOL;
                     $res[$objID] = 1;
                 }
@@ -819,14 +903,14 @@ namespace IOFrame{
                     else
                         $objInTime = ((int)$obj['Last_Updated'] <= $times[$objID][0]) ? true : false;
                     //Check if the user is authorized to modify the object
-                    if(!$this->checkObAuth($obj,1)){
-                        if($test)
+                    if(!$this->checkObAuth($obj,['type'=>1])){
+                        if($verbose)
                             echo 'User with id '.json_decode($_SESSION['details'], true)['ID'].' not authorized to delete object '.$objID.EOL;
                         $res[$objID] = 2;
                     }
                     //Check if the object is too new/old to delete
                     elseif(!$objInTime){
-                        if($test)
+                        if($verbose)
                             echo 'Object '.$objID.' will not be deleted, as it was last updated at '.$obj['Last_Updated'].' and
                             time constraints are ['.$times[$objID][0].', '.$times[$objID][1].']'.EOL;
                         $res[$objID] = 3;
@@ -841,20 +925,30 @@ namespace IOFrame{
             //As always, check to see the array is not empty - we dont want to delete EVERYTHING (or case an exception in the expression constructor).
             if($idsToDelete != []){
                 //On success, update the values of all objects that are of the default error value
-                if($this->sqlHandler->deleteFromTable($tableName, [$idsToDelete,'OR'], [], $test) === true){
-                    foreach($res as $key=>$val){
-                        if($val == 4)
-                            $res[$key] = 0;
+                $deletionRequest = $this->sqlHandler->deleteFromTable($tableName, [$idsToDelete,'OR'], ['test'=>$test,'verbose'=>$verbose]);
+                if($deletionRequest === true){
+                    $shouldUpdateCache =  isset($this->defaultSettingsParams['useCache']) && $this->defaultSettingsParams['useCache'] ;
+                    foreach($res as $objID=>$result){
+                        if($result == 4)
+                            $res[$objID] = 0;
+                        //If we are using cache, remove the deleted object from there
+                        if($shouldUpdateCache){
+                            if(!$test)
+                                $this->redisHandler->call('del','ioframe_'.$this->cacheName.'_id_'.$objID);
+                            if($verbose)
+                                echo 'Deleting object '.$objID.' from cache!'.EOL;
+                        }
                     }
                     //Now, handle updating the group sizes
-                    $this->updateGroups($groupsToUpdate,$test);
+                    $this->updateGroups($groupsToUpdate,$params);
                 }
             }
-
             return $res;
         }
 
-        /* Returns objects, but this time by groups.
+        /** Returns objects, but this time by groups.
+         *  Unlike normal readObjects, CANNOT USE CACHE
+         * @param string $groupName Name of the group.
          * @param array $params of the form:
          *              'updated', => number default 0. Will only return objects whose "Last_Updated" is bigger than updated.
          *              'safeStr' => bool, Default true. Converts object content to normal string from safeString.
@@ -863,7 +957,8 @@ namespace IOFrame{
          *                                  Meant for extensions to this module.
          *
          * Will convert from safeString to normal string if $fromSafeStr is true.
-         * Returns either an integer, or almost the same array as "getObjects", where:
+         * @return mixed
+         *              either an integer, or almost the same array as "getObjects", where:
          *              Integer codes:
          *                  0 - The whole group is up to date
          *                  1 - The group with this name does not exist
@@ -872,12 +967,16 @@ namespace IOFrame{
          *                  1 - CANNOT BE RETURNED. If You are missing an object ID, it means that object isn't part of the group anymore or was deleted.
          *                  2 if insufficient authorization to view the object.
          * */
-        function getObjectsByGroup($groupName, $params = [], $test = false){
-
+        function getObjectsByGroup(string $groupName, $params = []){
             $errors = [];
             $res = [];
 
             //set default params
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
             if(!isset($params['updated']))
                 $updated = 0;
             else
@@ -927,8 +1026,8 @@ namespace IOFrame{
             );
 
             //Get objects from db
-            $objectName = $this->sqlHandler->getSQLPrefix().'OBJECT_CACHE';
-            $objectGroupName = $this->sqlHandler->getSQLPrefix().'OBJECT_CACHE_META';
+            $objectName = $this->sqlHandler->getSQLPrefix().$this->tableName.'_CACHE';
+            $objectGroupName = $this->sqlHandler->getSQLPrefix().$this->tableName.'_CACHE_META';
             $query =
                 //Select all objects that are not up to date - Unless the whole group is up to date
                 $this->sqlHandler->selectFromTable(
@@ -949,8 +1048,7 @@ namespace IOFrame{
                         'AND'
                     ],
                     $notUpToDateCol,
-                    ['justTheQuery'=>true],
-                    false
+                    ['justTheQuery'=>true,'test'=>false]
                 ).
                 ' UNION '
                 .
@@ -973,8 +1071,8 @@ namespace IOFrame{
                         'AND'
                     ],
                     $upToDateCol,
-                    ['justTheQuery'=>true],
-                    false).
+                    ['justTheQuery'=>true,'test'=>false]
+                    ).
                 ' UNION '
                 .
                 //Select (-1,-1,NULL,-1,-1,null,true) - IF the whole group is up to date (and exists)
@@ -1007,8 +1105,8 @@ namespace IOFrame{
                         'AND'
                     ],
                     $upToDateGroupCol,
-                    ['justTheQuery'=>true],
-                    false).
+                    ['justTheQuery'=>true,'test'=>false]
+                ).
                 ' UNION '
                 .
                 //Select (-2,-2,NULL,-2,-2,null,false) - IF the group does not exist
@@ -1028,14 +1126,14 @@ namespace IOFrame{
                         ,'NOT'
                     ],
                     $groupDoesNotExistCol,
-                    ['justTheQuery'=>true],
-                    false)
+                    ['justTheQuery'=>true,'test'=>false]
+                )
             ;
 
-            if($test){
+            if($verbose){
                 echo 'Query to send: '.$query.EOL;
             }
-            $objects = $this->sqlHandler->exeQueryBindParam($query, [], true);
+            $objects = $this->sqlHandler->exeQueryBindParam($query, [], ['fetchAll'=>true]);
 
             //This means the group does not exist
             if($objects == [] || $objects[0]['ID'] == -2)
@@ -1046,7 +1144,7 @@ namespace IOFrame{
 
             foreach($objects as $k=>$v){
                 //If we don't have auth to view the object, stick it into the error group.
-                if(!$this->checkObAuth($objects[$k],1,0)){
+                if(!$this->checkObAuth($objects[$k],['type'=>1,'strict'=>0])){
                     //If we are not hiding unauthorized objects from showing, do this.
                     if(!$protectedView)
                         $errors[$objects[$k]['ID']] = 2;
@@ -1072,7 +1170,15 @@ namespace IOFrame{
          * If $strict isn't false/0/null/etc, will only return true if either the user is the main owner or of rank 0.
          * Returns true or false.
          * */
-        function checkObAuth($obj,$type = 0, $strict = 0, $sesInfo = null){
+        protected function checkObAuth($obj, array $params = []){
+
+            isset($params['type'])?
+                $type = $params['type'] : $type = 0;
+            isset($params['strict'])?
+                $strict = $params['strict'] : $strict = 0;
+            isset($params['sesInfo'])?
+                $sesInfo = $params['sesInfo'] : $sesInfo = null;
+
             //Different checks, depending on whether the user is logged in or not
             $loggedIn = true;
             if(!isset($_SESSION['logged_in']))
@@ -1127,8 +1233,15 @@ namespace IOFrame{
 
 
 
-        // Checks if the object could be legally inserted into / removed from the group.
-        function checkObAddGroupAuth($groupInfo, $sesInfo, $toAdd ,$test = false){
+        /**
+         * Checks if the object could be legally inserted into / removed from the group.
+         */
+        protected function checkObAddGroupAuth($groupInfo, $sesInfo, bool $toAdd, array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
             //Maybe it's allowed to add objects to this group
             if($toAdd){
                 $allowAddition = $groupInfo['Allow_Addition'];
@@ -1139,20 +1252,25 @@ namespace IOFrame{
             //Maybe you are the owner
             $owner = $groupInfo['Owner'];
             //If the user is the owner, return true.
-            if($owner == $sesInfo['ID'])
+            if($sesInfo!= null && $owner!=null && $owner == $sesInfo['ID'])
                 return true;
 
-            if($test){
+            if($verbose)
                 echo 'User '.$sesInfo['ID'].' does not have the auth to modify group '.$groupInfo['Group_Name'].EOL;
-            }
+
             return false;
         }
 
-        /* Retrieves from a table, by keyNames, and returns a result in the form
-           [<keyName> => <Associated array for row>]
-           or returns 1 if nothing exists, or on different error
+        /** Retrieves from a table, by keyNames, and returns a result in the form
+         *  [<keyName> => <Associated array for row>]
+         *  or returns 1 if nothing exists, or on different error
          * */
-        private function getFromTableByKey($keys,$keyCol,$tableName,$columns, $test = false){
+        protected function getFromTableByKey($keys,$keyCol,$tableName,$columns, array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
             if(!in_array($keyCol,$columns) && $columns!=[])
                 array_push($columns,$keyCol);
             $conds = [];
@@ -1164,7 +1282,7 @@ namespace IOFrame{
             }
             if($conds != [])
                 array_push($conds,'OR');
-            $res = $this->sqlHandler->selectFromTable($tableName,$conds,$columns,[],$test);
+            $res = $this->sqlHandler->selectFromTable($tableName,$conds,$columns,['test'=>$test,'verbose'=>$verbose]);
             if(is_array($res)){
                 $resLength = count($res);
                 for($i = 0; $i<$resLength; $i+=1){
@@ -1181,76 +1299,209 @@ namespace IOFrame{
             }
         }
 
-        /* Retrieves an object of a certain ID from the database.
-         * Returns  the object as an assoc array, if succesful,
-         *          1, if object by this id doesn't exist.
+        /** Basically an interface for retrieve<Objects/Maps/Groups>
+         *  Gets the requested objects/maps/groups from the db/cache.
+         *  $params['type'] is the type of targets.
+         *  For the other parameters and/or return format, see the retrieve functions bellow.
          * */
-        function retrieveObject($id, $columns = [], $test = false){
-            $res = $this->retrieveObjects([$id],$columns,$test);
-            return is_array($res)?
+        protected function getFromCacheOrDB($targets, array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
+            isset($params['columns'])?
+                $columns = $params['columns'] : $columns = [];
+
+            if(!isset($params['type'])){
+                if($verbose)
+                    echo 'Wrong usage of getFromCacheOrDB, lacking type!'.EOL;
+                return -1;
+            }
+
+            if(isset($params['cacheTTL']))
+                $cacheTTL = $params['cacheTTL'];
+            else
+                $cacheTTL = $this->cacheTTL;
+
+            switch($params['type']){
+                case 'object':
+                    $keyCol = 'ID';
+                    $tableName = $this->tableName.'_CACHE';
+                    $cacheName = 'ioframe_'.$this->cacheName.'_id_';
+                    break;
+                case 'group':
+                    $keyCol = 'Group_Name';
+                    $tableName = $this->tableName.'_CACHE_META';
+                    $cacheName = 'ioframe_'.$this->cacheName.'_group_';
+                    $columns = [];
+                    break;
+                case 'map':
+                    $keyCol = 'Page_Name';
+                    $tableName = $this->tableName.'_MAP';
+                    $cacheName = 'ioframe_'.$this->cacheName.'_map_';
+                    $columns = [];
+                    break;
+                default:
+                    if($verbose)
+                        echo 'Wrong usage of getFromCacheOrDB, incorrect type!'.EOL;
+                    return -1;
+
+            }
+
+            $cacheResults = [];
+            $results = [];
+            $dbResults = [];
+
+            //If we are using cache, try to get the objects from cache
+            if( isset($this->defaultSettingsParams['useCache']) && $this->defaultSettingsParams['useCache'] ){
+                foreach($targets as $index=>$identifier) {
+                    $cachedResult = $this->redisHandler->call('get', $cacheName . $identifier);
+                    if ($cachedResult && is_json($cachedResult)) {
+                        $cachedResult = json_decode($cachedResult, true);
+                        //Check that all required columns exist in the cached object, if it's an object
+                        if ($columns != [] && $params['type'] == 'object') {
+                            $colCompare = [];
+                            foreach ($columns as $colName) {
+                                $colCompare[$colName] = 1;
+                            }
+                            if (count(array_diff_key($colCompare, $cachedResult)) != 0)
+                                continue;
+                        }
+                        unset($targets[$index]);
+                        $cacheResults[$identifier] = $cachedResult;
+                    }
+                }
+                //Push all cached results into final result array
+                if($cacheResults != [])
+                    foreach($cacheResults as $identifier=>$cachedResult){
+                        $results[$identifier] = $cachedResult;
+                    }
+            }
+            if($targets != [])
+                $dbResults = $this->getFromTableByKey($targets,$keyCol,$tableName,$columns,['test'=>$test,'verbose'=>$verbose]);
+            if($dbResults != 1)
+                foreach($dbResults as $identifier=>$dbResult){
+                    $results[$identifier] = $dbResult;
+                    //Dont forget to update the cache with the DB objects, if we're using cache
+                    if(
+                        isset($this->defaultSettingsParams['useCache']) &&
+                        $this->defaultSettingsParams['useCache'] &&
+                        is_array($dbResult)
+                    ){
+                        if(!$test)
+                            $this->redisHandler->call('set',[$cacheName . $identifier,json_encode($dbResult),$cacheTTL]);
+                        if($verbose)
+                            echo 'Adding '.$params['type'].' '.$identifier.' to cache for '.
+                                $this->cacheTTL.' seconds as '.json_encode($dbResult).EOL;
+                    }
+                }
+            return $results;
+        }
+
+
+        /** Retrieves an object from the database.
+         * @param int $id Object ID
+         * @param array $params of the form:
+         *      'columns' => columns to get
+         * @returns array
+         *          the object as an assoc array, if successful,
+         *          [], if an object by this name doesn't exist.
+         * */
+        function retrieveObject(int $id, array $params = []){
+            $res = $this->retrieveObjects([$id],$params);
+            return count($res)>0?
                 $res[$id] : $res;
         }
 
-        /* Retrieves an object of a certain ID from the database.
-         * Returns  the object as an assoc array of the form <objectID>=><objectAssocArray>, if succesful,
-         *          1, if no objects exist, or encountered error.
+        /** Retrieves objects from the database.
+         * @param array $ids Object IDs
+         * @param array $params of the form:
+         *      'columns' => columns to get
+         * @returns array of the form <object id> => <result as per retrieveObject()>
          * */
-        function retrieveObjects(array $ids, $columns = [], $test = false){
-            return $this->getFromTableByKey($ids,'ID','OBJECT_CACHE',$columns,$test);
+        function retrieveObjects(array $ids, array $params = []){
+            $params['type'] = 'object';
+            return $this->getFromCacheOrDB($ids,$params);
         }
 
 
-        /* Retrieves a group of a certain name from the database.
-         * Returns the group as an assoc array, if succesful,
-         *          1, if group by this name doesn't exist.
+        /** Retrieves a group from the database.
+         * @param string $group group name
+         * @param array $params
+         * @returns mixed
+         *          the group as an assoc array, if successful,
+         *          [], if a group by this name doesn't exist.
          * */
-        function retrieveGroup($group, $columns = [], $test = false){
-            $res =  $this->retrieveGroups([$group],$columns,$test);
-            return is_array($res)?
+        function retrieveGroup(string $group,$params = []){
+            $res =  $this->retrieveGroups([$group],$params);
+            return count($res)>0?
                 $res[$group] : $res;
         }
 
-        /* Retrieves a group of a certain name from the database.
-         * Returns the group as an assoc array, if succesful,
-         *          1, if group by this name doesn't exist.
+        /** Retrieves groups from the database.
+         * @param array $groups Group names
+         * @param array $params
+         * @returns array of the form <group name> => <result as per retrieveGroup()>
          * */
-        function retrieveGroups(array $groups, $columns = [], $test = false){
-            return $this->getFromTableByKey($groups,'Group_Name','OBJECT_CACHE_META',$columns,$test);
+        function retrieveGroups(array $groups,$params = []){
+            $params['type'] = 'group';
+            return $this->getFromCacheOrDB($groups,$params);
         }
 
-        /* Retrieves a page map, identified by $page, from the database.
-         * Returns  the object as an assoc array, if succesful,
-         *          1, if a page by this name doesn't exist.
+        /** Retrieves an object map from the database.
+         * @param string $map Map name
+         * @param array $params
+         * @returns mixed
+         *          the object as an assoc array, if successful,
+         *          1, if a map by this name doesn't exist.
          * */
-        function retrieveObjectMap($object, $columns = [], $test = false){
-            $res = $this->retrieveObjectMaps([$object],$columns,$test);
-            return is_array($res)?
-                $res[$object] : $res;
+        function retrieveObjectMap(string $map, array $params = []){
+            $res = $this->retrieveObjectMaps([$map],$params);
+            return count($res)>0?
+                $res[$map] : $res;
         }
 
-        /* Retrieves a page map, identified by $page, from the database.
-         * Returns  the object as an assoc array, if succesful,
-         *          1, if a page by this name doesn't exist.
+        /** Retrieves page maps from the database.
+         * @param array $maps Map names
+         * @param array $params
+         * @returns array of the form <map name> => <result as per retrieveObjectMap()>
          * */
-        function retrieveObjectMaps(array $objects, $columns = [], $test = false){
-            return $this->getFromTableByKey($objects,'Page_Name','OBJECT_MAP',$columns,$test);
+        function retrieveObjectMaps(array $maps, array $params = []){
+            $params['type'] = 'map';
+            return $this->getFromCacheOrDB($maps,$params);
         }
 
-        /* Creates a group of name $group, and size of $newSize.
-         * Returns 0 on success,
-         *         1 on faliure.
+        /** Creates a group of name $group, and size of $newSize.
+         * @param string $group Group name
+         * @param array $sesInfo Decoded $_SESSION['details']
+         * @param array $params of the form
+         *                  'cacheTTL' => int, default set by handler - for how long to cache results gotten during this operation.
+         * @returns int 0 on success, 1 on failure
          * */
-        function createGroup($group, $sesInfo, $test = false){
-            return $this->createGroups([$group], $sesInfo,$test);
+        function createGroup(string $group, array $sesInfo, array $params = []){
+            return $this->createGroups([$group], $sesInfo, $params);
         }
 
-        /* Creates inputs, where each group is an array of inputs like those in createGroup.
-         * Returns 0 on success,
-         *         1 on faliure.
+        /** Creates groups  inputs, where each group is an array of inputs like those in createGroup.
+         * @param array $groups Array of group names
+         * @param array $sesInfo Decoded $_SESSION['details']
+         * @param array $params of the form
+         *                  'cacheTTL' => int, default set by handler - for how long to cache results gotten during this operation.
+         * @returns int 0 on success, 1 on failure
          * */
-        function createGroups($groups,$sesInfo, $test = false){
-            $tableName = $this->sqlHandler->getSQLPrefix().'OBJECT_CACHE_META';
-            $cols = ['Group_Name','Owner','Last_Updated'];
+        function createGroups(array $groups, array $sesInfo, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
+            if(isset($params['cacheTTL']))
+                $cacheTTL = $params['cacheTTL'];
+            else
+                $cacheTTL = $this->cacheTTL;
+
+            $tableName = $this->sqlHandler->getSQLPrefix().$this->tableName.'_CACHE_META';
+            $cols = ['Group_Name','Owner','Last_Updated','Allow_Addition'];
             $values = [];
             $timeUpdated = strval(time());
             //If there is nothing to do..
@@ -1258,31 +1509,74 @@ namespace IOFrame{
                 return 0;
             //Else create the groups
             foreach($groups as $group){
-                array_push($values,[[$group,'STRING'],$sesInfo['ID'],[$timeUpdated,'STRING']]);
+                array_push($values,[[$group,'STRING'],$sesInfo['ID'],[$timeUpdated,'STRING'],0]);
             }
             //execute
             if($values!=[])
-                $res =$this->sqlHandler->insertIntoTable($tableName,$cols,$values,['onDuplicateKey'=>false, 'returnRows'=>false],$test);
+                $res =$this->sqlHandler->insertIntoTable(
+                    $tableName,$cols,$values,['onDuplicateKey'=>false, 'returnRows'=>false,'test'=>$test,'verbose'=>$verbose]
+                );
             else
                 $res = true;
+
+            if($res === true && $values !=[]){
+                //Dont forget to update the cache with the DB objects, if we're using cache
+                if(
+                    isset($this->defaultSettingsParams['useCache']) &&
+                    $this->defaultSettingsParams['useCache']
+                ){
+                    foreach($groups as $group){
+                        $toSet = json_encode(
+                            [
+                                'Group_Name'=>$group,
+                                'Last_Updated'=>$timeUpdated,
+                                'Owner'=>$sesInfo['ID'],
+                                'Allow_Addition'=>0
+                            ]
+                        );
+                        if(!$test)
+                            $this->redisHandler->call(
+                                'set',
+                                [
+                                    'ioframe_'.$this->cacheName.'_group_'.$group,
+                                    $toSet,
+                                    $cacheTTL
+                                ]
+                            );
+                        if($verbose)
+                            echo 'Adding group '.$group.' to cache for '.$cacheTTL.' seconds as '.$toSet.EOL;
+                    }
+                }
+            }
             return ($res === true)?
                 0 : 1;
         }
 
-        /* Updates group - usually invoked when an object in the group has changed.
+        /** Updates group - usually invoked when an object in the group has changed.
          * $group is a group name
-         * Returns true on success, false on failure
+         * @returns int 0 on success, 1 on failure
          * */
-        function updateGroup(string $group, $test = false){
-            return $this->updateGroups([$group],$test);
+        function updateGroup(string $group, array $params = []){
+            return $this->updateGroups([$group],$params);
         }
 
-        /* Updates group - usually invoked when an object in the group has changed.
-         * $group is an array of group names
-         * Returns true on success, false on failure
+        /** Updates group - usually invoked when an object in the group has changed.
+         * @param array $groups Array of the form group names
+         * @param array $params of the form
+         *                  'cacheTTL' => int, default set by handler - for how long to cache results gotten during this operation.
+         * @returns int 0 on success, 1 on failure
          * */
-        function updateGroups($groups, $test = false){
-            $tableName = $this->sqlHandler->getSQLPrefix().'OBJECT_CACHE_META';
+        function updateGroups(array $groups, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
+            if(isset($params['cacheTTL']))
+                $cacheTTL = $params['cacheTTL'];
+            else
+                $cacheTTL = $this->cacheTTL;
+
+            $tableName = $this->sqlHandler->getSQLPrefix().$this->tableName.'_CACHE_META';
             $cols = ['Group_Name','Last_Updated'];
             $groupMap = [];
             $timeUpdated = strval(time());
@@ -1302,36 +1596,92 @@ namespace IOFrame{
                 array_push($values,$input);
             }
             //execute
-            $res =$this->sqlHandler->insertIntoTable($tableName,$cols,$values,['onDuplicateKey'=>true, 'returnRows'=>false],$test);
+            $res =$this->sqlHandler->insertIntoTable(
+                $tableName,
+                $cols,
+                $values,
+                ['onDuplicateKey'=>true, 'returnRows'=>false,'test'=>$test,'verbose'=>$verbose]
+            );
+
+            //If we are using cache, delete the group. This is because we do not have ownerID to set.
+            if($res === true){
+                if(
+                    isset($this->defaultSettingsParams['useCache']) &&
+                    $this->defaultSettingsParams['useCache']
+                ){
+                foreach($groups as $group){
+                    $currentGroup = $this->redisHandler->call(
+                        'get',
+                        'ioframe_'.$this->cacheName.'_group_'.$group
+                    );
+                    if($currentGroup){
+                        $currentGroup = json_decode($currentGroup,true);
+                        $toSet = json_encode(
+                                [
+                                    'Group_Name' =>$group,
+                                    'Last_Updated' =>$timeUpdated,
+                                    'Owner' =>$currentGroup['Owner'],
+                                    'Allow_Addition' =>$currentGroup['Allow_Addition'],
+                                ]
+                            );
+                        if(!$test)
+                            $this->redisHandler->call(
+                                'set',
+                                [
+                                    'ioframe_'.$this->cacheName.'_group_'.$group,
+                                    $toSet,
+                                    $cacheTTL
+                                ]
+                            );
+                        if($verbose)
+                            echo 'Updating group map' . $group . ' to '.$toSet.' with TTL '.$cacheTTL.EOL;
+                    }
+                    else
+                        if($verbose)
+                            echo 'Group '.$group.' not in cache, cannot update!'.EOL;
+                    }
+                }
+            }
+
             return ($res === true)?
                 0 : 1;
         }
 
-        /* Checks whether a %time is up-to-date compared to a $group (name).
-         * Returns  0 if up to date,
-         *          1 if not up to date,
-         *          -1 if group doesn't exist
+        /** Checks whether a %time is up-to-date compared to a $group (name).
+         * @param string $group Name of the group
+         * @param int $time     Time before which the group is considered up-to-date
+         * @param array $params
+         * @returns int
+         *      0 if up to date,
+         *      1 if not up to date,
+         *      -1 if group doesn't exist
          * */
 
-        function checkGroupUpdated($group, $time, $test = false){
-            return $this->checkGroupsUpdated([$group => $time],$test)[$group];
+        function checkGroupUpdated(string $group, int $time, array $params = []){
+            return $this->checkGroupsUpdated([$group => $time],$params)[$group];
         }
 
-        /* checkGroupUpdated but for more than 1 group.
-         * returns [<groupName>=><result as per checkGroupUpdated>]
+        /** checkGroupUpdated but for more than 1 group.
+         * @param array $groups 2D array of the form [<group Name> => <Last updated>]
+         * @param array $params
+         * @returns array [<groupName>=><result as per checkGroupUpdated>]
          * */
 
-        function checkGroupsUpdated($groups,$test = false){
+        function checkGroupsUpdated(array $groups, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
             $toRetrieve = [];
             foreach($groups as $groupName => $groupTime){
                 array_push($toRetrieve,$groupName);
             }
             //Get the inputs' Last_Updated
-            $groupRes = $this->retrieveGroups($toRetrieve, ['Group_Name','Last_Updated'], $test);
+            $groupRes = $this->retrieveGroups($toRetrieve,$params);
             $resArr = [];
             foreach($groups as  $groupName => $groupTime){
                 //Check whether the group actually exists
-                if($groupRes[$groupName] == 1)
+                if($groupRes == [] || $groupRes[$groupName] == 1)
                     $resArr[$groupName] = -1;
                 //Check whether group is up to date
                 elseif($groupRes[$groupName]['Last_Updated']<=$groupTime)
@@ -1340,25 +1690,28 @@ namespace IOFrame{
                     $resArr[$groupName] = 1;
             }
 
-            if($test)
-                echo 'Result: '.json_encode($resArr).EOL;
+            if($verbose)
+                echo 'Groups check, result: '.json_encode($resArr).EOL;
 
             return $resArr;
 
         }
 
-        /* Assigns, or removes assignment of an object to a page.
-         * $id is the object ID, $page is the path/name of the page, as defined in the OBJECT_MAP docs in SQLdbInit.php
-         * $assign is true if you want to assign an object to a page, false if you want to remove an object from a page.
-         * Returns  0 on success.
+        /** Assigns, or removes assignment of an object to a page.
+         *
+         * @param int $id ID of the object to assign
+         * @param string $page Name of the page/map to assign the object to
+         * @param bool $assign - default true - whether to assign or remove the object to/from the map
+         * @returns int
+         *          0 on success.
          *          1 if object or page id don't exist.
          *          2 if insufficient authorization to modify the object.
          *          3 if insufficient authorization to remove/add object-page assignments.
          *          4 Different error
          * */
 
-        function objectMapModify($id, $page, $assign = true, $test = false){
-            $res = $this->objectMapModifyMultiple([[$id, $page, $assign]],$test);
+        function objectMapModify(int $id, string $page, bool $assign = true, array $params = []){
+            $res = $this->objectMapModifyMultiple([[$id, $page, $assign]],$params);
             if($res == -1)
                 return 4;
             if($res == 3)
@@ -1367,17 +1720,31 @@ namespace IOFrame{
         }
 
 
-        /* Assigns, or removes assignment of multiple objects to/from multiple pages.
-         * Returns -1 on database failure,
+        /** Assigns, or removes assignment of multiple objects to/from multiple pages.
+         * @param array $inputArray 2D array where each sub-array is of the same Same order as objectMapModify before $params
+         * @param array $params of the form
+         *                  'cacheTTL' => int, default set by handler - for how long to cache results gotten during this operation.
+         * @returns mixed
+         *          -1 on database failure,
+         *          1 No objects of the IDs specified in the inputs exist,
          *          an assoc array [<objectID> => <resultCode>] otherwise
-         * TODO *SHOULD* be remade using a stored procedure - doesn't support cuncurrent use at current state
+         * TODO *SHOULD* be remade using a stored procedure - doesn't support concurrent use at current state
          * */
 
-        function objectMapModifyMultiple(array $inputArray, $test = false){
+        function objectMapModifyMultiple(array $inputArray, array $params = []){
 
             //You must be logged in to use this handler, as it checks the caller's rank and ID.
             if(!assertLogin())
                 return -1;
+
+            if(isset($params['cacheTTL']))
+                $cacheTTL = $params['cacheTTL'];
+            else
+                $cacheTTL = $this->cacheTTL;
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
 
             //Array of the type <pageName> => <objectID> for all objects that need to be assigned
             $assignMaps = [];
@@ -1391,24 +1758,24 @@ namespace IOFrame{
             //Populate the 2 arrays using $inputArray
             foreach($inputArray as $input){
                 if($input[2]){
-                    if(!isset( $assignMaps[$input[1]]) ){
-                        $assignMaps[$input[1]] =[$input[0]];
-                        $mapNames[$input[1]] = $input[1];
+                    if(!isset( $assignMaps[(string)$input[1]]) ){
+                        $assignMaps[(string)$input[1]] =[(int)$input[0]];
+                        $mapNames[(string)$input[1]] = $input[1];
                     }
                     else{
-                        array_push($assignMaps[$input[1]],$input[0]);
+                        array_push($assignMaps[(string)$input[1]],(int)$input[0]);
                     }
                 }
                 else{
-                    if(!isset( $deleteMaps[$input[1]]) ){
-                        $deleteMaps[$input[1]] =[$input[0]];
-                        $mapNames[$input[1]] = $input[1];
+                    if(!isset( $deleteMaps[(string)$input[1]]) ){
+                        $deleteMaps[(string)$input[1]] =[(int)$input[0]];
+                        $mapNames[(string)$input[1]] = (string)$input[1];
                     }
                     else{
-                        array_push($deleteMaps[$input[1]],$input[0]);
+                        array_push($deleteMaps[(string)$input[1]],(int)$input[0]);
                     }
                 }
-                $objectIDs[$input[0]] = $input[0];
+                $objectIDs[(int)$input[0]] = (int)$input[0];
             }
 
             //Delete overlapping values (that are marked both for assignment and deletion)
@@ -1439,11 +1806,12 @@ namespace IOFrame{
 
             //get ALL relevant mapNames, and ALL relevant objects from the database
             //TODO can be done in one query with a bit more work
-            $mapNamesExt = $this->retrieveObjectMaps($mapNames,[],$test);
-            $objectIDsExt = $this->retrieveObjects($objectIDs,['ID','Owner', 'Owner_Group', 'Min_Modify_Rank'],$test);
+            $mapNamesExt = $this->retrieveObjectMaps($mapNames,$params);
+            $params['columns'] = ['ID','Owner', 'Owner_Group', 'Min_Modify_Rank'];
+            $objectIDsExt = $this->retrieveObjects($objectIDs,$params);
 
-            if($objectIDsExt == 1){
-                if($test)
+            if($objectIDsExt == []){
+                if($verbose)
                     echo 'No objects of specified IDs/Names exist!'.EOL;
                 return 1;
             }
@@ -1468,7 +1836,7 @@ namespace IOFrame{
                     $objectIDs[$objectID] = $objectIDsExt[$objectID];
                 }
                 //Check object auth
-                if(!$this->checkObAuth($objectIDs[$objectID],1,0,$sesInfo)){
+                if(!$this->checkObAuth($objectIDs[$objectID],['type'=>1,'strict'=>0,'sesInfo'=>$sesInfo])){
                     $objectIDs[$objectID] = 2;
                 }
             }
@@ -1527,20 +1895,29 @@ namespace IOFrame{
                     $objectIDs[$key] = 0;
             }
 
-            $tableName = $this->sqlHandler->getSQLPrefix().'OBJECT_MAP';
+            $tableName = $this->sqlHandler->getSQLPrefix().$this->tableName.'_MAP';
 
             //Delete all empty pages first
             $conds = [];
-            foreach($deleteArray as $key){
-                array_push($conds,['Page_Name',$key,'=']);
+            foreach($deleteArray as $mapName){
+                array_push($conds,['Page_Name',$mapName,'=']);
             }
             if(count($conds)>0){
                 array_push($conds,'OR');
-                if($this->sqlHandler->deleteFromTable($tableName,$conds,[],$test) !== true){
-                    if($test)
+                if($this->sqlHandler->deleteFromTable($tableName,$conds,['test'=>$test,'verbose'=>$verbose]) !== true){
+                    if($verbose)
                         echo 'Unexpected error when deleting pages!'.EOL;
                     return -1;
                 };
+            }
+            //If we are using cache, drop the deleted maps from it
+            if( isset($this->defaultSettingsParams['useCache']) && $this->defaultSettingsParams['useCache'] ) {
+                foreach ($deleteArray as $mapName) {
+                    if (!$test)
+                        $this->redisHandler->call('del', 'ioframe_'.$this->cacheName.'_map_' . $mapName);
+                    if($verbose)
+                        echo 'Deleting object map' . $mapName . ' from cache!' . EOL;
+                }
             }
             //Luckily for us, create and update operations may be handled in one query
             $values = [];
@@ -1552,38 +1929,82 @@ namespace IOFrame{
                 }
             }
             if($values !=[])
-                if($this->sqlHandler->insertIntoTable($tableName,$colArr,$values,['onDuplicateKey'=>true, 'returnRows'=>false],$test) !== true){
-                    if($test)
+                if(
+                    $this->sqlHandler->insertIntoTable(
+                        $tableName,
+                        $colArr,
+                        $values,
+                        ['onDuplicateKey'=>true, 'returnRows'=>false,'test'=>$test,'verbose'=>$verbose]
+                    )
+                    !==
+                    true
+                ){
+                    if($verbose)
                         echo 'Unexpected error when updating pages!'.EOL;
                     return -1;
                 };
+            //If we are using cache, update it with the newly modified maps
+            if( isset($this->defaultSettingsParams['useCache']) && $this->defaultSettingsParams['useCache'] ) {
+                foreach($mapNames as $mapName=>$details){
+                    $toSet = json_encode(
+                            [
+                                'Page_Name' => $mapName,
+                                'Objects' => json_encode($details['Objects']),
+                                'Last_Changed' => $lastChanged,
+                            ]
+                        );
+                    if (!$test)
+                        $this->redisHandler->call(
+                            'set',
+                            [
+                                'ioframe_'.$this->cacheName.'_map_'.$mapName,
+                                $toSet,
+                                $cacheTTL
+                            ]
+                        );
+                    if($verbose)
+                        echo 'Updating object map' . $mapName . ' to '.$toSet.' with TTL '.$cacheTTL.EOL;
+                }
+            }
 
             return $objectIDs;
 
         }
 
-        /* Gets the list of objects assigned to a certein $page, if the latest change was made after $time.
-         * Returns:     A JSON array of the objects, of the form {"ID":"ID",...}, if $time < Last_Changed
+        /**  Gets the list of objects assigned to a certain page, if the latest change was made not earlier than $params['time'].
+         *
+         * @param string $page Name of requested page
+         * @param array $params of the form:
+         *                  'time' -> int, default 0 - Will only return objects assigned to a page that was updated
+         *                            later than $params['time']
+         *
+         * @return mixed
+         *              A JSON array of the objects, of the form {"ID":"ID",...}, if $time < Last_Changed
          *              0 if Last_Changed < $time
          *              1 if the page doesn't exist, or has no objects in it
          * TODO - Add security, allow private or otherwise secure objects, or at least pages
          * */
-        function getObjectMap($page, $time = 0, $test = false){
-            $pageArr = $this->retrieveObjectMap($page, [],$test);
-            if($pageArr == 1){
-                if($test)
+        function getObjectMap(string $page, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            isset($params['time'])?
+                $time = $params['time'] : $time = 0;
+            $pageArr = $this->retrieveObjectMap($page, $params);
+            if($pageArr == []){
+                if($verbose)
                     echo 'Page  '.$page.' does not exist!'.EOL;
                 return 1;
             }
             else{
                 if($pageArr['Last_Changed'] < $time){
-                    if($test)
-                        echo 'Page '.$page.' is up to date! ';
+                    if($verbose)
+                        echo 'Page '.$page.' is up to date! '.EOL;
                     return 0;
                 }
                 else{
-                    if($test)
-                        echo 'Retrieving object list from page '.$page.': ';
+                    if($verbose)
+                        echo 'Retrieving object list from page '.$page.': '.$pageArr['Objects'].EOL;
                     ($pageArr['Objects'] != '')?
                         $res = $pageArr['Objects'] : $res = 1 ;
                     return $res;
@@ -1591,20 +2012,64 @@ namespace IOFrame{
             }
         }
 
-        /* Backs up the whole Objects state
+        /** Gets the list of objects assigned to certain pages, if the latest change was made not earlier than <Time Updated>.
+         *
+         ** @param array $pageArray of the form: <Page Name>=><Time Updated>
+         ** @param array $params
+         *
+         * @return array of the form: [ <Page Name> => <Output of getObjectMap()> ]
+         * TODO - Add security, allow private or otherwise secure objects, or at least pages
          * */
-        function backupObjects($test = false){
-            $prefix = $this->sqlHandler->getSQLPrefix();
-            $objArr = [$prefix.'OBJECT_CACHE_META',$prefix.'OBJECT_CACHE',$prefix.'OBJECT_MAP'];
-            $this->sqlHandler->backupTables($objArr,[],[], $test);
+        function getObjectMaps(array $pageArray, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            $res = array();
+            $pagesToGet = [];
+            foreach($pageArray as $pageName=>$time){
+                $res[$pageName] = 1;
+                array_push($pagesToGet,$pageName);
+            }
+            $pageArr = $this->retrieveObjectMaps($pagesToGet,$params);
+            if($pageArr == 1){
+                if($verbose)
+                    echo 'Page  none of the pages exists!'.EOL;
+                return 1;
+            }
+            else{
+                foreach($pageArr as $pageName=>$pageData){
+                    if($pageData['Last_Changed'] < $pageArray[$pageName]){
+                        if($verbose)
+                            echo 'Page '.$pageName.' is up to date! '.EOL;
+                        $res[$pageName] = 0;
+                    }
+                    else{
+                        if($verbose)
+                            echo 'Retrieving object list from page '.$pageName.': '.EOL;
+                        $res[$pageName] = ($pageData['Objects'] != '') ?
+                            $pageData['Objects'] : 1 ;
+                    }
+                }
+            }
+            return $res;
         }
 
-        /* Restores latest state - from the latest backup
+        /** Backs up the whole Objects state
+         * @param array $params
          * */
-        function restoreLatestState($test = false){
-            $prefix = $this->sqlHandler->getSQLPrefix();
-            $objArr = [$prefix.'OBJECT_CACHE_META',$prefix.'OBJECT_CACHE',$prefix.'OBJECT_MAP'];
-            $this->sqlHandler->restoreLatestTables($objArr, $test);
+        function backupObjects( array $params = []){
+            $prefix = $this->sqlHandler->getSQLPrefix().$this->tableName;
+            $objArr = [$prefix.'_CACHE_META',$prefix.'_CACHE',$prefix.'_MAP'];
+            $this->sqlHandler->backupTables($objArr,[],$params);
+        }
+
+        /** Restores latest state - from the latest backup
+         * @param array $params
+         * */
+        function restoreLatestState( array $params = []){
+            $prefix = $this->sqlHandler->getSQLPrefix().$this->tableName;
+            $objArr = [$prefix.'_CACHE_META',$prefix.'_CACHE',$prefix.'_MAP'];
+            $this->sqlHandler->restoreLatestTables($objArr, $params);
         }
     }
 }

@@ -70,8 +70,7 @@ $targetUser = $sqlHandler->selectFromTable(
     $sqlHandler->getSQLPrefix().'USERS',
     $identityCond,
     ['Rank'],
-    [],
-    $test
+    ['test'=>$test]
 );
 
 if($targetUser == 0){

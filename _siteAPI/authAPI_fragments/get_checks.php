@@ -95,7 +95,7 @@ foreach($expectedParams as $expectedParam){
                 break;
             case 'includeActions':
                 //No using this API for actions if it's not getUserActions or getGroupActions!
-                if($_REQUEST['action'] == 'getUsers' || $_REQUEST['action'] == 'getGroups')
+                if($action == 'getUsers' || $action == 'getGroups')
                     $params[$expectedParam] = false;
                 break;
             case 'limit':
@@ -115,7 +115,7 @@ foreach($expectedParams as $expectedParam){
                 }
                 break;
             case 'orderByExp':
-                switch($_REQUEST['action']){
+                switch($action){
                     case 'getUsers':
                         $allowedExpressions = ['ID'];
                         break;

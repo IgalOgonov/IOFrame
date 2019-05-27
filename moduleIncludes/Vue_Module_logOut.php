@@ -25,10 +25,10 @@
                     if (xhr.readyState === DONE) {
                         if (xhr.status === OK){
                             //If we logged out, update current session.
-                            //Set 2nd parameter to false or remove it if you don't want a page reload.
                             localStorage.removeItem("sesID");
                             localStorage.removeItem("sesIV");
                             localStorage.removeItem("myMail");
+                            //Set 2nd parameter to false or remove it if you don't want a page reload.
                             updateSesInfo(document.pathToRoot,true);
                         }
                     } else {

@@ -25,7 +25,7 @@ if( !( $auth->isAuthorized(0) || $auth->hasAction('BAN_USERS_AUTH') ) ){
     exit('-2');
 }
 
-$targetRank = $sqlHandler->selectFromTable($sqlHandler->getSQLPrefix().'USERS',['ID',$inputs['id'],'='],['Rank'],[],$test)[0][0];
+$targetRank = $sqlHandler->selectFromTable($sqlHandler->getSQLPrefix().'USERS',['ID',$inputs['id'],'='],['Rank'],['test'=>$test])[0][0];
 
 //God I hate that this check is done here again
 if($targetRank === null){

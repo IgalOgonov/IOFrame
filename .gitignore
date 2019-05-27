@@ -1,7 +1,3 @@
 .idea/
-_Core/definitions/definitions.json
-_siteHandlers/ext/phpmailer/vendor/
-_siteHandlers/ext/monolog/vendor/
-_siteHandlers/ext/GeoIP/vendor/
-_siteFiles/geoip-db/
-_logs/
+_siteFiles/
+pluginImages/

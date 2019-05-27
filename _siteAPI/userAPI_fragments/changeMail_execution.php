@@ -10,7 +10,7 @@ if(!isset($userHandler))
         $defaultSettingsParams
     );
 
-$result =  $userHandler->changeMail($id,$_REQUEST['newMail'],$test);
+$result =  $userHandler->changeMail($id,$inputs['newMail'],['test'=>$test]);
 
 if(!$test){
     unset($_SESSION['MAIL_CHANGE_ID']);

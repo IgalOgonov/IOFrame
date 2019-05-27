@@ -1,10 +1,5 @@
 <?php
 
-if (php_sapi_name() == "cli")
-    $cli = true;
-else
-    $cli = false;
-
 if(!defined('helperFunctions'))
     require $this->settings->getSetting('absPathToRoot').'_util/helperFunctions.php';
 
@@ -59,7 +54,7 @@ foreach($foldersToCopy as $folder) {
 
 
 //The following changes the system state, as such it must not be executed in cli mode (which is local changes only)
-if(!$cli){
+if(!$local){
     if(!isset($this->sqlHandler))
         $sqlHandler = new IOFrame\sqlHandler($this->settings);
     else
@@ -93,7 +88,7 @@ if(!$cli){
         $assignments[$k][1] = [$v[1],'STRING'];
     }
 
-    $res = $sqlHandler->insertIntoTable($prefix.'ACTIONS_AUTH',$columns,$assignments,['onDuplicateKey'=>true],$test);
+    $res = $sqlHandler->insertIntoTable($prefix.'ACTIONS_AUTH',$columns,$assignments,['onDuplicateKey'=>true,'test'=>$test]);
 
 
 }

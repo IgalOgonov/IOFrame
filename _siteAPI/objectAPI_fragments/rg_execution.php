@@ -14,6 +14,7 @@ if(!isset($executionParameters))
     $executionParameters = [];
 
 $executionParameters['updated'] = $updated;
+$executionParameters['test'] = $test;
 
 //Get all the objects requested
-$result =  $objHandler->getObjectsByGroup($groupName,$executionParameters,$test);
+$result =  $objHandler->getObjectsByGroup($groupName,$executionParameters);

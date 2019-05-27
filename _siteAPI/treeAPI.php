@@ -65,7 +65,8 @@
  *        'content' - json encoded array of the form [ [<nodeID*>,<newNodeContent>], ... ]
  *                    *IDs are the IDs of nodes in an Euler Tour tree.
  *        Returns:
- *          0 On success - also if the tree didn't exist
+ *          1 On success - also if the tree didn't exist
+ *          0 On failure
  *
  *        Examples: action=updateNodes&treeName=someTree&content=[[0,"Root"],[1,"Node 1 - modified"]]
  *_________________________________________________
@@ -133,7 +134,7 @@
  *        Examples: action=getTreeMap
  */
 
-require __DIR__ . '/../_Core/coreInit.php';
+require __DIR__ . '/../_main/coreInit.php';
 require __DIR__.'/../_siteHandlers/treeHandler.php';
 require __DIR__.'/../_util/validator.php';
 
@@ -701,7 +702,7 @@ switch($_REQUEST['action']){
                 $inputs[$k]['override'] = false;
         }
 
-        $res = $treeHandler->addTrees($inputs,$test);
+        $res = $treeHandler->addTrees($inputs,['test'=>$test]);
 
         if(gettype($res) == 'string')
             echo $res;
@@ -717,7 +718,7 @@ switch($_REQUEST['action']){
         $treeNames = [];
 
         foreach($inputs as $k=>$v){
-            array_push($treeNames,$k);
+            $treeNames[$k] = 0;
             $inputs[$k]['updateDB'] = true;
             if(isset($inputs[$k]['onlyEmpty']) && $inputs[$k]['onlyEmpty'] === 'false')
                 $inputs[$k]['onlyEmpty'] = false;
@@ -729,7 +730,7 @@ switch($_REQUEST['action']){
             ['sqlHandler'=>$sqlHandler,'logger'=>$logger,'redisHandler'=>$redisHandler]
         );
 
-        $res  = $treeHandler->removeTrees($inputs,$test);
+        $res  = $treeHandler->removeTrees($inputs,['test'=>$test]);
 
         if(gettype($res) == 'string')
             echo $res;
@@ -748,7 +749,7 @@ switch($_REQUEST['action']){
             ['sqlHandler'=>$sqlHandler,'logger'=>$logger,'redisHandler'=>$redisHandler]
         );
 
-        echo $treeHandler->updateNodes($contentArray,$_REQUEST['treeName'],true,$test);
+        echo $treeHandler->updateNodes($contentArray,$_REQUEST['treeName'],['updateDB'=>true,'test'=>$test])? '1':0;
 
         break;
 
@@ -767,10 +768,14 @@ switch($_REQUEST['action']){
                 $auth->hasAction('TREE_R_AUTH')
             )
             ){
-                $treeHandler->getFromDB([$_REQUEST['treeName']=>$_REQUEST['lastUpdated']],['ignorePrivate'=>false],$test);
+                $treeHandler->getFromDB([$_REQUEST['treeName']=>$_REQUEST['lastUpdated']],['ignorePrivate'=>false, 'test'=>$test]);
             }
 
-        echo json_encode($treeHandler->getSubtreeByID($_REQUEST['treeName'],$_REQUEST['nodeID'],$_REQUEST['returnType'],$test));
+        echo json_encode(
+            $treeHandler->getSubtreeByID(
+                $_REQUEST['treeName'],['returnType'=>$_REQUEST['returnType'],'nodeID'=>$_REQUEST['nodeID'],'test'=>$test]
+            )
+        );
 
         break;
 
@@ -810,7 +815,7 @@ switch($_REQUEST['action']){
                 $auth->hasAction('TREE_R_AUTH')
             )
             ){
-                $treeHandler->getFromDB($combinedArray,['ignorePrivate'=>false],$test);
+                $treeHandler->getFromDB($combinedArray,['ignorePrivate'=>false, 'test'=>$test]);
             }
 
         foreach($eulerTreeNames as $eulerName){
@@ -844,8 +849,7 @@ switch($_REQUEST['action']){
             $_REQUEST['treeName'],
             $newNodeArray,
             $_REQUEST['nodeID'],
-            ['updateDB'=>true, 'childNum'=>$_REQUEST['nodeChildNumber']],
-            $test
+            ['updateDB'=>true, 'childNum'=>$_REQUEST['nodeChildNumber'],'test'=>$test]
         );
 
         break;
@@ -862,8 +866,7 @@ switch($_REQUEST['action']){
             $treeHandler->cutNodesByID(
             $_REQUEST['treeName'],
             $_REQUEST['nodeID'],
-            ['updateDB'=>true, 'returnType'=>$_REQUEST['returnType']],
-            $test
+            ['updateDB'=>true, 'returnType'=>$_REQUEST['returnType'],'test'=>$test]
         )
         );
 
@@ -883,14 +886,15 @@ switch($_REQUEST['action']){
         echo $treeHandler->cutNodesByID(
             $_REQUEST['treeName'],
             $_REQUEST['nodeID'],
-            ['updateDB'=>true,
+            [
+                'updateDB'=>true,
                 'link'=> [
                     $_REQUEST['targetTreeName'],
                     $_REQUEST['targetNodeID'],
                     [ 'childNum' => $_REQUEST['targetChildNumber'] ]
-                ]
-            ],
-            $test
+                ],
+                'test'=>$test
+            ]
         );
 
         break;

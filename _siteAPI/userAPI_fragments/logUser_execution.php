@@ -8,9 +8,9 @@ if(!isset($userHandler))
 
 switch($inputs["log"]) {
     case 'out':
-        $userHandler->logOut([],$test);
+        $userHandler->logOut(['test'=>$test]);
         $result = 0;
         break;
     default:
-        $result =  $userHandler->logIn($inputs,$test);
+        $result =  $userHandler->logIn($inputs,['test'=>$test]);
 }

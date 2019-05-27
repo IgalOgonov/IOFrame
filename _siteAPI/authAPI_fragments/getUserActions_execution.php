@@ -1,2 +1,3 @@
 <?php
-$result = $auth->getUserActions($params, $test);
+$params['test'] = $test;
+$result = $auth->getUserActions($params);

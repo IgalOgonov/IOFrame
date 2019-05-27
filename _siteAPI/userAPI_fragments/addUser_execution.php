@@ -11,7 +11,7 @@ try {
             $defaultSettingsParams
         );
     //Hash the password
-    $result =  $userHandler->regUser($inputs,$test);
+    $result =  $userHandler->regUser($inputs,['test'=>$test]);
 }
 catch(PDOException $e)
 {

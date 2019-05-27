@@ -1,3 +1,4 @@
 <?php
 $params['safeStr'] = true;
-$result = $auth->getActions($params,$test);
+$params['test'] = $test;
+$result = $auth->getActions($params);

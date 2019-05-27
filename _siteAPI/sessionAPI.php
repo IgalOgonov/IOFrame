@@ -1,6 +1,7 @@
 <?php
 /*Current API used to get some session details, as well as a single related global setting (time after which a session expires)*/
-require __DIR__ . '/../_Core/coreInit.php';
+
+require __DIR__ . '/../_main/coreInit.php';
 
 $resArr = array();
 

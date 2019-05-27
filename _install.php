@@ -1,10 +1,26 @@
 <?php
 
-require_once '_Core/definitions/definitions.php';
-require_once '_siteHandlers/settingsHandler.php';
-require_once '_util/helperFunctions.php';
-require_once '_siteHandlers/abstractDB.php';
-require_once '_siteHandlers/userHandler.php';
+
+//-------------------- Define current version --------------------
+if(!defined("IOFRAME_VERSION"))
+    define("IOFRAME_VERSION",1.0);
+
+require '_main/definitions.php';
+if(!defined('settingsHandler'))
+    require '_siteHandlers/settingsHandler.php';
+if(!defined('helperFunctions'))
+    require '_util/helperFunctions.php';
+if(!defined('abstractDB'))
+    require '_siteHandlers/abstractDB.php';
+if(!defined('userHandler'))
+    require '_siteHandlers/userHandler.php';
+if(!defined('pluginHandler'))
+    require '_siteHandlers/pluginHandler.php';
+
+require '_siteFunctions/updateGeoIP.php';
+
+//--------------------Initialize Current DIR--------------------
+$baseUrl = IOFrame\replaceInString('\\','/',__DIR__).'/';
 
 //--------------------Initialize EOL --------------------
 if(!defined("EOL"))
@@ -14,59 +30,95 @@ if(!defined("EOL"))
         define("EOL",'<br>');;
     }
 
-if(php_sapi_name() == "cli"){
-    define('INSTALL_CLI',true);
-    require_once 'cli_install.php';
-    die();
+//--------------------Initialize local files folder if it does not exist--------------------
+if(!is_dir('_siteFiles')){
+    if(!mkdir('_siteFiles'))
+        die('Cannot create files directory for some reason - most likely insufficient user privileges, or it already exists');
 }
-
-
-echo '<head>
-    <link rel="stylesheet" type="text/css" href="css/install.css" media="all">
-    <script src="js/jQuery_3_1_1/jquery.js"></script>
-    <script src="css/bootstrap_3_3_7/js/bootstrap.js"></script>
-    </head>';
-if(isset($_REQUEST['stage']) && $_REQUEST['stage']>='2')
-    require_once '_dbFunctions/SQLdbInit.php';
-if(isset($_REQUEST['stage']) && $_REQUEST['stage']>='4')
-    require_once '_siteNameCleanse.php';
-
+//--------------------If the installation was complete, exit --------------------
 if(file_exists('_siteFiles/_installComplete'))
     die('It seems the site is already installed! If this is an error, go to the /siteFiles folder
     and delete _installComplete.');
 
-//------TODO Add CLI support
+//--------------------Initialize temp files folder if it does not exist--------------------
+if(!is_dir('_siteFiles/temp')){
+    if(!mkdir('_siteFiles/temp'))
+        die('Cannot create temp directory for some reason - most likely insufficient user privileges, or it already exists');
+}
+if(!is_dir('_siteFiles/logs')){
+    if(!mkdir('_siteFiles/logs'))
+        die('Cannot create logs directory for some reason - most likely insufficient user privileges, or it already exists');
+}
+//-------------------- Throw in an htaccess (from a place it already exists) to deny access to local files --------------------
+if(!file_exists('_siteFiles/.htaccess'))
+    file_put_contents(
+        '_siteFiles/.htaccess',
+        file_get_contents('_plugins/.htaccess')
+    );
 
-//--------------------Initialize Current DIR--------------------
-$baseUrl = IOFrame\replaceInString('\\','/',__DIR__).'/';
+//--------------------Initialize the version --------------------
+file_put_contents('_siteFiles/ver.txt',(string)IOFRAME_VERSION);
 
 //--------------------Create the definitions json file --------------------
-fclose(fopen('_Core/definitions/definitions.json','w'));
-
-
-//--------------------Initialize settings handler--------------------
-if(!is_dir('_siteFiles/userSettings')){
-    if(!mkdir('_siteFiles/userSettings'))
-        die('Cannot create settings directory for some reason - most likely insufficient user privileges, or it already exists');
-    fclose(fopen('_siteFiles/userSettings/settings','w'));
+if(!is_dir('_siteFiles/definitions')){
+    if(!mkdir('_siteFiles/definitions'))
+        die('Cannot create definitions directory for some reason - most likely insufficient user privileges, or it already exists');
+    fclose(fopen('_siteFiles/definitions/definitions.json','w'));
 }
 
-if(!is_dir('_siteFiles/pageSettings')){
-    if(!mkdir('_siteFiles/pageSettings'))
-        die('Cannot create settings directory for some reason - most likely insufficient user privileges, or it already exists');
-    fclose(fopen('_siteFiles/pageSettings/settings','w'));
+
+//--------------------Initialize plugin "settings" folders--------------
+if(!is_dir('_siteFiles/plugins')){
+    if(!mkdir('_siteFiles/plugins'))
+        die('Cannot create plugins directory for some reason - most likely insufficient user privileges, or it already exists');
+    fclose(fopen('_siteFiles/plugins/settings','w'));
 }
 
+//--------------------Create and update GeoIP--------------------
+if(!is_dir('_siteFiles/geoip-db')){
+    if(!mkdir('_siteFiles/geoip-db'))
+        die('Cannot create geoIP directory for some reason - most likely insufficient user privileges, or it already exists');
+}
+//Only do this once during the install, cli or not
+if(!file_exists($baseUrl.'_siteFiles/geoip-db/GeoLite2-Country.mmdb'))
+    updateGeoIP($baseUrl);
+
+//--------------------Create empty plugin order--------------------
+if(!is_dir('_siteFiles/pluginOrder')){
+    if(!mkdir('_siteFiles/pluginOrder'))
+        die('Cannot create plugin order directory for some reason - most likely insufficient user privileges, or it already exists');
+    fclose(fopen('_siteFiles/pluginOrder/order','w'));
+}
+
+//--------------------Create empty plugin dependency map--------------------
+if(!is_dir('_siteFiles/pluginDependencyMap')){
+    if(!mkdir('_siteFiles/pluginDependencyMap'))
+        die('Cannot create plugin dependency map for some reason - most likely insufficient user privileges, or it already exists');
+}
+
+//--------------------Create plugins public image folder--------------------
+if(!is_dir($baseUrl.IOFrame\PLUGIN_IMAGE_FOLDER)){
+    if(!mkdir($baseUrl.IOFrame\PLUGIN_IMAGE_FOLDER))
+        die('Cannot create plugin image folder!');
+}
+
+//-------------------- Copy default icon/thumbnail into plugins image folder --------------------
+//Only do this once during the install, cli or not
+if(!file_exists($baseUrl.IOFrame\PLUGIN_IMAGE_FOLDER.'/def_icon.png'))
+    file_put_contents(
+        $baseUrl.IOFrame\PLUGIN_IMAGE_FOLDER.'/def_icon.png',
+        file_get_contents('_plugins/def_icon.png')
+    );
+if(!file_exists($baseUrl.IOFrame\PLUGIN_IMAGE_FOLDER.'/def_thumbnail.png'))
+    file_put_contents(
+        $baseUrl.IOFrame\PLUGIN_IMAGE_FOLDER.'/def_thumbnail.png',
+        file_get_contents('_plugins/def_thumbnail.png')
+    );
+//--------------------Initialize local setting folders--------------------
 if(!is_dir('_siteFiles/localSettings')){
     if(!mkdir('_siteFiles/localSettings'))
         die('Cannot create settings directory for some reason - most likely insufficient user privileges, or it already exists');
     fclose(fopen('_siteFiles/localSettings/settings','w'));
-}
-
-if(!is_dir('_siteFiles/siteSettings')){
-    if(!mkdir('_siteFiles/siteSettings'))
-        die('Cannot create settings directory for some reason - most likely insufficient user privileges, or it already exists');
-    fclose(fopen('_siteFiles/siteSettings/settings','w'));
 }
 
 if(!is_dir('_siteFiles/sqlSettings')){
@@ -81,22 +133,50 @@ if(!is_dir('_siteFiles/redisSettings')){
     fclose(fopen('_siteFiles/redisSettings/settings','w'));
 }
 
+$redisSettings = new IOFrame\settingsHandler($baseUrl.'/_siteFiles/redisSettings/',['useCache'=>false]);
+$sqlSettings = new IOFrame\settingsHandler($baseUrl.'/_siteFiles/sqlSettings/');
+$localSettings = new IOFrame\settingsHandler($baseUrl.'/_siteFiles/localSettings/');
+
+//--------------------From this point on, if we are in CLI mode, the installation is different--------------------
+if(php_sapi_name() == "cli"){
+    define('INSTALL_CLI',true);
+    require 'cli_install.php';
+    die();
+}
+
+//Only require this if it is not a local install
+require_once '_siteFunctions/SQLdbInit.php';
+
+echo '<head>
+    <link rel="stylesheet" type="text/css" href="css/install.css" media="all">
+    <script src="js/jQuery_3_1_1/jquery.js"></script>
+    <script src="css/bootstrap_3_3_7/js/bootstrap.js"></script>
+    </head>';
+//--------------------Initialize settings handler--------------------
+if(!is_dir('_siteFiles/userSettings')){
+    if(!mkdir('_siteFiles/userSettings'))
+        die('Cannot create settings directory for some reason - most likely insufficient user privileges, or it already exists');
+    fclose(fopen('_siteFiles/userSettings/settings','w'));
+}
+
+if(!is_dir('_siteFiles/pageSettings')){
+    if(!mkdir('_siteFiles/pageSettings'))
+        die('Cannot create settings directory for some reason - most likely insufficient user privileges, or it already exists');
+    fclose(fopen('_siteFiles/pageSettings/settings','w'));
+}
+
+if(!is_dir('_siteFiles/siteSettings')){
+    if(!mkdir('_siteFiles/siteSettings'))
+        die('Cannot create settings directory for some reason - most likely insufficient user privileges, or it already exists');
+    fclose(fopen('_siteFiles/siteSettings/settings','w'));
+}
+
 if(!is_dir('_siteFiles/mailSettings')){
     if(!mkdir('_siteFiles/mailSettings'))
         die('Cannot create settings directory for some reason - most likely insufficient user privileges, or it already exists');
     fclose(fopen('_siteFiles/mailSettings/settings','w'));
 }
 
-//--------------------Initialize plugin "settings" file--------------
-if(!is_dir('_siteFiles/plugins')){
-    if(!mkdir('_siteFiles/plugins'))
-        die('Cannot create plugins directory for some reason - most likely insufficient user privileges, or it already exists');
-    fclose(fopen('_siteFiles/plugins/settings','w'));
-}
-
-$localSettings = new IOFrame\settingsHandler($baseUrl.'/_siteFiles/localSettings/');
-$redisSettings = new IOFrame\settingsHandler($baseUrl.'/_siteFiles/redisSettings/',['useCache'=>false]);
-$sqlSettings = new IOFrame\settingsHandler($baseUrl.'/_siteFiles/sqlSettings/');
 $userSettings = new IOFrame\settingsHandler($baseUrl.'/_siteFiles/userSettings/');
 $pageSettings = new IOFrame\settingsHandler($baseUrl.'/_siteFiles/pageSettings/');
 $mailSettings = new IOFrame\settingsHandler($baseUrl.'/_siteFiles/mailSettings/');
@@ -143,14 +223,14 @@ function install(IOFrame\settingsHandler $userSettings,
             $privKey = bin2hex($bytes);
             echo '<div id="notice">';
             if(isset($_REQUEST['siteName'])){
-                if($siteSettings->setSetting('siteName',$_REQUEST['siteName'],true))
+                if($siteSettings->setSetting('siteName',$_REQUEST['siteName'],['createNew'=>true]))
                     echo 'Setting siteName set to '.$_REQUEST['siteName'].EOL;
                 else{
                     echo 'Failed to set setting siteName set to '.$_REQUEST['siteName'].EOL;
                 }
             }
             else{
-                if($siteSettings->setSetting('siteName','My Website',true))
+                if($siteSettings->setSetting('siteName','My Website',['createNew'=>true]))
                     echo 'Setting siteName set to My Website'.EOL;
                 else{
                     echo 'Failed to set setting siteName set to My Website'.EOL;
@@ -231,7 +311,7 @@ function install(IOFrame\settingsHandler $userSettings,
             echo '<div id="notice">';
 
             if(isset($_REQUEST['privateKey'])){
-                if($siteSettings->setSetting('privateKey',$_REQUEST['privateKey'],true))
+                if($siteSettings->setSetting('privateKey',$_REQUEST['privateKey'],['createNew'=>true]))
                     echo 'Setting privateKey set to '.$_REQUEST['privateKey'].EOL;
                 else{
                     echo 'Failed to set setting privateKey to '.$_REQUEST['privateKey'].EOL.EOL;
@@ -239,7 +319,7 @@ function install(IOFrame\settingsHandler $userSettings,
             }
 
             if(isset($_REQUEST['sslOn'])){
-                if($siteSettings->setSetting('sslOn',1,true))
+                if($siteSettings->setSetting('sslOn',1,['createNew'=>true]))
                     echo 'Setting sslOn set to 1'.EOL;
                 else{
                     echo 'Failed to set setting sslOn  to 1'.EOL.EOL;
@@ -247,7 +327,7 @@ function install(IOFrame\settingsHandler $userSettings,
             }
 
             if(isset($_REQUEST['rememberMe'])){
-                if($userSettings->setSetting('rememberMe',1,true))
+                if($userSettings->setSetting('rememberMe',1,['createNew'=>true]))
                     echo 'User setting rememberMe set to 1'.EOL;
                 else{
                     echo 'Failed to set User setting RememberMe to 1'.EOL.EOL;
@@ -255,7 +335,7 @@ function install(IOFrame\settingsHandler $userSettings,
             }
 
             if(isset($_REQUEST['userTokenExpiresIn'])){
-                if($userSettings->setSetting('userTokenExpiresIn',$_REQUEST['userTokenExpiresIn'],true))
+                if($userSettings->setSetting('userTokenExpiresIn',$_REQUEST['userTokenExpiresIn'],['createNew'=>true]))
                     echo 'User setting userTokenExpiresIn set to '.$_REQUEST['userTokenExpiresIn'].EOL;
                 else{
                     echo 'Failed to set User setting userTokenExpiresIn to '.$_REQUEST['userTokenExpiresIn'].EOL.EOL;
@@ -263,7 +343,7 @@ function install(IOFrame\settingsHandler $userSettings,
             }
 
             if(isset($_REQUEST['selfReg'])){
-                if($userSettings->setSetting('selfReg',1,true))
+                if($userSettings->setSetting('selfReg',1,['createNew'=>true]))
                     echo 'User setting selfReg set to 1'.EOL;
                 else{
                     echo 'Failed to set User setting selfReg  to 1'.EOL.EOL;
@@ -271,7 +351,7 @@ function install(IOFrame\settingsHandler $userSettings,
             }
 
             if(isset($_REQUEST['usernameChoice'])){
-                if($userSettings->setSetting('usernameChoice',$_REQUEST['usernameChoice'],true))
+                if($userSettings->setSetting('usernameChoice',$_REQUEST['usernameChoice'],['createNew'=>true]))
                     echo 'User setting usernameChoice set to '.$_REQUEST['usernameChoice'].EOL;
                 else{
                     echo 'Failed to set User setting usernameChoice  to '.$_REQUEST['usernameChoice'].EOL.EOL;
@@ -279,7 +359,7 @@ function install(IOFrame\settingsHandler $userSettings,
             }
 
             if(isset($_REQUEST['passwordResetTime'])){
-                if($userSettings->setSetting('passwordResetTime',$_REQUEST['passwordResetTime'],true))
+                if($userSettings->setSetting('passwordResetTime',$_REQUEST['passwordResetTime'],['createNew'=>true]))
                     echo 'User setting passwordResetTime set to '.$_REQUEST['passwordResetTime'].EOL;
                 else{
                     echo 'Failed to set User setting passwordResetTime to '.$_REQUEST['passwordResetTime'].EOL.EOL;
@@ -287,7 +367,7 @@ function install(IOFrame\settingsHandler $userSettings,
             }
 
             if(isset($_REQUEST['regConfirmMail'])){
-                if($userSettings->setSetting('regConfirmMail',1,true))
+                if($userSettings->setSetting('regConfirmMail',1,['createNew'=>true]))
                     echo 'User setting regConfirmMail set to 1'.EOL;
                 else{
                     echo 'Failed to set User setting regConfirmMail  to 1'.EOL.EOL;
@@ -295,7 +375,7 @@ function install(IOFrame\settingsHandler $userSettings,
             }
 
             if(isset($_REQUEST['pwdResetExpires'])){
-                if($userSettings->setSetting('pwdResetExpires',$_REQUEST['pwdResetExpires'],true))
+                if($userSettings->setSetting('pwdResetExpires',$_REQUEST['pwdResetExpires'],['createNew'=>true]))
                     echo 'User setting pwdResetExpires set to '.$_REQUEST['pwdResetExpires'].EOL;
                 else{
                     echo 'Failed to set User setting pwdResetExpires  to '.$_REQUEST['pwdResetExpires'].EOL.EOL;
@@ -303,7 +383,7 @@ function install(IOFrame\settingsHandler $userSettings,
             }
 
             if(isset($_REQUEST['mailConfirmExpires'])){
-                if($userSettings->setSetting('mailConfirmExpires',$_REQUEST['mailConfirmExpires'],true))
+                if($userSettings->setSetting('mailConfirmExpires',$_REQUEST['mailConfirmExpires'],['createNew'=>true]))
                     echo 'User setting mailConfirmExpires set to '.$_REQUEST['mailConfirmExpires'].EOL;
                 else{
                     echo 'Failed to set User setting mailConfirmExpires  to '.$_REQUEST['mailConfirmExpires'].EOL.EOL;
@@ -311,7 +391,7 @@ function install(IOFrame\settingsHandler $userSettings,
             }
 
             if(isset($_REQUEST['expectedProxy'])){
-                if($localSettings->setSetting('expectedProxy',$_REQUEST['expectedProxy'],true))
+                if($localSettings->setSetting('expectedProxy',$_REQUEST['expectedProxy'],['createNew'=>true]))
                     echo 'Local setting expectedProxy set to '.$_REQUEST['expectedProxy'].EOL;
                 else{
                     echo 'Failed to set local setting expectedProxy  to '.$_REQUEST['expectedProxy'].EOL.EOL;
@@ -341,14 +421,14 @@ function install(IOFrame\settingsHandler $userSettings,
 
             //Notice everything else is inside this - if the address is not set, everything is skipped
             if(isset($_REQUEST['redis_addr']) && ($_REQUEST['redis_addr']!= '') ){
-                if($redisSettings->setSetting('redis_addr',$_REQUEST['redis_addr'],true))
+                if($redisSettings->setSetting('redis_addr',$_REQUEST['redis_addr'],['createNew'=>true]))
                     echo 'Setting redis_addr set to '.$_REQUEST['redis_addr'].EOL;
                 else{
                     echo 'Failed to set setting redis_addr to '.$_REQUEST['redis_addr'].EOL.EOL;
                 }
 
                 if(isset($_REQUEST['redis_port'])){
-                    if($redisSettings->setSetting('redis_port',$_REQUEST['redis_port'],true))
+                    if($redisSettings->setSetting('redis_port',$_REQUEST['redis_port'],['createNew'=>true]))
                         echo 'Setting redis_port set to '.$_REQUEST['redis_port'].EOL;
                     else{
                         echo 'Failed to set setting redis_port to '.$_REQUEST['redis_port'].EOL.EOL;
@@ -358,7 +438,7 @@ function install(IOFrame\settingsHandler $userSettings,
                 if(isset($_REQUEST['redis_password'])){
                     //This is optional!
                     if($_REQUEST['redis_password'] != ''){
-                        if($redisSettings->setSetting('redis_password',$_REQUEST['redis_password'],true))
+                        if($redisSettings->setSetting('redis_password',$_REQUEST['redis_password'],['createNew'=>true]))
                             echo 'Setting redis_password set to '.$_REQUEST['redis_password'].EOL;
                         else{
                             echo 'Failed to set setting redis_password to '.$_REQUEST['redis_password'].EOL.EOL;
@@ -372,7 +452,7 @@ function install(IOFrame\settingsHandler $userSettings,
                         //Has to be at least 1
                         if($_REQUEST['redis_timeout'] < 1)
                             $_REQUEST['redis_timeout'] = 1;
-                        if($redisSettings->setSetting('redis_timeout',$_REQUEST['redis_timeout'],true))
+                        if($redisSettings->setSetting('redis_timeout',$_REQUEST['redis_timeout'],['createNew'=>true]))
                             echo 'Setting redis_timeout set to '.$_REQUEST['redis_timeout'].EOL;
                         else{
                             echo 'Failed to set setting redis_timeout to '.$_REQUEST['redis_timeout'].EOL.EOL;
@@ -381,7 +461,7 @@ function install(IOFrame\settingsHandler $userSettings,
                 }
 
                 if(isset($_REQUEST['redis_default_persistent'])){
-                    if($redisSettings->setSetting('redis_default_persistent',$_REQUEST['redis_default_persistent'],true))
+                    if($redisSettings->setSetting('redis_default_persistent',$_REQUEST['redis_default_persistent'],['createNew'=>true]))
                         echo 'Setting redis_default_persistent set to '.$_REQUEST['redis_default_persistent'].EOL;
                     else{
                         echo 'Failed to set setting redis_default_persistent to '.$_REQUEST['redis_default_persistent'].EOL.EOL;
@@ -401,7 +481,7 @@ function install(IOFrame\settingsHandler $userSettings,
                     <input type="text" name="sql_u" placeholder="Your SQL server username"><br>
                     <input type="text" name="sql_p" placeholder="Your SQL server password"><br>
                     <input type="text" name="sql_db" placeholder="Your SQL server database name"><br>
-                    <span>Safe DB Mode:</span> <input type="checkbox" name="dbLockOnAction" value="0" checked><br>
+                    <span>Safe DB Mode:</span> <input type="checkbox" name="dbLockOnAction" value="0"><br>
                     <small>If this is checked, database queries that modify the database will lock the (default database API on the)
                      server from making other modifying actions until the result is returned.</small><br>
                     <input type="submit" value="Next">
@@ -434,7 +514,7 @@ function install(IOFrame\settingsHandler $userSettings,
             }
 
             if(isset($_REQUEST['dbLockOnAction'])){
-                if($sqlSettings->setSetting('dbLockOnAction',$_REQUEST['dbLockOnAction'],true))
+                if($sqlSettings->setSetting('dbLockOnAction',$_REQUEST['dbLockOnAction'],['createNew'=>true]))
                     echo 'Setting dbLockOnAction set to '.$_REQUEST['dbLockOnAction'].EOL;
                 else{
                     echo 'Failed to set setting dbLockOnAction  to '.$_REQUEST['dbLockOnAction'].EOL.EOL;
@@ -457,7 +537,7 @@ function install(IOFrame\settingsHandler $userSettings,
             $res = true;
             //Update all settings, and return false if any of the updates failed
             foreach($sqlArgs as $key=>$val){
-                if($sqlSettings->setSetting($val[0],$val[1],true))
+                if($sqlSettings->setSetting($val[0],$val[1],['createNew'=>true]))
                     echo 'Setting '.$val[0].' set to '.$val[1].EOL;
                 else{
                     echo 'Failed to set setting '.$val[0].' to '.$val[1].EOL;
@@ -522,7 +602,7 @@ function install(IOFrame\settingsHandler $userSettings,
                 [1,0,100,2678400,31557600],
             ];
 
-            $res = $sqlHandler->insertIntoTable($sqlHandler->getSQLPrefix().'EVENTS_RULEBOOK',$columns,$assignments,[],false);
+            $res = $sqlHandler->insertIntoTable($sqlHandler->getSQLPrefix().'EVENTS_RULEBOOK',$columns,$assignments,['test'=>false]);
 
             if($res) {
                 echo EOL.'Events Rulebook initiated!' . EOL;
@@ -564,7 +644,7 @@ function install(IOFrame\settingsHandler $userSettings,
                 $assignments[$k][1] = [$v[1],'STRING'];
             }
 
-            $res = $sqlHandler->insertIntoTable($sqlHandler->getSQLPrefix().'ACTIONS_AUTH',$columns,$assignments,[],false);
+            $res = $sqlHandler->insertIntoTable($sqlHandler->getSQLPrefix().'ACTIONS_AUTH',$columns,$assignments,['test'=>false]);
 
             if($res) {
                 echo EOL.'Default Actions initiated!' . EOL;
@@ -601,27 +681,27 @@ function install(IOFrame\settingsHandler $userSettings,
                 &&isset($_REQUEST['mailPort'])
             ){
                 echo '<div id="notice">Setting mail...';
-                if($mailSettings->setSetting('mailHost',$_REQUEST['mailHost'],true))
+                if($mailSettings->setSetting('mailHost',$_REQUEST['mailHost'],['createNew'=>true]))
                     echo 'Setting mailHost set to '.$_REQUEST['mailHost'].EOL;
                 else{
                     echo 'Failed to set setting mailHost  to '.$_REQUEST['mailHost'].EOL.EOL;
                 }
-                if($mailSettings->setSetting('mailEncryption',$_REQUEST['mailEncryption'],true))
+                if($mailSettings->setSetting('mailEncryption',$_REQUEST['mailEncryption'],['createNew'=>true]))
                     echo 'Setting mailEncryption set to '.$_REQUEST['mailEncryption'].EOL;
                 else{
                     echo 'Failed to set setting mailEncryption  to '.$_REQUEST['mailEncryption'].EOL.EOL;
                 }
-                if($mailSettings->setSetting('mailUsername',$_REQUEST['mailUsername'],true))
+                if($mailSettings->setSetting('mailUsername',$_REQUEST['mailUsername'],['createNew'=>true]))
                     echo 'Setting mailUsername set to '.$_REQUEST['mailUsername'].EOL;
                 else{
                     echo 'Failed to set setting mailUsername  to '.$_REQUEST['mailUsername'].EOL.EOL;
                 }
-                if($mailSettings->setSetting('mailPassword',$_REQUEST['mailPassword'],true))
+                if($mailSettings->setSetting('mailPassword',$_REQUEST['mailPassword'],['createNew'=>true]))
                     echo 'Setting mailPassword set to '.$_REQUEST['mailPassword'].EOL;
                 else{
                     echo 'Failed to set setting mailPassword  to '.$_REQUEST['mailPassword'].EOL.EOL;
                 }
-                if($mailSettings->setSetting('mailPort',$_REQUEST['mailPort'],true))
+                if($mailSettings->setSetting('mailPort',$_REQUEST['mailPort'],['createNew'=>true]))
                     echo 'Setting mailPort set to '.$_REQUEST['mailPort'].EOL;
                 else{
                     echo 'Failed to set setting mailPort  to '.$_REQUEST['mailPort'].EOL.EOL;
@@ -743,7 +823,7 @@ function install(IOFrame\settingsHandler $userSettings,
             $myFile = fopen('_siteFiles/_installComplete', 'w');
             fclose($myFile);
             //The private key should stay inside the db, not in a setting file.
-            $siteSettings->setSetting('privateKey',null,true);
+            $siteSettings->setSetting('privateKey',null,['createNew'=>true]);
             echo 'Installation complete!'.EOL;
             $_SESSION['INSTALLING']=false;
             //Create Install Complete file
@@ -779,6 +859,7 @@ function install(IOFrame\settingsHandler $userSettings,
             array_push($localArgs,["pathToRoot",
                 substr($_SERVER['SCRIPT_NAME'], 0, strlen($_SERVER['SCRIPT_NAME'])- strlen('/install.php'))]);
             array_push($localArgs,["opMode",IOFrame\SETTINGS_OP_MODE_MIXED]);
+            array_push($localArgs,["dieOnPluginMismatch",true]);
             array_push($siteArgs,["siteName",'My Website']);
             array_push($siteArgs,["maxInacTime",3600]);
             array_push($siteArgs,["privateKey",'0000000000000000000000000000000000000000000000000000000000000000']);
@@ -808,7 +889,7 @@ function install(IOFrame\settingsHandler $userSettings,
 
             //Update all settings, and return false if any of the updates failed
             foreach($localArgs as $key=>$val){
-                if($localSettings->setSetting($val[0],$val[1],true))
+                if($localSettings->setSetting($val[0],$val[1],['createNew'=>true]))
                     echo 'Setting '.$val[0].' set to '.$val[1].EOL;
                 else{
                     echo 'Failed to set setting '.$val[0].' to '.$val[1].EOL;
@@ -817,7 +898,7 @@ function install(IOFrame\settingsHandler $userSettings,
             }
 
             foreach($siteArgs as $key=>$val){
-                if($siteSettings->setSetting($val[0],$val[1],true))
+                if($siteSettings->setSetting($val[0],$val[1],['createNew'=>true]))
                     echo 'Setting '.$val[0].' set to '.$val[1].EOL;
                 else{
                     echo 'Failed to set setting '.$val[0].' to '.$val[1].EOL;
@@ -826,7 +907,7 @@ function install(IOFrame\settingsHandler $userSettings,
             }
 
             foreach($userArgs as $key=>$val){
-                if($userSettings->setSetting($val[0],$val[1],true))
+                if($userSettings->setSetting($val[0],$val[1],['createNew'=>true]))
                     echo 'User setting '.$val[0].' set to '.$val[1].EOL;
                 else{
                     echo 'Failed to set mail setting '.$val[0].' to '.$val[1].EOL;
@@ -836,7 +917,7 @@ function install(IOFrame\settingsHandler $userSettings,
 
 
             foreach($pageArgs as $key=>$val){
-                if($pageSettings->setSetting($val[0],$val[1],true))
+                if($pageSettings->setSetting($val[0],$val[1],['createNew'=>true]))
                     echo 'Page setting '.$val[0].' set to '.$val[1].EOL;
                 else{
                     echo 'Failed to set page setting '.$val[0].' to '.$val[1].EOL;

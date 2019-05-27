@@ -178,6 +178,13 @@ namespace IOFrame{
     class pluginHandler extends abstractDBWithCache{
 
         private $fileHandler = null;
+
+        /**
+         * @var Int Tells us for how long to cache stuff by default.
+         * 0 means indefinitely.
+         */
+        protected $cacheTTL = 3600;
+
         /* Standard constructor
          *
          * Constructs an instance of the class, getting the main settings file and an existing DB connection, or generating
@@ -193,6 +200,10 @@ namespace IOFrame{
             if(isset($params['authHandler']))
                 $this->authHandler = $params['authHandler'];
 
+            //If we are caching for a custom duration, this should stated here
+            if(isset($params['cacheTTL']))
+                $this->cacheTTL = $params['cacheTTL'];
+
             $this->fileHandler = new fileHandler();
 
             //If we did not define PLUGIN_FOLDER_NAME, the default is "plugins"
@@ -204,10 +215,14 @@ namespace IOFrame{
             if(!defined('PLUGIN_FOLDER_PATH')){
                 define('PLUGIN_FOLDER_PATH','');
             }
+            //If we did not define PLUGIN_IMAGE_PATH, the default is "pluginImages/", going from site root.
+            if(!defined('PLUGIN_IMAGE_FOLDER')){
+                define('PLUGIN_IMAGE_FOLDER','pluginImages/');
+            }
 
-            //If we did not define PLUGIN_IMAGE_PATH, the default is "_img/", going from site root.
+            //If we did not define PLUGIN_IMAGE_PATH, the default is "pluginImages/", going from site root.
             if(!defined('PLUGIN_IMAGE_PATH')){
-                define('PLUGIN_IMAGE_PATH','_img/');
+                define('PLUGIN_IMAGE_PATH',PLUGIN_IMAGE_FOLDER.'/');
             }
 
             //Signifies a plugin has quickInstall.php
@@ -256,7 +271,7 @@ namespace IOFrame{
             }
         }
 
-        /* Gets available plugins
+        /** Gets available plugins
          *
          * Returns an array of all of the plugins who's folder lies in /_plugins. If they follow the correct structure of a plugin -
          * aka, having at least full/quickInstall.php, quickUninstall.php, include.php and a correctly formatted meta.json, they are
@@ -264,16 +279,25 @@ namespace IOFrame{
          * If $name is specified, only checks the specified folder - if it even exists.
          * Also checks /_siteFiles/plugins/settings. If a plugin exists there, but either doesn't exist or is illegal
          *
-         * @param string $name Name of the plugin you want to check. If isn't provided, will return a JSON string of all plugins.
+         * @param array $params Object array of the form:
+         *          name => Name of the plugin you want to check. If isn't provided (or empty),
+         *                  will return an array of all plugins.
          *
-         * @return string All available plugins, in the format {"pluginName":"<Status>", ...}. If a name is specified, returns
-         * 1 item in the array, with
+         * @return array
+         * All available plugins, in the format ["pluginName"=>"<Status>", ...].
+         * If a name is specified, returns 1 item in the array, with:
          * "illegal" if the plugin folder is of improper format
          * "absent"if there is a plugin listed as installed, but does not exist or is illegal
          * "legal" if the plugin folder is of proper format
          * "active" if the plugin folder is of proper format and it is listed as installed
         */
-        function getAvailable($name  = ''){
+        function getAvailable($params = []){
+
+            //Set defaults
+            if(isset($params['name']))
+                $name = $params['name'];
+            else
+                $name = '';
 
             $res = array();
             $plugList = new settingsHandler($this->settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/plugins/');  //Listed plugins
@@ -293,20 +317,21 @@ namespace IOFrame{
                     $folderUrls[$name] = $url.$name;
                 }
             //For each plugin, check if it's legal, then check if it exists in the json list
-            foreach($folderUrls as $name => $url){
+            foreach($folderUrls as $pluginName => $url){
                 $legal = $this->validatePlugin($url);
-                $res[$name] = $legal ? 'legal': 'illegal';
+                $res[$pluginName] = $legal ? 'legal': 'illegal';
             }
             //'absent' if there is a plugin listed as active, but does not exist
-            //Change legal to active if it's installed on the liast
-            if(count($plugList->getSettings())>0 && $name == '')
+            //Change legal to active if it's installed on the list
+            if(count($plugList->getSettings())>0 && $name == ''){
                 foreach($plugList->getSettings() as $plugin => $status){
                     if(!(array_key_exists($plugin,$res)))
                         $res[$plugin] = 'absent';
-                    else if((array_key_exists($plugin,$res)))
+                    else
                         if($status == 'installed' && $res[$plugin] == 'legal')
                             $res[$plugin] = 'active';
                 }
+            }
             else if ($name != '')
                 if($plugList->getSetting($name) == 'installed' && isset($res[$name]))
                     if($res[$name] == 'legal')
@@ -317,7 +342,7 @@ namespace IOFrame{
             return $res;
         }
 
-        /* Gets plugin info
+        /** Gets plugin info
          *
          * If $name isn't specified, returns a list (2D array) of plugins, which consist of - Available plugins + Active plugins listed at _siteFiles/plugins.
          * It is important to note that unless a plugin's folder was removed or critically altered before the plugin was uninstalled,
@@ -335,6 +360,7 @@ namespace IOFrame{
          *   "uninstallOptions": <JSON string>
          *   "installOptions": <JSON string>
          * }
+         *
          *  The status can be:
          * "active" (if it is both legal and listed "installed"),
          * "legal" (as in getAvailable)
@@ -342,17 +368,29 @@ namespace IOFrame{
          * "absent" (as in getAvailable - wont have other info)
          * "zombie" (if uninstall has started, but wasn't finished - shouldn't appear not during runtime- wont have other info),
          * "installing" (self explanatory).
+         *
          *  "icon"/"thumbnail" are only present if the status is "available" or "active", and are a mix of the info in meta.json and
          *  whether or not an icon and/or a thumbnail are present.
+         *
          *  "options" is present if the status is "available", and the plugin has an installOptions.json file in its folder. This
          *  specific options file is meant for install purposes only.
          *
-         * @param string $name Name of the plugin you want to get. If isn't provided, will return an array of all plugins.
+         * @param array $params of the form:
+         *          'name' => Name of the plugin you want to get. If isn't provided, will return an array of all plugins.
          *
-         * @return mixed If $name is specified, returns a JSON string of the format described above. Else, returns an array where
-         * each element is such a string.
+         * @return array
+         * If $name is specified, returns an array of the format described above.
+         * Else, returns an array where each element is such an array.
         */
-        function getInfo($name  = '', $test = false){
+        function getInfo(array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
+            isset($params['name'])?
+                $name = $params['name'] : $name = '';
+
             $res = array();
             $plugList = new settingsHandler($this->settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'plugins/');  //Listed plugins
             $url = $this->settings->getSetting('absPathToRoot').PLUGIN_FOLDER_PATH.PLUGIN_FOLDER_NAME;   //Plugin folder
@@ -371,7 +409,7 @@ namespace IOFrame{
             }
             foreach($names as $num=>$name){
                 $res[$num] =array();
-                $res[$num] = $this->getAvailable($name);
+                $res[$num] = $this->getAvailable(['name'=>$name]);
                 $res[$num]['fileName'] = $name;
                 $res[$num]['status'] = $res[$num][$name];
                 if($res[$num][$name] == 'absent' || $res[$num][$name] == 'illegal'){
@@ -429,7 +467,7 @@ namespace IOFrame{
                         if($inst != null)
                             if(is_json($inst)){
                                 //Ensure options are legal
-                                if($this->validatePluginFile(json_decode($inst,true),$installOpt,true,$test))
+                                if($this->validatePluginFile(json_decode($inst,true),$installOpt,['isFile'=>true,'test'=>$test,'verbose'=>$verbose]))
                                     $res[$num]['installOptions'] = json_decode($inst,true);
                             }
                         //open and read uninstall options if those exist
@@ -445,7 +483,7 @@ namespace IOFrame{
                         if($uninst != null)
                             if(is_json($uninst)){
                                 //Ensure options are legal
-                                if($this->validatePluginFile(json_decode($uninst,true),$uninstallOpt,true,$test))
+                                if($this->validatePluginFile(json_decode($uninst,true),$uninstallOpt,['isFile'=>true,'test'=>$test,'verbose'=>$verbose]))
                                     $res[$num]['uninstallOptions'] = json_decode($uninst,true);
                             }
                         //Dependencies
@@ -461,7 +499,7 @@ namespace IOFrame{
                         if($dep != null)
                             if(is_json($dep)){
                                 //Ensure dependencies are legal
-                                if($this->validatePluginFile(json_decode($dep,true),'dependencies',true,$test))
+                                if($this->validatePluginFile(json_decode($dep,true),'dependencies',['isFile'=>true,'test'=>$test,'verbose'=>$verbose]))
                                     $res[$num]['dependencies'] = json_decode($dep,true);
                             }
                         //Icon/thumbnail exist?
@@ -483,8 +521,7 @@ namespace IOFrame{
             return $res;
         }
 
-        /* Installs a plugin
-         *
+        /** Installs a plugin
          * If the $name specified is a legal, uninstalled plugin, installs it.
          * 1) Validates dependencies
          * 2) Compares each of the provided $options (assoc array) with the same-name options at installOptions.json of the plugin, and checks
@@ -497,7 +534,9 @@ namespace IOFrame{
          * 4) Adds the plugin on /_siteFiles/plugins, and sets its status to "installing".
          * 5) Includes quickInstall.php, which should be a procedural file doing the actual installing. It is usually included
          *    after coreUtils.php, but you can't be certain, so when writing quickInstall.php consider the worst scenario in both
-         *    cases. You can, however, rely on the fact that $options was defined here, and quickInstall.php has access to it.
+         *    cases.
+         *    You can, however, rely on the fact that $options was defined here, and quickInstall.php has access to it.
+         *    Also, $local is defined and either 'true' or 'false' here as well.
          * 6) Changes the plugin at /_siteFiles/plugins to "active".
          * At any point, if any exception is thrown, stops, echoes it, and includes quickUninstall.php.
          *
@@ -505,7 +544,10 @@ namespace IOFrame{
          * fullInstall.php should be a standalone installer for the plugin, that runs more like "_install.php" at the root folder.
          *
          * @param string $name Name of the plugin to install
-         * @param string $options A JSON string of options for the installer.
+         * @param array $options An array of options for the installer.
+         * @param array $params Parameters of the form:
+         *              'override' => Whether to try to install despite plugin being considered illegal. Default false
+         *              'local' => Install plugin locally as opposed to adding it to globally. Defaults to true in CLI mode, false otherwise.
          *
          * @returns integer Returns
          * 0 installation was complete and without errors
@@ -516,14 +558,35 @@ namespace IOFrame{
          * 5 plugin definitions are similar to existing system definitions  - will also echo exception
          * 6 exception thrown during install  - will also echo exception
          * */
-        function install($name, $options = [],$override = false, $test = false){
+        function install(string $name, array $options = [], array $params = []){
+
+            //Set defaults
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
+            if(isset($params['override']))
+                $override = $params['override'];
+            else
+                $override = false;
+
+            if(isset($params['local']))
+                $local = $params['local'];
+            else
+                if (php_sapi_name() == "cli") {
+                    $local = true;
+                } else {
+                    $local = false;
+                }
+
             $url = $this->settings->getSetting('absPathToRoot').PLUGIN_FOLDER_PATH.PLUGIN_FOLDER_NAME.$name.'/';   //Plugin folder
             $lockHandler = new lockHandler($url);
             $plugList = new settingsHandler($this->settings->getSetting('absPathToRoot').SETTINGS_DIR_FROM_ROOT.'/plugins/');
-            $plugName = $this->getInfo($name)[0];
+            $plugName = $this->getInfo(['name'=>$name])[0];
             //-------Check if the plugin is installed
             if($plugList->getSetting($name) == 'installed' || $plugList->getSetting($name) == 'zombie' || $plugList->getSetting($name) == 'installing'){
-                if($test)
+                if($verbose)
                     echo 'Plugin '.$name.' is either installed, installing or zombie!'.EOL;
                 return 1;
             }
@@ -538,46 +601,36 @@ namespace IOFrame{
             else
                 $goOn = true;
             if(!$goOn){
-                if($test)
+                if($verbose)
                     echo 'quickInstall for '.$name.' is either missing, or plugin illegal!'.EOL;
                 return 2;
             }
 
             //-------Validate dependencies
-            isset($plugName['dependencies'])?
-                $dependencies = $plugName['dependencies']:$dependencies = [];
-
-            foreach($dependencies as $dep => $versions){
-                //Remember - $versions[0] is min version, [1] max version.
-                $dep = $this->getInfo($dep)[0];
-                ( $dep['status']=='active' && isset($dep['version']) && filter_var((int)$dep['version'],FILTER_VALIDATE_INT) )?
-                    $ver = (int)$dep['version']:
-                    $ver = -1;
-                if( $ver < $versions['minVersion'] ||  (isset($versions['maxVersion']) && $ver > $versions['maxVersion'])){
-                    if($test)
-                        echo 'Plugin '.$name.' is missing a correct version of the dependency '.$dep['name'].'!'.EOL;
-                    return 3;
-                }
-            }
-
+            if(isset($plugName['dependencies']))
+                $dependencies = $plugName['dependencies'];
+            else
+                $dependencies = [];
+            if($this->validateDependencies($name,['dependencyArray'=>$dependencies,'test'=>$test,'verbose'=>$verbose]) > 1)
+                return 3;
             //-------Time to validate options
-            if(!$this->validateOptions('installOptions',$url,$name,$options,$test))
+            if(!$this->validateOptions('installOptions',$url,$name,$options,['test'=>$test,'verbose'=>$verbose]))
                 return 4;
 
             //-------Change plugin to "installing"
             if(!$test)
-                $plugList->setSetting($name,'installing',true);
+                $plugList->setSetting($name,'installing',['createNew'=>true]);
 
             //-------Time to validate (then update) definitions if the exist
             if(file_exists($url.'definitions.json')){
-                if(!$this->validatePluginFile($url,'definitions',false,$test)){
-                    if($test)
+                if(!$this->validatePluginFile($url,'definitions',['isFile'=>false,'test'=>$test,'verbose'=>$verbose])){
+                    if($verbose)
                         echo 'Definitions for '.$name.' are not valid!'.EOL;
                     return 5;
                 }
                 //Now add the definitions to the system definition file
                 try{
-                    $gDefUrl = $this->settings->getSetting('absPathToRoot').'_Core/definitions/';
+                    $gDefUrl = $this->settings->getSetting('absPathToRoot').'_siteFiles/definitions/';
                     //Read definition files - and merge them
                     $defFile = $this->fileHandler->readFileWaitMutex($url,'definitions.json',['lockHandler' => $lockHandler]);
                     if($defFile != null){       //If the file is empty, don't bother doing work
@@ -599,7 +652,7 @@ namespace IOFrame{
                             $defLock->deleteMutex();
                         }
                         //If this was a test, return the expected result
-                        else{
+                        if($verbose){
                             echo 'New definitions added to system definitions: '.$defFile.EOL;
                         }
                     }
@@ -609,10 +662,10 @@ namespace IOFrame{
                     try{
                         $options = [];
                         require $url.'quickUninstall.php';
-                        $plugList->setSetting($name,null,true);
+                        $plugList->setSetting($name,null,['createNew'=>true]);
                     }
                     catch (\Exception $e){
-                        if($test)
+                        if($verbose)
                             echo 'Exception during definition inclusion of plugin '.$name.': '.$e.EOL;
                     }
                     return 5;
@@ -626,42 +679,45 @@ namespace IOFrame{
                 try{
                     $options = [];
                     require $url.'quickUninstall.php';
-                    $plugList->setSetting($name,null,true);
+                    $plugList->setSetting($name,null,['createNew'=>true]);
                 }
                 catch (\Exception $e){
-                    if($test)
+                    if($verbose)
                         echo 'Exception during install of plugin '.$name.': '.$e.EOL;
                 }
                 return 6;
             }
             //-------Populate dependency map
-            $this->populateDependencies($name,$dependencies,$test);
+            $this->populateDependencies($name,$dependencies,['test'=>$test,'verbose'=>$verbose]);
             if(!$test){
                 //-------Change plugin to "installed"
-                $plugList->setSetting($name,'installed',true);
-                //-------Add to order list
-                $this->pushToOrder($name);
+                $plugList->setSetting($name,'installed',['createNew'=>true]);
             }
+            //-------Add to order list
+            $this->pushToOrder($name,['local'=>$local,'verify'=>!$override,'test'=>$test,'verbose'=>$verbose]);
             return 0;
         }
 
-        /* Uninstalls a plugin
+        /** Uninstalls a plugin
          *
          * If the $name specified is a legal, existing plugin, uninstalls it.
          * 1) Validates all files/options
          * 2) Changes the plugin at /_siteFiles/plugins to "zombie".
          * 3) Includes quickUninstall.php, which should be a procedural file doing the uninstalling.
-         *    Notice that this file an also be included at any point at the installation, so when writing it, don't assume
+         *    Notice that this file can also be included at any point at the installation, so when writing it, don't assume
          *    every component of your plugin is installed correctly (or at all).
-         *    IMPORTANT $options will be available to uninstall as a string - it's up to the uninstall file to parse it and
-         *    check for each option's legality.
+         *    Like with install, you can rely on the fact that $options was defined here, as well as $local (but again -
+         *    $options may be the ones from the install).
          * 4) Removes all the definitions - if there are any - of the plugin from the systems definitions.json file.
          * 5) Removes the plugin from the /_siteFiles/plugins list.
          * At any point, if any exception is thrown, stops and echoes it. Remember that a plugin with a failed uninstall will
          * have the status "zombie".
          *
          * @param string $name Name of the plugin to uninstall
-         * @param string $options A JSON string of options for the uninstaller.
+         * @param array $options Array of options for the uninstaller.
+         * @param array $params of the form:
+         *          'override' => bool, default true - whether to continue uninstalling even if the plugin is not marked as 'active'
+         *          'local' => bool, default depends on PHP Mode (web vs cli) - whether to only change local state, or global state.
          *
          * @returns mixed Returns
          * 0 the plugin was uninstalled successfully
@@ -672,20 +728,40 @@ namespace IOFrame{
          * 5 Could not remove definitions  - will also echo exception
          * 6 Exception during uninstall - will also echo exception
          * */
-        function uninstall($name, $options = [], $override = true, $test = false){
+        function uninstall(string $name, $options = [], $params = []){
+
+            //Set defaults
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
+            if(isset($params['override']))
+                $override = $params['override'];
+            else
+                $override = true;
+
+            if(isset($params['local']))
+                $local = $params['local'];
+            else
+                if (php_sapi_name() == "cli") {
+                    $local = true;
+                } else {
+                    $local = false;
+                }
+
             $url = $this->settings->getSetting('absPathToRoot').PLUGIN_FOLDER_PATH.PLUGIN_FOLDER_NAME.$name.'/';   //Plugin folder
-            $depUrl = $this->settings->getSetting('absPathToRoot').PLUGIN_FOLDER_PATH.PLUGIN_FOLDER_NAME.'_dependency.map/';
+            $depUrl = $this->settings->getSetting('absPathToRoot').'_siteFiles/pluginDependencyMap/';
             $lockHandler = new lockHandler($url);
             $plugList = new settingsHandler($this->settings->getSetting('absPathToRoot').SETTINGS_DIR_FROM_ROOT.'/plugins/');
-            $plugName = $this->getInfo($name)[0];
+            $plugName = $this->getInfo(['name'=>$name])[0];
             //-------Check if the plugin is absent - or if override is false while the plugin isn't listed installed.
             $goOn = ($plugName['status'] != 'absent');
             if($goOn && !$override && $plugName['status'] != 'active')
                 $goOn = false;
             if(!$goOn){
-                if($test)
+                if($verbose)
                     echo 'Plugin '.$name.' absent, can not uninstall!'.EOL;
-                else if($plugName['status'] == 'absent') //Only remove the plugin from the list if its actually absent
+                if($plugName['status'] == 'absent' && !$test) //Only remove the plugin from the list if its actually absent
                     $plugList->setSetting($name,null);
                 return 1;
             }
@@ -696,14 +772,14 @@ namespace IOFrame{
 
             //-------Make sure quickUninstall exists
             if(!file_exists($url.'quickUninstall.php')){
-                if($test)
+                if($verbose)
                     echo 'Plugin '.$name.' quickUninstall absent, can not uninstall!'.EOL;
                 return 2;
             }
             //-------Check for dependencies
-            $dep = $this->checkDependencies($name,true,$test);
+            $dep = $this->checkDependencies($name,['validate'=>true,'test'=>$test,'verbose'=>$verbose]);
             if(!($dep === 0)){
-                if($test)
+                if($verbose)
                     echo 'Plugin '.$name.' dependencies are '.$dep.', can not uninstall!'.EOL;
                 return 3;
             }
@@ -711,19 +787,23 @@ namespace IOFrame{
             if(!$test)
                 $plugList->setSetting($name,'zombie');
             //-------Validate options
-            if(!$this->validateOptions('uninstallOptions',$url,$name,$options,$test))
+            if(!$this->validateOptions('uninstallOptions',$url,$name,$options,['test'=>$test,'verbose'=>$verbose]))
                 return 4;
             //-------Call quickUninstall.php - REMEMBER - OPTIONS ARRAY MUST BE FILTERED
             try{
                 require $url.'quickUninstall.php';
             }
             catch(\Exception $e){
-                if($test)
+                if($verbose)
                     echo 'Exception during uninstall of plugin '.$name.': '.$e.EOL;
                 return 6;
             }
             //-------Remove plugin from order list
-            $this->removeFromOrder($name, 'name', false, true, $test);
+            $this->removeFromOrder(
+                $name,
+                'name',
+                ['verify'=>false,'backUp'=>true,'local'=>$local,'test'=>$test,'verbose'=>$verbose]
+            );
             //-------Remove dependencies
             $dep = json_decode($this->fileHandler->readFileWaitMutex($url,'dependencies.json',[]),true);
             if(is_array($dep))
@@ -733,21 +813,21 @@ namespace IOFrame{
                             $depHandler = new settingsHandler($depUrl.$pName.'/',['useCache'=>false]);
                             $depHandler->setSetting($name,null);
                         }
-                        else{
+                        if($verbose){
                             echo 'Removing '.$name.' from dependency tree of '.$pName.EOL;
                         }
                     }
                 }
             //-------If the definitions file exists, remove them
             if(file_exists($url.'definitions.json')){
-                if(!$this->validatePluginFile($url,'definitions',false,$test)){
-                    if($test)
+                if(!$this->validatePluginFile($url,'definitions',['isFile'=>false,'test'=>$test,'verbose'=>$verbose])){
+                    if($verbose)
                         echo 'Definitions for '.$name.' are not valid!'.EOL;
                     return 5;
                 }
                 //Now remove the definitions from the system definition file
                 try{
-                    $gDefUrl = $this->settings->getSetting('absPathToRoot').'_Core/definitions/';
+                    $gDefUrl = $this->settings->getSetting('absPathToRoot').'_siteFiles/definitions/';
                     //Read definition files - and remove the matching ones
                     $defFile = $this->fileHandler->readFileWaitMutex($url,'definitions.json',['lockHandler' => $lockHandler]);
                     if($defFile != null){       //If the file is empty, don't bother doing work
@@ -771,13 +851,14 @@ namespace IOFrame{
                             $defLock->deleteMutex();
                         }
                         //If this was a test, return the expected result
-                        else{
+                        if($verbose){
                             echo 'Definitions removed from system definitions: '.$defFile.EOL;
                         }
                     }
                 }
                 catch (\Exception $e){
-                    echo 'Exception during definition removal plugin '.$name.': '.$e.EOL;
+                    if($verbose)
+                        echo 'Exception during definition removal plugin '.$name.': '.$e.EOL;
                     return 5;
                 }
             }
@@ -785,14 +866,54 @@ namespace IOFrame{
             return 0;
         }
 
-        /* Returns the current order of plugins.
-         * Returns an empty array if 'order' file is empty, or false on failure.
+        /** Gets the current order of plugins
+         * @param array $params Parameters of the form:
+         *              'local' - bool, default true - Get order from local file, or from the Cache/DB.
+         *              'cacheTTL' - int, default set by handler - How long the order should be cached for, if gotten from the DB.
+         * @return mixed Returns an empty array if 'order' file is empty, or false on failure.
+         *
          * */
-        function getOrder(){
+        function getOrder($params = []){
+
+            //Set defaults
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
+            if(isset($params['local']))
+                $local = $params['local'];
+            else
+                $local = true;
+
+
+            if(isset($params['cacheTTL']))
+                $cacheTTL = $params['cacheTTL'];
+            else
+                $cacheTTL = $this->cacheTTL;
             $res = [];
-            $order = $this->fileHandler->readFileWaitMutex($this->settings->getSetting('absPathToRoot').PLUGIN_FOLDER_PATH.PLUGIN_FOLDER_NAME.'_order.list/','order',[]);
-            if($order === '')
-                $res = '';
+
+            if($local)
+                $order = $this->fileHandler->readFileWaitMutex($this->settings->getSetting('absPathToRoot').'/_siteFiles/pluginOrder/','order',[]);
+            else{
+                $order = $this->redisHandler->call('get','plugin_order');
+                if($order === false){
+                    $order = $this->sqlHandler->selectFromTable(
+                        $this->sqlHandler->getSQLPrefix().'CORE_VALUES',
+                        [
+                            ['tableKey','pluginOrder','=']
+                        ],
+                        ['tableValue'],
+                        ['test'=>$test,'verbose'=>$verbose]
+                    )[0]['tableValue'];
+                    if(!$test)
+                        $this->redisHandler->call('set',['plugin_order',$order,$cacheTTL]);
+                    if($verbose)
+                        echo 'Adding plugin order to cache!'.EOL;
+                }
+            }
+
+            if($order === '' || $order === null || $order === [])
+                $res = [];
             elseif($order === false){
                 $res = false;
             }
@@ -804,18 +925,89 @@ namespace IOFrame{
             return $res;
         }
 
+        /** Updates plugin order in the cache/DB
+         * @param string $newOrder The new order, in form of a string
+         * @param array $params Parameters of the form:
+         *              'useCache' - overrides the classes 'useCache' if provided
+         *
+         * @return bool Whether the DB was updated
+         *
+        */
+        function updatePluginOrder(string $newOrder, $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            //Set defaults
+            if(isset($params['useCache']))
+                $useCache = $params['useCache'];
+            else
+                $useCache = $this->defaultSettingsParams['useCache'];
+
+            $res = (
+                $this->sqlHandler->insertIntoTable(
+                    $this->sqlHandler->getSQLPrefix().'CORE_VALUES',
+                    ['tableKey','tableValue'],
+                    [[['pluginOrder','STRING'], [$newOrder,'STRING']]],
+                    ['onDuplicateKey'=>true,'test'=>$test,'verbose'=>$verbose]
+                )
+                ===
+                true
+            );
+
+            if($useCache && $res){
+                if(!$test)
+                    $this->redisHandler->call('del',['plugin_order']);
+                if($verbose)
+                    echo 'Deleting plugin order cache!'.EOL;
+            }
+
+            return $res;
+
+        }
+
         /* Pushes a plugin to the bottom/top of the order list, if index is -1/-2, respectively, or
          * to the index (pushing everything below it down)
+         * @param string $name Plugin name
+         * @param array $params of the form:
+         *              'index' - int, default -1 - As described above.
+         *              'verify' => bool, default true - Verify plugin dependencies before changing order
+         *              'local' => bool, default true - Whether to change the order just locally, or globally too.
+         *              'backUp' => bool, default false - Back up local file after changing
+         * @returns int
          * */
-        function pushToOrder($name, $index = -1, $verify = true, $backUp = false,$test = false){
+        function pushToOrder(string $name, $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            //Set defaults
+            if(isset($params['index']))
+                $index = $params['index'];
+            else
+                $index = -1;
+
+            if(isset($params['verify']))
+                $verify = $params['verify'];
+            else
+                $verify = true;
+
+            if(isset($params['backUp']))
+                $backUp = $params['backUp'];
+            else
+                $backUp = false;
+
+            if(isset($params['local']))
+                $local = $params['local'];
+            else
+                $local = true;
+
             $res = false;
-            $url = $this->settings->getSetting('absPathToRoot').PLUGIN_FOLDER_PATH.PLUGIN_FOLDER_NAME.'_order.list/';
+            $url = $this->settings->getSetting('absPathToRoot').'/_siteFiles/pluginOrder/';
             $filename = 'order';
             //Verify first, if $verify == true
             if($verify == true){
-                $info = $this->getAvailable($name);
+                $info = $this->getAvailable(['name'=>$name]);
                 if($info[$name] != 'active'){
-                    if($test)
+                    if($verbose)
                         echo 'Cannot push a plugin into order that is not active!'.EOL;
                     return $res;
                 }
@@ -823,26 +1015,28 @@ namespace IOFrame{
             //Read the existing order and act accordingly
             $order = $this->fileHandler->readFileWaitMutex($url,$filename,[]);
             if($order === ''){
+                $order = $name;
                 if(!$test)
-                    return $this->fileHandler->writeFileWaitMutex($url, $filename, $name, []);
-                else
-                    echo 'Writing ',$name.' to empty order file'.EOL;
+                    $res = $this->fileHandler->writeFileWaitMutex($url, $filename, $order, []);
+                if($verbose)
+                    echo 'Writing ',$order.' to empty order file'.EOL;
+                if(!$local)
+                    $this->updatePluginOrder($order,['test'=>$test,'verbose'=>$verbose]);
             }
             elseif($order === false){
-                if(!$test)
-                    return false;
-                else
+                $res = false;
+                if($verbose)
                     echo 'failed to open order file'.EOL;
             }
             else{
                 if($index<0){
+                    ($index == -2)?
+                        $order = $name . ',' . $order : $order = $order . ',' . $name ;
                     if(!$test)
-                        ($index == -2)?
-                            $res = $this->fileHandler->writeFileWaitMutex($url, $filename, $name . ',' . $order, []) :
-                            $res = $this->fileHandler->writeFileWaitMutex($url, $filename, $order . ',' . $name, []);
-                    else{
-                        ($index == -2)? $order = $name.','.$order : $order =$order.','.$name;
+                        $res = $this->fileHandler->writeFileWaitMutex($url, $filename, $order, []);
+                    if($verbose){
                         echo 'New plugin order: '.$order.EOL;
+                        $res = true;
                     }
                 }
                 else{
@@ -854,38 +1048,66 @@ namespace IOFrame{
                     if(!$test){
                         $res = $this->fileHandler->writeFileWaitMutex($url, $filename, $order, ['backUp' => $backUp]);
                     }
-                    else{
+                    if($verbose){
                         echo 'New plugin order: '.$order.EOL;
-                        return true;
+                        $res = true;
                     }
                 }
+                if(!$local)
+                    $this->updatePluginOrder($order,['test'=>$test,'verbose'=>$verbose]);
             }
             return $res;
         }
 
-        /* Remove a plugin from the order.
-         * $type is 'index', 'range' or 'name'
-         * $target is the index (number) or name of the plugin, depending on $type. Range is of format '<from>,<to>'
-         * Returns:
+        /** Remove a plugin from the order.
+         *
+         * @param string $target is the index (number) or name of the plugin, depending on $type. Range is of format '<from>,<to>'
+         * @param string $type is 'index', 'range' or 'name'
+         * @param array $params of the form:
+         *              'verify' => bool, default true - Verify plugin dependencies before changing order
+         *              'local' => bool, default true - Whether to change the order just locally, or globally too.
+         *              'backUp' => bool, default false - Back up local file after changing
+         * @returns int
          * 0 - success
          * 1 - index or name don't exist
          * 2 - incorrect type
          * 3 - couldn't read or write file, or order is not an array
          * 4 - $validate is true, and removing the target violates its dependencies
+         * 5 - db write failed
          * */
-        function removeFromOrder($target, $type, $validate = true, $backUp = false, $test = false){
-            $url = $this->settings->getSetting('absPathToRoot').PLUGIN_FOLDER_PATH.PLUGIN_FOLDER_NAME.'_order.list/';
+        function removeFromOrder(string $target, string $type, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            //Set defaults
+            if(isset($params['verify']))
+                $verify = $params['verify'];
+            else
+                $verify = true;
+
+            if(isset($params['backUp']))
+                $backUp = $params['backUp'];
+            else
+                $backUp = false;
+
+            if(isset($params['local']))
+                $local = $params['local'];
+            else
+                $local = true;
+
+            $url = $this->settings->getSetting('absPathToRoot').'/_siteFiles/pluginOrder/';
             $filename = 'order';
             try{
                 $order = $this->fileHandler->readFileWaitMutex($url,$filename,[]);
+                $oldOrder = $order;
                 //If order file is empty or cannot be opened, it is of no interest
                 if($order === ''){
-                    if($test)
+                    if($verbose)
                         echo 'Order file empty'.EOL;
                     return 3;
                 }
                 elseif($order === false){
-                    if($test)
+                    if($verbose)
                         echo 'failed to open order file'.EOL;
                     return 3;
                 }
@@ -894,7 +1116,7 @@ namespace IOFrame{
                     $order = explode(',', $order);
                     //Make sure the order was of the right format
                     if(!is_array($order)){
-                        if($test)
+                        if($verbose)
                             echo 'Order is not an array!.'.EOL;
                         return 3;
                     }
@@ -902,7 +1124,7 @@ namespace IOFrame{
                     switch($type){
                         case 'index':
                             if(!isset($order[$target])){
-                                if($test)
+                                if($verbose)
                                     echo 'Index does not exist!'.EOL;
                                 return 1;
                             }
@@ -917,26 +1139,26 @@ namespace IOFrame{
                                 }
                             }
                             if(!$foundMatch){
-                                if($test)
+                                if($verbose)
                                     echo 'Name '.$target.' does not exist in order list!'.EOL;
                                 return 1;
                             }
                             break;
                         case 'range':
-                            if($test)
+                            if($verbose)
                                 echo 'Unimplemented type sorry mate.'.EOL; // TODO IMPLEMENT
                             return 2;
                             break;
                         default:
-                            if($test)
+                            if($verbose)
                                 echo 'Incorrect type!'.EOL;
                             return 2;
                     }
-                    //Validate dependencies
-                    if($validate){
-                        $dep = $this->checkDependencies($order[$target],true,$test);
+                    //Verify dependencies
+                    if($verify){
+                        $dep = $this->checkDependencies($order[$target],['validate'=>true,'test'=>$test,'verbose'=>$verbose]);
                         if($dep !== 0){
-                            if($test)
+                            if($verbose)
                                 echo 'Plugin '.$order[$target].' dependencies are '.$dep.', can not remove!'.EOL;
                             return 4;
                         }
@@ -949,42 +1171,80 @@ namespace IOFrame{
                         if($res == true)
                             $res = 0;
                     }
-                    else{
+                    if($verbose){
                         echo 'New plugin order: '.$order.EOL;
-                        return 0;
+                        $res = 0;
                     }
+
+                    if(!$local)
+                        if(!$this->updatePluginOrder($order,['test'=>$test,'verbose'=>$verbose]))
+                            $res = 5;
                 }
             }
             catch(\Exception $e){
-                if($test)
+                if($verbose)
                     echo 'Exception: '.$e.EOL;
                 return 3;
+            }
+
+            //If writing to DB failed, restore the file locally
+            if($res == 5){
+                $res = $this->fileHandler->writeFileWaitMutex($url, $filename, $oldOrder, ['backUp' => $backUp]);
             }
 
             return $res;
         }
 
-        /* Moves a plugin from one index in the order list to another, pushing everything it passes 1 space up/down in the opposite direction
-         * Returns
+        /** Moves a plugin from one index in the order list to another,
+         * pushing everything it passes 1 space up/down in the opposite direction
+         * @param int $from
+         * @param int $to
+         * @param array $params of the form:
+         *              'verify' => bool, default true - Verify plugin dependencies before changing order
+         *              'local' => bool, default true - Whether to change the order just locally, or globally too.
+         *              'backUp' => bool, default false - Back up local file after changing
+         * @returns mixed
          * 0 - all good
          * 1 - from or to indexes are not set, or illegal
          * 2 - could not open file
-         * JSON of the form {'fromName':'violatedDependency'} - $validate is true, and dependencies would be violated by moving the plugin in the order
+         * 3 - failed to write to db
+         * JSON of the form {'fromName':'violatedDependency'} - $validate is true, and dependencies would be violated by
+         *  moving the plugin in the order
          * */
-        function moveOrder($from,$to, $validate = true, $backUp = false, $test = false){
-            $url = $this->settings->getSetting('absPathToRoot').PLUGIN_FOLDER_PATH.PLUGIN_FOLDER_NAME.'_order.list/';
+        function moveOrder(int $from, int $to, $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            //Set defaults
+            if(isset($params['verify']))
+                $verify = $params['verify'];
+            else
+                $verify = true;
+
+            if(isset($params['backUp']))
+                $backUp = $params['backUp'];
+            else
+                $backUp = false;
+
+            if(isset($params['local']))
+                $local = $params['local'];
+            else
+                $local = true;
+
+            $url = $this->settings->getSetting('absPathToRoot').'/_siteFiles/pluginOrder/';
             $pluginUrl = $this->settings->getSetting('absPathToRoot').PLUGIN_FOLDER_PATH.PLUGIN_FOLDER_NAME;
             $filename = 'order';
             try{
                 $order = $this->fileHandler->readFileWaitMutex($url,$filename,[]);
+                $oldOrder = $order;
                 //If order file is empty or cannot be opened, it is of no interest
                 if($order === ''){
-                    if($test)
+                    if($verbose)
                         echo 'Order file empty'.EOL;
                     return 2;
                 }
                 elseif($order === false){
-                    if($test)
+                    if($verbose)
                         echo 'failed to open order file'.EOL;
                     return 2;
                 }
@@ -993,19 +1253,13 @@ namespace IOFrame{
                     $order = explode(',', $order);
                     //Make sure the order was of the right format
                     if(!is_array($order)){
-                        if($test)
+                        if($verbose)
                             echo 'Order is not an array!.'.EOL;
                         return 2;
                     }
                     //Make sure from and to are set
-                    if(gettype($from)!= 'integer' || gettype($to)!= 'integer'){
-                        if($test)
-                            echo '$from or $to are not integers.'.EOL;
-                        return 1;
-                    }
-                    //Make sure from and to are set
                     if(!isset($order[$from]) || !isset($order[$to])){
-                        if($test)
+                        if($verbose)
                             echo $from.' or '.$to.' indexes are not set in order array.'.EOL;
                         return 1;
                     }
@@ -1015,7 +1269,7 @@ namespace IOFrame{
                     //Save the name!
                     $fromName = $order[$from];
                     //Validate if we need to
-                    if($validate){
+                    if($verify){
                         //If we push something upwards, we need to make sure its own dependencies are not violated
                         if($from > $to){
                             $dep = json_decode($this->fileHandler->readFileWaitMutex($pluginUrl.$fromName,'dependencies.json',[]),true);
@@ -1025,7 +1279,7 @@ namespace IOFrame{
                                     //Remember that $order[i] is the name of each plugin in the order, and $dep is an array whos keys are plugins
                                     //We are dependant on.
                                     if( array_key_exists($order[$i],$dep) ){
-                                        if($test)
+                                        if($verbose)
                                             echo 'Order movement would violate '.$fromName.' dependency on '.$order[$i].EOL;
                                         return  json_encode([$order[$i]=>$fromName]);
                                     }
@@ -1033,14 +1287,14 @@ namespace IOFrame{
                         }
                         //If we push something downwards, we need ensure it does not break others' dependencies on it.
                         else{
-                            $dep = json_decode( $this->checkDependencies($fromName,true) , true);
+                            $dep = json_decode( $this->checkDependencies($fromName,['validate'=>true]) , true);
                             if(is_array($dep))
                                 for($i = $from+1; $i<=$to; $i++){
                                     //This would mean we can get swapped under a plugin that depends on us, which is illegal.
                                     //Remember that $order[i] is the name of each plugin in the order, and $dep is an array
                                     //of plugins that depend on this one.
                                     if( array_key_exists($order[$i],$dep) ){
-                                        if($test)
+                                        if($verbose)
                                             echo 'Order movement would violate '.$order[$i].' dependency on '.$fromName.EOL;
                                         return json_encode([$fromName=>$order[$i]]);
                                     }
@@ -1051,43 +1305,78 @@ namespace IOFrame{
                     array_splice($order,$from,1);
                     array_splice($order,$to,0,$fromName);
                     $order = implode(',',$order);
-                    if($test)
+                    if($verbose)
                         echo 'New order: '.$order.EOL;
-                    else{
+                    if(!$test){
                         $this->fileHandler->writeFileWaitMutex($url, $filename, $order, ['backUp' => $backUp]);
                     }
+                    if(!$local)
+                        if($this->updatePluginOrder($order,['test'=>$test,'verbose'=>$verbose]))
+                            return 0;
+                        else{
+                            $this->fileHandler->writeFileWaitMutex($url, $filename, $oldOrder, ['backUp' => $backUp]);
+                            return 3;
+                        }
                     return 0;
                 }
             }
             catch(\Exception $e){
-                if($test)
+                if($verbose)
                     echo 'Exception: '.$e.EOL;
                 return 2;
             }
         }
 
-        /* Swaps 2 plugins in the order
-         * Returns
+        /** Swaps 2 plugins in the order
+         * @param int $num1
+         * @param int $num2
+         * @param array $params of the form:
+         *              'verify' => bool, default true - Verify plugin dependencies before changing order
+         *              'local' => bool, default true - Whether to change the order just locally, or globally too.
+         *              'backUp' => bool, default false - Back up local file after changing
+         * @returns mixed
          * 0 - success
          * 1 - one of the indices is not set (or empty order file), or not integers
          * 2 - couldn't open order file, or order is not an array
-         * 3 - $validate is true, and dependencies would be violated by moving the plugin in the order
+         * 3 - Could not write to db
+         * JSON of the form {'fromName':'violatedDependency'} - $validate is true, and dependencies would be violated by
+         *  moving the plugin in the order
          * */
-        function swapOrder($num1,$num2, $validate = true, $backUp = true ,$test = false){
-            $url = $this->settings->getSetting('absPathToRoot').PLUGIN_FOLDER_PATH.PLUGIN_FOLDER_NAME.'_order.list/';
+        function swapOrder(int $num1,int $num2, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            //Set defaults
+            if(isset($params['verify']))
+                $verify = $params['verify'];
+            else
+                $verify = true;
+
+            if(isset($params['backUp']))
+                $backUp = $params['backUp'];
+            else
+                $backUp = false;
+
+            if(isset($params['local']))
+                $local = $params['local'];
+            else
+                $local = true;
+
+            $url = $this->settings->getSetting('absPathToRoot').'/_siteFiles/pluginOrder/';
             $pluginUrl = $this->settings->getSetting('absPathToRoot').PLUGIN_FOLDER_PATH.PLUGIN_FOLDER_NAME;
             $filename = 'order';
             try{
                 $order = $this->fileHandler->readFileWaitMutex($url,$filename,[]);
+                $oldOrder = $order;
                 //Make sure order isnt empty
                 if($order === ''){
-                    if($test)
+                    if($verbose)
                         echo 'Order file empty'.EOL;
                     return 1;
                 }
                 //Make sure we opened the file
                 elseif($order === false){
-                    if($test)
+                    if($verbose)
                         echo 'failed to open order file'.EOL;
                     return 2;
                 }
@@ -1095,19 +1384,13 @@ namespace IOFrame{
                     $order = explode(',', $order);
                     //Make sure order is an array
                     if(!is_array($order)){
-                        if($test)
+                        if($verbose)
                             echo 'Order is not an array!.'.EOL;
                         return 2;
                     }
-                    //Make sure both numbers are numbers
-                    if(gettype($num1)!='integer' || gettype($num2)!='integer'){
-                        if($test)
-                            echo '$num1 or $num2 are not integers!'.EOL;
-                        return 1;
-                    }
                     //Make sure both numbers are set
                     if(!isset($order[$num1]) || !isset($order[$num2])){
-                        if($test)
+                        if($verbose)
                             echo $num1.' or '.$num2.' indexes are not set in order array.'.EOL;
                         return 1;
                     }
@@ -1120,7 +1403,7 @@ namespace IOFrame{
                         $num2 = $temp;
                     }
                     //Validate dependencies
-                    if($validate){
+                    if($verify){
                         //If we push something upwards, we need to make sure its own dependencies are not violated
                         $dep = json_decode($this->fileHandler->readFileWaitMutex($pluginUrl.$order[$num2],'dependencies.json',[]),true);
                         if(is_array($dep))
@@ -1129,20 +1412,20 @@ namespace IOFrame{
                                 //Remember that $order[i] is the name of each plugin in the order, and $dep is an array whos keys are plugins
                                 //We are dependant on.
                                 if( array_key_exists($order[$i],$dep) ){
-                                    if($test)
+                                    if($verbose)
                                         echo 'Order swap would violate '.$order[$num2].' dependency on '.$order[$i].EOL;
                                     return json_encode([$order[$i]=>$order[$num2]]);
                                 }
                             }
                         //If we push something downwards, we need ensure it does not break others' dependencies on it.
-                        $dep = json_decode( $this->checkDependencies($order[$num1],true) , true);
+                        $dep = json_decode( $this->checkDependencies($order[$num1],['validate'=>true]) , true);
                         if(is_array($dep))
                             for($i = $num1+1; $i<=$num2; $i++){
                                 //This would mean we can get swapped under a plugin that depends on us, which is illegal.
                                 //Remember that $order[i] is the name of each plugin in the order, and $dep is an array
                                 //of plugins that depend on this one.
                                 if( array_key_exists($order[$i],$dep) ){
-                                    if($test)
+                                    if($verbose)
                                         echo 'Order swap would violate '.$order[$i].' dependency on '.$order[$num1].EOL;
                                     return json_encode([$order[$num1]=>$order[$i]]);
                                 }
@@ -1153,16 +1436,23 @@ namespace IOFrame{
                     $order[$num1] = $order[$num2];
                     $order[$num2] = $temp;
                     $order = implode(',',$order);
-                    if($test)
+                    if($verbose)
                         echo 'New plugin order: '.$order.EOL;
-                    else{
+                    if(!$test){
                         $this->fileHandler->writeFileWaitMutex($url, $filename, $order, ['backUp' => $backUp]);
                     }
+                    if(!$local)
+                        if($this->updatePluginOrder($order,['test'=>$test,'verbose'=>$verbose]))
+                            return 0;
+                        else{
+                            $this->fileHandler->writeFileWaitMutex($url, $filename, $oldOrder, ['backUp' => $backUp]);
+                            return 3;
+                        }
                     return 0;
                 }
             }
             catch(\Exception $e){
-                if($test)
+                if($verbose)
                     echo 'Exception: '.$e.EOL;
                 return 2;
             }
@@ -1170,23 +1460,37 @@ namespace IOFrame{
 
 
 
-        /* Returns true if a the contents of the folder at $url are contents of a valid plugin folder
+        /** Checks whether a the contents of the folder at $url are contents of a valid plugin folder
+         * @param string $url url to the plugin
+         * @param array $params
+         * @returns bool
          * */
-        function validatePlugin($url, $test = false){
+        function validatePlugin(string $url,array $params = []){
+            $params['isFile'] = false;
             $res = false;
             if( (file_exists($url.'/quickInstall.php') || file_exists($url.'/fullInstall.php')) &&
                 (file_exists($url.'/quickUninstall.php') || file_exists($url.'/fullUninstall.php')) &&
                 file_exists($url.'/include.php'))
-                $res = $this->validatePluginFile($url,'meta',false,$test);
+                $res = $this->validatePluginFile($url,'meta',$params);
             return $res;
         }
 
-        /* Makes sure the format of array $options matches the optionfile $target at $url. $target is '(un)installOptions'
+        /** Makes sure the format of array $options matches the option file $target at $url. $target is '(un)installOptions'
+         * @param string $target One of the two - "installOptions" / "uninstallOptions"
+         * @param string $url Url to the options file
+         * @param string $name Name of the plugin
+         * @param array $options Options array (probably user provided)
+         * @param array $params
+         * @returns bool
          * */
-        function validateOptions($target,$url, $name, $options,$test = false){
+        function validateOptions(string $target, string $url, string $name, array $options, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            $params['isFile'] = false;
             //-------Time to validate options
-            if(!$this->validatePluginFile($url,$target,false,$test)){
-                if($test)
+            if(!$this->validatePluginFile($url,$target,$params)){
+                if($verbose)
                     echo $target.' of '.$name.' are invalid!'.EOL;
                 return false;
             }
@@ -1197,6 +1501,10 @@ namespace IOFrame{
                 $optionsFile = json_decode($optionsFile,true);
                 //Validate the FORMAT and TYPES of $options - not their content validity.
                 foreach($optionsFile as $optName => $optProperties){
+                    //No need to check for an optional option that was not provided.
+                    if(isset($optProperties['optional']) && !isset($options[$optName]))
+                        continue;
+
                     if(!isset($optProperties['maxLength']))
                         $maxLength = 20000;
                     else
@@ -1208,21 +1516,21 @@ namespace IOFrame{
                     //$options has to contain EVERY option described in installOptions.json - unless it is optional
                     if(!isset($options[$optName])){
                         if(!isset($optProperties['optional'])){
-                            if($test)
+                            if($verbose)
                                 echo 'Option '.$optName.' for '.$name.' is not set!'.EOL;
                             return false;
                         }
                     }
                     if($optProperties['type'] == 'number'){
                         if($options[$optName] > $maxNum){
-                            if($test)
+                            if($verbose)
                                 echo 'Option '.$optName.' for '.$name.' is too big a number!'.EOL;
                             return false;
                         }
                     }
                     else{
                         if(strlen($options[$optName]) > $maxLength){
-                            if($test)
+                            if($verbose)
                                 echo 'Option '.$optName.' for '.$name.' is too long!'.EOL;
                             return false;
                         }
@@ -1230,18 +1538,27 @@ namespace IOFrame{
                 }
             }
             catch(\Exception $e){
-                if($test)
+                if($verbose)
                     echo $target.' of '.$name.' threw an exception!'.EOL;
                 return false;
             }
             return true;
         }
 
-        /* Returns true if a the contents of the file at url $target are contents of a VALID FORMAT - can still be ILLEGAL VALUES
-         * Currently supported $type's - 'meta', 'installOptions', 'uninstallOptions','definitions'.
-         * if $isFile is true, will treat $target as the string of the file itself rather than the URL
+        /** Returns true if a the contents of the file at url $target are contents of a VALID FORMAT - can still be ILLEGAL VALUES
+         * @param mixed $target Depends on type
+         * @param string $type Type of file - 'meta', 'installOptions', 'uninstallOptions','definitions'
+         * @param array $params of the form:
+         *                  'isFile' => bool, default false - is true, will treat $target as a string of the file contents
+         *                                    rather than the URL
+         * @returns bool
          * */
-        function validatePluginFile($target, $type = '', $isFile = false, $test = false){
+        function validatePluginFile($target, string $type,array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            isset($params['isFile'])?
+                $isFile = $params['isFile'] : $isFile = false;
             $res = false;
             $supportedTypes = ['meta','installOptions','uninstallOptions','definitions','dependencies'];
             if(!in_array($type,$supportedTypes))
@@ -1256,7 +1573,7 @@ namespace IOFrame{
                         $fileContents = array();
                     }
                     else{
-                        if($test)
+                        if($verbose)
                             echo 'File contents are not a JSON!'.EOL;
                         return false;
                     }
@@ -1284,7 +1601,7 @@ namespace IOFrame{
                         //Validate option real name - has to only contain word characters - no spaces!
                         if(preg_match_all('/\w/',$option)<strlen($option) || strlen($option)>255
                             || strlen($option)==0 ){
-                            if($test)
+                            if($verbose)
                                 echo 'Option '.$option.' name is invalid!'.EOL;
                             $res = false;
                         }
@@ -1292,7 +1609,7 @@ namespace IOFrame{
                             break;
                         //Those 2 have to be set
                         if(!isset($optJSON['name'], $optJSON['type'])){
-                            if($test)
+                            if($verbose)
                                 echo 'Option '.$option.' missing name or type!'.EOL;
                             $res = false;
                         }
@@ -1300,28 +1617,28 @@ namespace IOFrame{
                             //Format for the name
                             if(htmlspecialchars($optJSON['name'])!=$optJSON['name'] || strlen($optJSON['name'])>255
                                 || strlen($optJSON['name'])==0 ){
-                                if($test)
+                                if($verbose)
                                     echo 'Option '.$option.' name is of invalid format!'.EOL;
                                 $res = false;
                             }
                             //Currently supported types
                             $types = ['number', 'text', 'textarea','radio','checkbox','select','email','password'];
                             if(!in_array($optJSON['type'],$types)){
-                                if($test)
+                                if($verbose)
                                     echo 'Option '.$option.' type invalid!'.EOL;
                                 $res = false;
                             }
                             //A list must be set for checkbox, radio or select.
                             if(!isset($optJSON['list']) &&
                                 ($optJSON['type'] == 'select' ||$optJSON['type'] == 'checkbox' ||$optJSON['type'] == 'radio')){
-                                if($test)
+                                if($verbose)
                                     echo 'Option '.$option.' missing a list!'.EOL;
                                 $res = false;
                             }
                             //If a list is set, validate it
                             if(isset($optJSON['list'])){
                                 if(!is_array($optJSON['list'])){
-                                    if($test)
+                                    if($verbose)
                                         echo 'Option '.$option.' list not an array!'.EOL;
                                     $res = false;
                                 }
@@ -1329,7 +1646,7 @@ namespace IOFrame{
                             //Validate lengths
                             if(isset($optJSON['maxLength'])){
                                 if($optJSON['maxLength']<1 || $optJSON['maxLength']>1000000){
-                                    if($test)
+                                    if($verbose)
                                         echo 'Option '.$option.' maxLength invalid!'.EOL;
                                     $res = false;
                                 }
@@ -1337,7 +1654,7 @@ namespace IOFrame{
                             //Validate lengths
                             if(isset($optJSON['maxNum'])){
                                 if($optJSON['maxNum']<1 || !($optJSON['maxNum']<=PHP_INT_MAX)){
-                                    if($test)
+                                    if($verbose)
                                         echo 'Option '.$option.' maxNum invalid!'.EOL;
                                     $res = false;
                                 }
@@ -1349,7 +1666,7 @@ namespace IOFrame{
                     $res = true;
                     //Just make sure the file is json and all definitions start with a upper case latter, and contain only word characters.
                     if(!is_array($fileContents)){
-                        if($test)
+                        if($verbose)
                             echo 'Definition file isnt an array!'.EOL;
                         $res = false;
                     }
@@ -1359,7 +1676,7 @@ namespace IOFrame{
                                 break;
                             if(preg_match_all('/\w/',$def)<strlen($def) || preg_match('/[A-Z]/',substr($def,0,1)) != 1
                                 ||strlen($def)>255){
-                                if($test)
+                                if($verbose)
                                     echo 'Definition file improperly formatted!'.EOL;
                                 $res = false;
                             }
@@ -1370,7 +1687,7 @@ namespace IOFrame{
                     $res = true;
                     //Just make sure the file is json and all definitions start with a upper case latter, and contain only word characters.
                     if(!is_array($fileContents)){
-                        if($test)
+                        if($verbose)
                             echo 'Definition file isnt an array!'.EOL;
                         $res = false;
                     }
@@ -1382,12 +1699,12 @@ namespace IOFrame{
 
                             //Name validation
                             if(strlen($def>64)){
-                                if($test)
+                                if($verbose)
                                     echo 'Name too long!'.EOL;
                                 $res = false;
                             }
                             if(preg_match('/\W/',$def)==1){
-                                if($test)
+                                if($verbose)
                                     echo 'Name must only contain word characters!'.EOL;
                                 $res = false;
                             }
@@ -1398,14 +1715,14 @@ namespace IOFrame{
                             }
                             else{
                                 if($val['minVersion']<1 || !($val['minVersion']<=PHP_INT_MAX)){
-                                    if($test)
+                                    if($verbose)
                                         echo 'Dependency '.$def.' minVersion invalid!'.EOL;
                                     $res = false;
                                 }
                             }
                             if(isset($val['maxVersion'])){
                                 if($val['maxVersion']<1 || !($val['maxVersion']<=PHP_INT_MAX)){
-                                    if($test)
+                                    if($verbose)
                                         echo 'Dependency '.$def.' maxVersion invalid!'.EOL;
                                     $res = false;
                                 }
@@ -1418,14 +1735,17 @@ namespace IOFrame{
             return $res;
         }
 
-        /* Initially, the icon and thumbnail for the plugin are located inside it.
+        /** Initially, the icon and thumbnail for the plugin are located inside its folder.
          * However, it is impossible to access them, due to the .htaccess in teh _plugins folder denying any access from the web.
          * That restriction has to remain for security reasons. However, we want to be able to display the images somehow.
-         * This is why we have this function. It will check whether a folder for a plugin exists inside _img (named after the plugin).
+         * This is why we have this function. It will check whether a folder for a plugin exists inside PLUGIN_IMAGE_PATH (named after the plugin).
          * If such folder doesn't exist, creates it.
          *  -Check whether icon, thumbnail or both files exist inside the original plugin.
-         *  -If yes, copies them to the plugin folder inside _img and exits with appropriate code.
-         * Returns:
+         *  -If yes, copies them to the plugin folder inside PLUGIN_IMAGE_PATH and exits with appropriate code.
+         *
+         * @param string $pName Plugin name
+         * @param array $params
+         * @returns int
          * -2 - Auth failure - copying, deleting or creating the images.
          * -1 - plugin does not exist, or illegal name
          * 0  - Plugin has neither icon nor thumbnail
@@ -1433,7 +1753,10 @@ namespace IOFrame{
          * PLUGIN_HAS_THUMBNAIL (should be 2) - plugin only has a thumbnail.
          * PLUGIN_HAS_ICON_THUMBNAIL (should be 3)- plugin has both an icon and a thumbnail.
          * */
-        function ensurePublicImage($pName ,$test = false){
+        function ensurePublicImage(string $pName ,array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             $pUrl = $this->settings->getSetting('absPathToRoot').PLUGIN_FOLDER_PATH.PLUGIN_FOLDER_NAME.$pName;   //Plugin folder
             $imgUrl = $this->settings->getSetting('absPathToRoot').PLUGIN_IMAGE_PATH.$pName;   //shared image folder
             $supportedFormats = ['png','jpg','bmp','gif'];                            //Supported image extentions
@@ -1448,19 +1771,19 @@ namespace IOFrame{
 
             //Validation
             if($pName>64){
-                if($test)
+                if($verbose)
                     echo 'Name too long!'.EOL;
                 return -1;
             }
             if(preg_match('/\W/',$pName)==1){
-                if($test)
+                if($verbose)
                     echo 'Plugin name must only contain word characters!'.EOL;
                 return -1;
             }
 
             //Check if plugin exists
             if(!is_dir($pUrl)){
-                if($test)
+                if($verbose)
                     echo 'Plugin does not exist!'.EOL;
                 return -1;
             }
@@ -1481,9 +1804,9 @@ namespace IOFrame{
             try{
                 //If a folder does not exist, create it and move on
                 if(!is_dir($imgUrl)){
-                    if($test)
-                        echo 'Plugin folder in _img does not exist, creating..!'.EOL;
-                    else
+                    if($verbose)
+                        echo 'Plugin folder in '.PLUGIN_IMAGE_PATH.' does not exist, creating..!'.EOL;
+                    if(!$test)
                         mkdir($imgUrl);
                 }
                 else{
@@ -1501,21 +1824,21 @@ namespace IOFrame{
                 //For each image, delete the old file if needed, and copy the new one if needed.
                 foreach($images as $imageType=>$image){
                     if($image['todelete']) {
-                        if($test)
+                        if($verbose)
                             echo 'Deleting old '.$imageType.EOL;
-                        else
+                        if(!$test)
                             unlink($imgUrl.'/'.$imageType.'.'.$image['format']);
                     }
                     if($image['tocopy']) {
-                        if($test)
+                        if($verbose)
                             echo 'Copying new '.$imageType.EOL;
-                        else
+                        if(!$test)
                             copy($pUrl.'/'.$imageType.'.'.$image['format'],$imgUrl.'/'.$imageType.'.'.$image['format']);
                     }
                 };
             }
             catch(\Exception $e){
-                if($test)
+                if($verbose)
                     var_dump($e);
                 return -2;
             }
@@ -1535,99 +1858,105 @@ namespace IOFrame{
             }
         }
 
-        /* Runs ensurePublicImage on an array of unique names, and returns the results for each in a JSON string
-         * e.g: "{'testPlugin':3, 'ghostTest':-1}"
+        /** Runs ensurePublicImage on an array of unique names
+         * @param string[] $pNameArr Array of string names
+         * @param array $params
+         * @returns string results for each name in a JSON string e.g: "{'testPlugin':3, 'ghostTest':-1}"
          * */
-        function ensurePublicImages($pNameArr,  $test = false){
+        function ensurePublicImages(array $pNameArr, array $params = []){
             $res = array();
             foreach($pNameArr as $value){
-                $tempRes = $this->ensurePublicImage($value, $test);
+                $tempRes = $this->ensurePublicImage($value, $params);
                 $res += array($value => $tempRes);
             }
             return json_encode($res);
         }
 
-        /* Makes sure that the dependencies needed to install plugin $name are met.
-         * If $depFile is provided, will treat it as the dependency array of $pluginName.
-         * Returns:
+        /** Makes sure that the dependencies needed to install plugin $name are met.
+         *
+         * @params string $name
+         * @params array $params of the form
+         *              'dependencyArray' => Array of the form <dependency name> => ['minVersion'=>X, (OPTIONAL)'maxVersion'=>Y]
+         *                                  If dependencyArray is provided, will treat it as the dependency array of $pluginName.
+         * @returns int
          * 0 - All fine
-         * 1 - Invalid $depFile or $pluginName
-         * 2 - $pluginName or its dependency file do not exist.
-         * 3 - Some dependencies are not met
+         * 1 - $pluginName or its dependency file do not exist.
+         * 2 - Some dependencies are not met
          * */
-        function validateDependencies($name, $depArr = '',$test = false){
-            //Validate $name
-            if(strlen($name>64)){
-                if($test)
-                    echo 'Name too long!'.EOL;
-                return 1;
-            }
-            if(preg_match('/\W/',$name)==1){
-                if($test)
-                    echo 'Name must only contain word characters!'.EOL;
-                return 1;
-            }
+        function validateDependencies(string $name,$params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            isset($params['dependencyArray'])?
+                $dependencyArray = $params['dependencyArray'] : $dependencyArray = [];
             //Validate dependency array
-            if(!is_array($depArr)){
-                $plugName = $this->getInfo($name)[0];
+            if(!is_array($dependencyArray) || count($dependencyArray) == 0){
+                $plugName = $this->getInfo(['name'=>$name])[0];
                 if(isset($plugName['dependencies']))
                     $dependencies = $plugName['dependencies'];
                 else{
-                    if($test)
+                    if($verbose)
                         echo 'Plugin '.$name.' or its dependency file do not exist!'.EOL;
-                    return 2;
+                    return 1;
                 }
             }
             else
-                $dependencies = $depArr;
+                $dependencies = $dependencyArray;
             $errors = 0;
             //Validate dependencies
             foreach($dependencies as $dep => $versions){
-                $dep = $this->getInfo($dep)[0];
+
+                $dep = $this->getInfo(['name'=>$dep])[0];
                 (isset($dep['version']) && filter_var((int)$dep['version'],FILTER_VALIDATE_INT))?
                     $ver = (int)$dep['version']:
                     $ver = -1;
+
                 if( $ver < $versions['minVersion'] || (isset($versions['maxVersion']) && $ver > $versions['maxVersion'])){
                     $errors++;
-                    if($test)
-                        echo 'Plugin '.$name.' is missing '.$dep.' dependency!'.EOL;
+                    if($verbose)
+                        echo 'Plugin '.$name.' is missing '.$dep.' dependency, wrong version!'.EOL;
                 }
+
+                if($dep['status']!='active'){
+                    $errors++;
+                    if($verbose)
+                        echo 'Plugin '.$name.' is missing '.$dep.' dependency, not active!'.EOL;
+                }
+
             }
             if($errors>0){
-                if($test)
+                if($verbose)
                     echo 'Plugin '.$name.' is missing '.$errors.' dependencies!'.EOL;
-                return 3;
+                return 2;
             }
             return 0;
         }
 
-        /* Populates dependency map based on given array
-         * receives an array of $dependencies of the form {<name> : { 'minVersion':x, 'maxVersion:y' } }.
-         * $name is the name of the plugin dependent on those dependencies.
-         * Returns:
+        /** Populates dependency map based on given array
+         * @params array $dependencies of the form {<name> : { 'minVersion':x, 'maxVersion:y' } }
+         * @params string $name is the name of the plugin dependent on those dependencies.
+         * @params array $params
+         * @returns int
          * 0 - all good
          * 1 - invalid input
          * */
-        function populateDependencies($name,$dependencies,$test = false){
-            $url = $this->settings->getSetting('absPathToRoot').PLUGIN_FOLDER_PATH.PLUGIN_FOLDER_NAME.'_dependency.map/';
+        function populateDependencies(string $name, array $dependencies, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            $url = $this->settings->getSetting('absPathToRoot').'_siteFiles/pluginDependencyMap/';
             if(!is_dir($url))
                 if(!mkdir($url))
                     die('Cannot create Dependency Map directory for some reason - most likely insufficient user privileges.');
             //Validate $name
             if(strlen($name>64)){
-                if($test)
+                if($verbose)
                     echo 'Name too long!'.EOL;
                 return 1;
             }
             if(preg_match('/\W/',$name)==1){
-                if($test)
+                if($verbose)
                     echo 'Name must only contain word characters!'.EOL;
-                return 1;
-            }
-            //Validate dependency array
-            if(!is_array($dependencies)){
-                if($test)
-                    echo 'Dependency array invalid!'.EOL;
                 return 1;
             }
             foreach($dependencies as $dep => $ver){
@@ -1639,43 +1968,52 @@ namespace IOFrame{
                         else
                             fclose(fopen($url.$dep.'/settings','w'));
                     }
-                    else{
+                    if($verbose){
                         echo 'Creating dependency folder at '.$url.$dep.EOL;
                     }
                 }
                 //Open dependency file and add the dependency
                 if(!$test){
                     $depFile = new settingsHandler($url.$dep.'/',['useCache'=>false]);
-                    $depFile->setSetting($name,json_encode($ver),true);
+                    $depFile->setSetting($name,json_encode($ver),['createNew'=>true]);
                 }
-                else
+                if($verbose)
                     echo 'Adding '.$name.' to '.$dep.' dependency tree!'.EOL;
             }
             return 0;
         }
 
-        /* Checks dependencies on the plugin $name.
-         * Will return
+        /** Checks dependencies on the plugin $name. May validate that the dependant plugins are actually active.
+         *
+		 * @param string $name Name of the plugin to check dependencies of
+		 * @param array $params of the form:
+         *                  'validate' => Validate that all dependencies are active, not just that they exist
+         * @returns mixed
          * 0 if no dependencies are present, or validate is true and no dependencies are active.
          * 1 invalid name
          * JSON of the form {<name>:{'minVersion':x[,'maxVersion':y]}} for each plugin that depends on $name (*and is active when validate==true)
          * */
-        function checkDependencies($name,$validate = true, $test = false){
-            $url = $this->settings->getSetting('absPathToRoot').PLUGIN_FOLDER_PATH.PLUGIN_FOLDER_NAME.'_dependency.map/';
+        function checkDependencies(string $name, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            isset($params['validate'])?
+                $validate = $params['validate'] : $validate = true;
+            $url = $this->settings->getSetting('absPathToRoot').'_siteFiles/pluginDependencyMap/';
             //Validate $name
             if(strlen($name>64)){
-                if($test)
+                if($verbose)
                     echo 'Name too long!'.EOL;
                 return 1;
             }
             if(preg_match('/\W/',$name)==1){
-                if($test)
+                if($verbose)
                     echo 'Name must only contain word characters!'.EOL;
                 return 1;
             }
             //If there are no dependencies, we are clear
             if(!file_exists($url.$name.'/settings')){
-                if($test)
+                if($verbose)
                     echo $name.' has no dependencies!'.EOL;
                 return 0;
             }
@@ -1685,7 +2023,7 @@ namespace IOFrame{
             $depNumber = count($deps);
             //Again, there might be 0 dependencies
             if($depNumber<1){
-                if($test)
+                if($verbose)
                     echo $name.' has no dependencies!'.EOL;
                 return 0;
             }
@@ -1703,11 +2041,11 @@ namespace IOFrame{
                 }
             }
             if(count($deps)<1){
-                if($test)
+                if($verbose)
                     echo $name.' has no dependencies!'.EOL;
                 return 0;
             }
-            if($test)
+            if($verbose)
                 echo 'Dependencies: '.json_encode($deps).EOL;
             return json_encode($deps);
         }

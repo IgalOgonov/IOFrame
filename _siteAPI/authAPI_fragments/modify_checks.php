@@ -10,7 +10,7 @@ if($params == null){
 }
 
 
-if($_REQUEST['action'] == 'modifyUserActions' || $_REQUEST['action'] == 'modifyUserGroups' )
+if($action == 'modifyUserActions' || $action == 'modifyUserGroups' )
     $expectedTarget = 'id';
 else
     $expectedTarget = 'groupName';
@@ -37,7 +37,7 @@ else{
 }
 
 
-if($_REQUEST['action'] == 'modifyUserActions' || $_REQUEST['action'] == 'modifyGroupActions' )
+if($action == 'modifyUserActions' || $action == 'modifyGroupActions' )
     $expectedParam = 'actions';
 else
     $expectedParam = 'groups';

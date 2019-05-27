@@ -2,6 +2,9 @@
 
 if(!isset($executionParameters))
     $executionParameters = [];
+
+$executionParameters['test'] = $test;
+
 $result = $objHandler->updateObject(
     $params['id'],
     $params['content'],
@@ -11,7 +14,6 @@ $result = $objHandler->updateObject(
     $params['mainOwner'],
     $params['addOwners'],
     $params['remOwners'],
-    $executionParameters,
-    $test
+    $executionParameters
 );
 

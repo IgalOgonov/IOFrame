@@ -162,7 +162,7 @@
  * */
 
 
-require __DIR__ . '/../_Core/coreInit.php';
+require __DIR__ . '/../_main/coreInit.php';
 
 require 'defaultInputChecks.php';
 
@@ -171,13 +171,14 @@ if($test)
 
 if(!isset($_REQUEST["action"]))
     exit('Action not specified!');
+$action = $_REQUEST["action"];
 
 if(isset($_REQUEST['params']))
     $params = json_decode($_REQUEST['params'],true);
 else
     $params = null;
 
-switch($_REQUEST["action"]){
+switch($action){
     case 'getRank':
         require 'authAPI_fragments/getRank_checks.php';
         require 'authAPI_fragments/getRank_execution.php';

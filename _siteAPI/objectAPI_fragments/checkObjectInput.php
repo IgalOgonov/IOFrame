@@ -6,8 +6,11 @@ function checkObjectInput($obj = null ,$group = '' ,$minViewRank = null ,$minMod
                       $mainOwner = null, $newOwners = null, $remOwners = null, $siteSettings, $test){
     $res = true;
     if($sesInfo == null){
-        $sesInfo = json_decode($_SESSION['details'],true);
+        $sesInfo = isset($_SESSION['details'])? json_decode($_SESSION['details'],true) : null;
     }
+    //If session info is still null, the user is probably not logged in
+    if($sesInfo == null)
+        return false;
 
     //Fisrt, check if the object isn't longer than the maximum size allowed by the database.
     if($obj!= null)

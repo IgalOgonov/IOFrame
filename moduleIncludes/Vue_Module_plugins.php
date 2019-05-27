@@ -302,8 +302,8 @@
                 ' Alright, I think you got the point now.',
                 uninstallStatus:'quick',
                 installStatus:'quick',
-                icon:'_img/def_icon.png',
-                thumbnail:'_img/def_thumbnail.png',
+                icon:'pluginImages/def_icon.png',
+                thumbnail:'pluginImages/def_thumbnail.png',
                 installOptions:{"testOption1":{"name":"Test Select","type":"select", list:{"Opt1":1,"Opt2":2}, desc:"Select test"},
                     "testOption2":{"name":"Test Number","type":"number", desc:"Number test", maxNum:1000, placeholder:"number bellow 1000"},
                     "testOption3":{"name":"Test Textarea","type":"textarea", desc:"Text area test", maxLength:20, placeholder:"up to 20 characters"},
@@ -593,11 +593,11 @@
                             let resPlugins = JSON.parse(xhr.responseText);
                             for(let i=0; i<resPlugins.length; i++){
                                 (resPlugins[i].icon)?
-                                    resPlugins[i].icon = '_img/'+resPlugins[i].fileName+'/icon.'+resPlugins[i].icon :
-                                    resPlugins[i].icon = '_img/def_icon.png';
+                                    resPlugins[i].icon = 'pluginImages/'+resPlugins[i].fileName+'/icon.'+resPlugins[i].icon :
+                                    resPlugins[i].icon = 'pluginImages/def_icon.png';
                                 (resPlugins[i].thumbnail)?
-                                    resPlugins[i].thumbnail = '_img/'+resPlugins[i].fileName+'/thumbnail.'+resPlugins[i].thumbnail :
-                                    resPlugins[i].thumbnail = '_img/def_thumbnail.png';
+                                    resPlugins[i].thumbnail = 'pluginImages/'+resPlugins[i].fileName+'/thumbnail.'+resPlugins[i].thumbnail :
+                                    resPlugins[i].thumbnail = 'pluginImages/def_thumbnail.png';
                                 if(resPlugins[i].status == 'active' || resPlugins[i].status == 'legal'){
                                     let fileName = resPlugins[i].fileName;
                                     resPlugins[i].version = parseInt(resPlugins[i].version);

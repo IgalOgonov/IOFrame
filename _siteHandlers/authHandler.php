@@ -73,29 +73,31 @@ namespace IOFrame{
             $this->useCache = isset($this->defaultSettingsParams['useCache'])?
                 $this->defaultSettingsParams['useCache'] : false;
 
-            if(isset($params['initiateUser']))
-                $initiateUser = $params['initiateUser'];
-            else
-                $initiateUser = false;
-
-            $this->init($initiateUser);
+            $this->init($params);
         }
 
         /**
          * Initiates the data in the handler.
          * While details, loggedIn and Rank are always initiated, actions and groups are only initiated here if
          *  the relevant parameter is true.
-         * @param bool $initiateUser Whether to initiate user actions/groups by default, or only on request
+         * @param array $params of the form:
+         *              'initiateUser' - bool, default false - Whether to initiate user actions/groups by default, or only on request
          */
-        function init(bool $initiateUser = false)
+        function init(array $params)
         {
+
+            if(isset($params['initiateUser']))
+                $initiateUser = $params['initiateUser'];
+            else
+                $initiateUser = false;
+
             //This means we logged in, so the rank (and logged in status) must be accurate
             if(isset($_SESSION['logged_in'],$_SESSION['details'])){
                 $this->details = json_decode($_SESSION['details'],true);
                 $this->loggedIn=true;
                 $this->rank=$this->details['Rank'];
                 if($initiateUser)
-                    $this->updateUserInfoFromDB(false);
+                    $this->updateUserInfoFromDB($params);
 
             }
             else{
@@ -106,16 +108,21 @@ namespace IOFrame{
         }
 
         /** Updates the user actions and groups. First from the cache (if used), then from the DB.
-         * @param mixed $test
+         * @param array $params
          */
-        function updateUserInfoFromDB($test = false){
+        function updateUserInfoFromDB(array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
             if(!isset($this->details['ID'])){
-                if($test)
+                if($verbose)
                     echo 'Trying to update user info when not logged in!'.EOL;
                 return;
             }
             //Get information from cache if asked
-            $cachedInfo = $this->getFromCache(['userID'=>$this->details['ID']],$test);
+            $cachedInfo = $this->getFromCache(['userID'=>$this->details['ID'],'test'=>$test,'verbose'=>$verbose]);
             //Save the groups we need to request from the cache for later
             $tempGroups = [];
             //Get user actions/groups from cache
@@ -130,7 +137,7 @@ namespace IOFrame{
             foreach($tempGroups as $groupName){
                 $this->lastUpdatedGroups[$groupName] = 0;
                 $this->groups[$groupName] = [];
-                $cachedInfo = $this->getFromCache(['groupName'=>$groupName],$test);
+                $cachedInfo = $this->getFromCache(['groupName'=>$groupName,'test'=>$test,'verbose'=>$verbose]);
                 if($cachedInfo!=null){
                     if(isset($cachedInfo['actions']))
                         $this->groups[$groupName] = $cachedInfo['actions'];
@@ -139,7 +146,7 @@ namespace IOFrame{
             }
 
             //Get up-to-date information from the database
-            $this->updateFromDB([],$test);
+            $this->updateFromDB(['test'=>$test,'verbose'=>$verbose]);
 
             //At this point the user is initiated
             $this->userInitiated = true;
@@ -187,11 +194,10 @@ namespace IOFrame{
          * This should take care of auto-updating after doing any change, to a group or a user.
          * //TODO Add cache TTL settings (to siteSettings probably)
          *
-         * @param array $params - array of the form 'userID'=>userID
-         *                        Meant for testing at the moment - running this without test would cause unexpected behaviour
-         * @param mixed $test
+         * @param array $params - array of the form
+         *                  'userID'=>int, defaults to session ID - user ID to update auth info from
          * */
-        function updateFromDB(array $params = [], $test = false){
+        function updateFromDB(array $params = []){
             $prefix = $this->sqlHandler->getSQLPrefix();
             $groupTable = $prefix.'GROUPS_AUTH';
             $userTable = $prefix.'USERS_AUTH';
@@ -200,10 +206,16 @@ namespace IOFrame{
             $groupsActionsTable = $prefix.'GROUPS_ACTIONS_AUTH';
             $usersGroupsTable = $prefix.'USERS_GROUPS_AUTH';
             $userLastChanged = $this->lastUpdatedUser;
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
             if(isset($params['userID']))
                 $userID = $params['userID'];
             else
                 $userID = $this->details['ID'];
+
             $updateTime = time();
 
             //Used in B
@@ -236,15 +248,14 @@ namespace IOFrame{
                                 'AND'
                             ],
                             [$usersGroupsTable.'.Auth_Group'],
-                            ['justTheQuery'=>true,'useBrackets'=>true],
-                            false
+                            ['justTheQuery'=>true,'useBrackets'=>true,'test'=>false]
                         ),
                         'IN'
                     ],
                     'AND'
                 ];
 
-                if($test)
+                if($verbose)
                     echo 'Groups found: '.json_encode($groupsToIgnoreCond).EOL;
 
                 array_push($groupsToIgnoreCond,'CSV');
@@ -263,8 +274,7 @@ namespace IOFrame{
                             'AND'
                         ],
                         [$usersGroupsTable.'.Auth_Group'],
-                        ['justTheQuery'=>true,'useBrackets'=>true],
-                        false
+                        ['justTheQuery'=>true,'useBrackets'=>true,'test'=>false]
                     ),
                     'IN'
                 ]
@@ -294,8 +304,7 @@ namespace IOFrame{
                             'AND'
                         ],
                         [$usersActionsTable.'.Auth_Action'],
-                        ['justTheQuery'=>true,'useBrackets'=>true],
-                        false
+                        ['justTheQuery'=>true,'useBrackets'=>true,'test'=>false]
                     ),
                     'IN'
                 ],
@@ -311,8 +320,7 @@ namespace IOFrame{
                             $groupsActionsTable,
                             $newGroupsCondition,
                             [$groupsActionsTable.'.Auth_Action'],
-                            ['justTheQuery'=>true,'useBrackets'=>true],
-                            false
+                            ['justTheQuery'=>true,'useBrackets'=>true,'test'=>false]
                         ),
                         'IN'
                     ],
@@ -333,8 +341,7 @@ namespace IOFrame{
                                 $groupsActionsTable.' INNER JOIN '.$groupTable.' ON '.$groupTable.'.Auth_Group = '.$groupTable.'.Auth_Group',
                                 $groupsToGetConditions,
                                 [$groupsActionsTable.'.Auth_Action'],
-                                ['justTheQuery'=>true,'useBrackets'=>true],
-                                false
+                                ['justTheQuery'=>true,'useBrackets'=>true,'test'=>false]
                             ),
                             'IN'
                         ],
@@ -352,14 +359,14 @@ namespace IOFrame{
                             'AND'
                         ],
                         ['-1 as actionName, '.$usersGroupsTable.'.Auth_Group as groupName, TRUE as userHadGroup'],
-                        ['justTheQuery'=>true],
-                        false);
+                        ['justTheQuery'=>true,'test'=>false]
+                        );
             }
 
-            if($test)
+            if($verbose)
                 echo 'Query to send: '.$query.EOL;
-            $res = $this->sqlHandler->exeQueryBindParam($query,[],true);
-            if($test)
+            $res = $this->sqlHandler->exeQueryBindParam($query,[],['fetchAll'=>true]);
+            if($verbose)
                 echo var_dump($res);
 
 
@@ -407,7 +414,7 @@ namespace IOFrame{
                     array_push($removedGroups,$groupName);
             }
 
-            if($test){
+            if($verbose){
                 echo 'Group Array: '.json_encode($groupArray).EOL;
                 echo 'Removed Array: '.json_encode($removedGroups).EOL;
             }
@@ -424,9 +431,9 @@ namespace IOFrame{
 
             foreach($removedGroups as $groupName){
                 $somethingChanged = true;
-                if($test)
+                if($verbose)
                     echo 'Unsetting group '.$groupName.EOL;
-                else{
+                if(!$test){
                     unset($this->groups[$groupName]);
                     unset($this->lastUpdatedGroups[$groupName]);
                 }
@@ -436,9 +443,9 @@ namespace IOFrame{
                 //This is the user actions
                 if($groupName == '@'){
                     $somethingChanged = true;
-                    if($test)
+                    if($verbose)
                         echo 'Updating actions '.json_encode( $arr['actions']).EOL;
-                    else{
+                    if(!$test){
                         $this->actions = $arr['actions'];
                     }
                 }
@@ -447,9 +454,9 @@ namespace IOFrame{
                     //Obviously only update updated groups..
                     if($arr['indicator'] == '1' || $arr['indicator'] == '2'){
                         $somethingChanged = true;
-                        if($test)
+                        if($verbose)
                             echo 'Updating group '.$groupName.' with actions '.json_encode( $arr['actions']).EOL;
-                        else{
+                        if(!$test){
                             $this->groups[$groupName] = $arr['actions'];
                             $this->lastUpdatedGroups[$groupName] = $updateTime;
                         }
@@ -460,9 +467,9 @@ namespace IOFrame{
                             [
                                 'groupName' => $groupName,
                                 'actions' => $arr['actions'],
-                                'lastUpdated' => $updateTime
-                            ],
-                            $test
+                                'lastUpdated' => $updateTime,
+                                'test'=>$test,'verbose'=>$verbose
+                            ]
                         );
                     }
                 }
@@ -482,9 +489,9 @@ namespace IOFrame{
                         'userID'=>$this->details['ID'],
                         'actions'=>$this->actions,
                         'groups'=>$groupList,
-                        'lastUpdated'=>$this->lastUpdatedUser
-                    ],
-                    $test
+                        'lastUpdated'=>$this->lastUpdatedUser,
+                        'test'=>$test,'verbose'=>$verbose
+                    ]
                 );
             }
 
@@ -495,8 +502,7 @@ namespace IOFrame{
          * @param array $params Of the form:
          *                  'userID'  => User ID to get from cache
          *                  'groupName' => Group name to get from cache (whitespaces are replaced by underlines)
-         *                  If both are set for some reason, will update user over group.
-         * @param mixed $test
+         *                  If both are set for some reason, will get user over group.
          * @returns array [
          *                'actions'     => <Action array> May be empty
          *                'groups'      => <Group array> May be empty if fetching user, is not set if fetching group.
@@ -504,12 +510,16 @@ namespace IOFrame{
          *                ]
          *                or NULL if user/group does not exist in the cache (or cache is disabled)
         */
-        function getFromCache(array $params = [], $test = false){
+        function getFromCache(array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
 
             $res = null;
 
             if(!$this->useCache){
-                if($test)
+                if($verbose)
                     echo 'Trying to get something from cache when cache is disabled!'.EOL;
                 return $res;
             }
@@ -518,7 +528,7 @@ namespace IOFrame{
             if(isset($params['userID'])){
                 //Lets see if the user is even in the cache
                 $lastUpdated = $this->redisHandler->call('get','_auth_userLastUpdated_'.$params['userID']);
-                if($test)
+                if($verbose)
                     echo 'Redis query - get from _auth_userLastUpdated_'.$params['userID'].', result - '.$lastUpdated.EOL;
                 //This means the user is not in the cache
                 if($lastUpdated === false)
@@ -528,13 +538,13 @@ namespace IOFrame{
 
                 //If user is in the cache, decode everything else (note he still might have 0 actions/groups)
                 $actionsJSON = $this->redisHandler->call('get','_auth_userActions_'.$params['userID']);
-                if($test)
+                if($verbose)
                     echo 'Redis query - get from _auth_userActions_'.$params['userID'].', result - '.$actionsJSON.EOL;
                 if($actionsJSON !== false)
                     $res['actions'] = json_decode($actionsJSON,true);
 
                 $groupsJSON = $this->redisHandler->call('get','_auth_userGroups_'.$params['userID']);
-                if($test)
+                if($verbose)
                     echo 'Redis query - get from _auth_userGroups_'.$params['userID'].', result - '.$groupsJSON.EOL;
                 if($groupsJSON !== false)
                     $res['groups'] = json_decode($groupsJSON,true);
@@ -545,7 +555,7 @@ namespace IOFrame{
             elseif(isset($params['groupName'])){
                 //Lets see if the group is even in the cache
                 $lastUpdated = $this->redisHandler->call('get','_auth_groupLastUpdated_'.$params['groupName']);
-                if($test)
+                if($verbose)
                     echo 'Redis query - get from _auth_groupLastUpdated_'.$params['groupName'].', result - '.$lastUpdated.EOL;
                 //This means the group is not in the cache
                 if($lastUpdated === false)
@@ -555,7 +565,7 @@ namespace IOFrame{
 
                 //If group is in the cache, decode everything else (still, might be 0 actions)
                 $actionsJSON = $this->redisHandler->call('get','_auth_groupActions_'.$params['groupName']);
-                if($test)
+                if($verbose)
                     echo 'Redis query - get from _auth_groupActions_'.$params['groupName'].', result - '.$actionsJSON.EOL;
                 if($actionsJSON !== false)
                     $res['actions'] = json_decode($actionsJSON,true);
@@ -572,20 +582,25 @@ namespace IOFrame{
          *                  'groupName' => Group name. Will update with groupActions, setting the lastChanged time to time().
          *                  'actions' => An array of actions
          *                  'groups' => An array of groups
-         *                  'lastUpdated' => Is the time we got the above information from the SOT (the DB). Defaults to time()
-         *                  If both are set, will update user.
-         * @param mixed $test checks user Auth rank versus target
+         *                  'lastUpdated' => Is the time we got the above information from the DB. Defaults to time()
+         *
+         *                  If both userID and groupName are set, will update user.
         */
-        function updateCache(array $params = [], $test = false){
+        function updateCache(array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
 
             if(!$this->useCache){
-                if($test)
+                if($verbose)
                     echo 'Trying to get something from cache when cache is disabled!'.EOL;
                 return;
             }
 
             if($test){
-                echo 'Running updateCache with parameters '.json_encode($params).EOL;
+                if($verbose)
+                    echo 'Running updateCache with parameters '.json_encode($params).EOL;
                 return;
             }
 
@@ -624,8 +639,10 @@ namespace IOFrame{
 
         }
 
-        /** @param int $target checks user Auth rank versus target
+        /** Check whether user has a rank of at most $target (lower rank = better!)
+         * @param int $target checks user Auth rank versus target
          * @returns bool true if the user is authorized below or at target level, false otherwise.
+         * @throws \Exception If target is less than 0 - that must be a programmer error
          * */
         function isAuthorized(int $target = 0){
             if($target<0){
@@ -659,7 +676,7 @@ namespace IOFrame{
         }
 
         /**
-         * @param $arg string Gets relevant detail from $this->details
+         * @param string $arg Gets relevant detail from $this->details
          * @return mixed a specific detail from the details array, or 'unset' if it isn't set.
         */
         function getDetail(string $arg){
@@ -669,11 +686,13 @@ namespace IOFrame{
                 return null;
         }
 
-        /**@return bool true if the user has an action in their Actions array
+        /** Check if a user has an action
+         * @param string $target Action to check
+         * @return bool true if the user has an action in their Actions array
         */
         function hasAction(string $target){
             if(!$this->userInitiated)
-                $this->updateUserInfoFromDB(false);
+                $this->updateUserInfoFromDB();
             if($this->loggedIn){
                 $res = in_array($target,$this->actions);
                 if($res)
@@ -697,10 +716,14 @@ namespace IOFrame{
          * A user must either be of rank 0, or own the auth_modifyUserRank or auth_modifyUser actions.
          * @param mixed $identifier Either user ID or user Mail
          * @param int $newRank Rank to assign
-         * @param array $params Reserved for later
+         * @param array $params
          * @returns bool
          * */
-        function modifyUserRank($identifier, int $newRank, $params = [], $test = false){
+        function modifyUserRank($identifier, int $newRank, array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
 
             $prefix = $this->sqlHandler->getSQLPrefix();
 
@@ -716,8 +739,7 @@ namespace IOFrame{
                 $this->sqlHandler->getSQLPrefix().'USERS',
                 ['Rank = '.$newRank.''],
                 $identityCond,
-                [],
-                $test
+                ['test'=>$test,'verbose'=>$verbose]
             );
 
             return $res;
@@ -737,10 +759,9 @@ namespace IOFrame{
          *          Supported filter types are: 'NOT IN', 'IN', '<', '>', '<=', '>=', '='.
          *          Filter parameters are arrays or single values of type Strings/IDs, depending on filter type - group and actions are STRINGs,
          *          ids are INTs. For 'NOT IN' and 'IN' it's arrays, for the rest single values.
-         * @param mixed $test
          * @return array
          *              If fetching user IDs - array of relevant (in respect to filters) user IDs
-         *              If fetching user IActions - array of the form: [
+         *              If fetching user Actions - array of the form: [
          *                                                               <UserID> =>[
          *                                                                            "@" => Array of Actions
          *                                                                            <groupName> => Array of Actions
@@ -750,7 +771,11 @@ namespace IOFrame{
          *                                                              ]
          *              where "@" are actions belonging directly to the user.
          */
-        function getUsers(array $params = [], $test = false){
+        function getUsers(array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
 
             $prefix = $this->sqlHandler->getSQLPrefix();
             $userTable = $prefix.'USERS_AUTH';
@@ -789,7 +814,7 @@ namespace IOFrame{
             //Valid parameters - not including filter ones
             $validParams = ['id','action','group'];
 
-            $selectionParams = ['justTheQuery'=>true,'useBrackets'=>true, 'DISTINCT'=>true] ;
+            $selectionParams = ['justTheQuery'=>true,'useBrackets'=>true, 'DISTINCT'=>true,'test'=>false] ;
 
             foreach($validParams as $paramName){
                 if(isset($params[$paramName]) && is_array($params[$paramName])){
@@ -835,8 +860,7 @@ namespace IOFrame{
                                                             'IN'
                                                         ],
                                                         [$userTable.'.ID'],
-                                                        $selectionParams,
-                                                        false
+                                                        $selectionParams
                                                     ),
                                                     'IN'
                                                 ],
@@ -858,8 +882,7 @@ namespace IOFrame{
                                                             'IN'
                                                         ],
                                                         [$userTable.'.ID'],
-                                                        $selectionParams,
-                                                        false
+                                                        $selectionParams
                                                     ),
                                                     'IN'
                                                 ],
@@ -894,8 +917,7 @@ namespace IOFrame{
                                                         'IN'
                                                     ],
                                                     [$userTable.'.ID'],
-                                                    $selectionParams,
-                                                    false
+                                                    $selectionParams
                                                 ),
                                                 'IN'
                                             ];
@@ -914,8 +936,7 @@ namespace IOFrame{
                                                         'IN'
                                                     ],
                                                     [$userTable.'.ID'],
-                                                    $selectionParams,
-                                                    false
+                                                    $selectionParams
                                                 ),
                                                 'IN'
                                             ]
@@ -951,8 +972,7 @@ namespace IOFrame{
                                                     '='
                                                 ],
                                                 [$userTable.'.ID'],
-                                                $selectionParams,
-                                                false
+                                                $selectionParams
                                             ),
                                             'IN'
                                         ];
@@ -970,8 +990,7 @@ namespace IOFrame{
                                                     '='
                                                 ],
                                                 [$userTable.'.ID'],
-                                                $selectionParams,
-                                                false
+                                                $selectionParams
                                             ),
                                             'IN'
                                         ];
@@ -1017,8 +1036,7 @@ namespace IOFrame{
                     $tables2,
                     $selectionFilter,
                     $columns2,
-                    ['justTheQuery'=>true],
-                    false
+                    ['justTheQuery'=>true,'test'=>false]
                 );
             }
             $query .= ') as Meaningless_Alias ORDER BY '.$orderByExp;
@@ -1030,10 +1048,10 @@ namespace IOFrame{
                     $query .= ' LIMIT '.$limit;
             }
 
-            if($test)
+            if($verbose)
                 echo 'Query to send: '.$query.EOL;
-            $response = $this->sqlHandler->exeQueryBindParam($query,[],true);
-            if($test)
+            $response = $this->sqlHandler->exeQueryBindParam($query,[],['fetchAll'=>true]);
+            if($verbose)
                 var_dump($response);
 
             $result = [];
@@ -1061,25 +1079,29 @@ namespace IOFrame{
 
         /**
          * Views all user actions (can be filtered with $params). Is an alias of getUsers.
-         * Note that if allowed to be viewed without enforcing an ID condition t'=' or 'IN' (or at least a similar group
-         * condition), the results could reach insane sizes, and the query would be very slow, as there is no way to limit
-         * this.
+         * Note that if allowed to be viewed without enforcing an ID condition '=' or 'IN' (or at least a similar group
+         * condition), or the limit parameter, the results could reach insane sizes, and the query would be very slow,
+         * as there is no way to limit this.
+         * @param array $params same as getUsers
+         * @returns array same as getUsers
          */
-        function getUserActions(array $params = [], $test = false){
-            return $this->getUsers(array_merge($params,['includeActions'=>true]),$test);
+        function getUserActions(array $params = []){
+            return $this->getUsers(array_merge($params,['includeActions'=>true]));
         }
 
         /**
          * Returns all the actions.
          *
-         * @param array $params Reserved for later
-         * @param mixed $test
+         * @param array $params
+         *                  'safeStr' => bool, default true - Whether to convert descriptions to safeString
+         *                  'limit' => int, SQL Limit clause
+         *                  'offset' => int, SQL offset clause (only matters if limit is set)
          * @returns array of the form [
          *                             <Action Name> => <Description>
          *                             ...
          *                            ]
          */
-        function getActions(array $params = [], $test = false){
+        function getActions(array $params = []){
 
             $prefix = $this->sqlHandler->getSQLPrefix();
             $actionsTable = $prefix.'ACTIONS_AUTH';
@@ -1102,8 +1124,7 @@ namespace IOFrame{
                 $actionsTable,
                 [],
                 ['Auth_Action','Description'],
-                $params,
-                $test
+                $params
             );
 
             $res = [];
@@ -1126,11 +1147,15 @@ namespace IOFrame{
          * Create new actions, or modifies existing ones.
          *
          * @param array $actions An array of the form <Action Name> => <Description>|null
-         * @param array $params Reserved for later
-         * @param mixed $test
+         * @param array $params
+         *                  'safeStr' => bool, default true - Whether to convert descriptions to safeString
          * @returns bool Whether the query succeeded or not.
          */
-        function setActions(array $actions, array $params = [], $test = false){
+        function setActions(array $actions, array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
 
             $prefix = $this->sqlHandler->getSQLPrefix();
             $actionsTable = $prefix.'ACTIONS_AUTH';
@@ -1161,8 +1186,7 @@ namespace IOFrame{
                 $actionsTable,
                 ['Auth_Action','Description'],
                 $actionsToInsert,
-                ['onDuplicateKey'=>true],
-                $test
+                ['onDuplicateKey'=>true,'test'=>$test,'verbose'=>$verbose]
             );
 
             return $res;
@@ -1172,11 +1196,14 @@ namespace IOFrame{
          * Deletes actions
          *
          * @param array $actions An array of action names
-         * @param array $params Reserved for later
-         * @param mixed $test
+         * @param array $params
          * @returns bool Whether the query succeeded or not.
          */
-        function deleteActions(array $actions, array $params = [], $test = false){
+        function deleteActions(array $actions, array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
 
             $prefix = $this->sqlHandler->getSQLPrefix();
             $actionsTable = $prefix.'ACTIONS_AUTH';
@@ -1196,8 +1223,7 @@ namespace IOFrame{
                     $actions,
                     'IN'
                 ],
-                [],
-                $test
+                ['test'=>$test,'verbose'=>$verbose]
             );
 
             if($res)
@@ -1210,19 +1236,16 @@ namespace IOFrame{
                             $usersActionsTable,
                             ['Auth_Action',$actions,'IN'],
                             ['ID'],
-                            ['justTheQuery'=>true,'DISTINCT'=>true],
-                            false
+                            ['justTheQuery'=>true,'DISTINCT'=>true,'test'=>false]
                         ).' UNION '.$this->sqlHandler->selectFromTable(
                             $usersGroupsTable.' JOIN '.$groupsActionsTable.' ON '.$usersGroupsTable.'.Auth_Group = '.$groupsActionsTable.'.Auth_Group',
                             ['Auth_Action',$actions,'IN'],
                             [$usersGroupsTable.'.ID'],
-                            ['justTheQuery'=>true,'DISTINCT'=>true],
-                            false
+                            ['justTheQuery'=>true,'DISTINCT'=>true,'test'=>false]
                         ).')',
                         'IN'
                     ],
-                    [],
-                    $test
+                    ['test'=>$test,'verbose'=>$verbose]
                 );
             return $res;
 
@@ -1233,7 +1256,6 @@ namespace IOFrame{
         /**
          * Views specific groups, and potentially their actions.
          * @param array $params Same as for getUsers
-         * @param mixed $test
          * @return array
          *              If fetching Groups - array of relevant (in respect to filters) group names.
          *              If fetching Groups Actions - array of the form: [
@@ -1241,7 +1263,11 @@ namespace IOFrame{
          *                                                               ...
          *                                                              ]
          */
-        function getGroups(array $params = [], $test = false){
+        function getGroups(array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
 
             $prefix = $this->sqlHandler->getSQLPrefix();
             $userTable = $prefix.'USERS_AUTH';
@@ -1280,7 +1306,7 @@ namespace IOFrame{
             //Valid parameters - not including filter ones
             $validParams = ['id','action','group'];
 
-            $selectionParams = ['justTheQuery'=>true,'useBrackets'=>true, 'DISTINCT'=>true] ;
+            $selectionParams = ['justTheQuery'=>true,'useBrackets'=>true, 'DISTINCT'=>true,'test'=>false] ;
 
             foreach($validParams as $paramName){
                 if(isset($params[$paramName]) && is_array($params[$paramName])){
@@ -1313,8 +1339,7 @@ namespace IOFrame{
                                                             '='
                                                         ],
                                                         [$usersGroupsTable.'.Auth_Group'],
-                                                        $selectionParams,
-                                                        false
+                                                        $selectionParams
                                                     ),
                                                     'IN'
                                                 ],
@@ -1336,8 +1361,7 @@ namespace IOFrame{
                                                             'IN'
                                                         ],
                                                         [$groupsActionsTable.'.Auth_Group'],
-                                                        $selectionParams,
-                                                        false
+                                                        $selectionParams
                                                     ),
                                                     'IN'
                                                 ],
@@ -1375,8 +1399,7 @@ namespace IOFrame{
                                                         'IN'
                                                     ],
                                                     [$usersGroupsTable.'.Auth_Group'],
-                                                    $selectionParams,
-                                                    false
+                                                    $selectionParams
                                                 ),
                                                 'IN'
                                             ];
@@ -1395,8 +1418,7 @@ namespace IOFrame{
                                                         'IN'
                                                     ],
                                                     [$groupsActionsTable.'.Auth_Group'],
-                                                    $selectionParams,
-                                                    false
+                                                    $selectionParams
                                                 ),
                                                 'IN'
                                             ];
@@ -1432,8 +1454,7 @@ namespace IOFrame{
                                                         '='
                                                     ],
                                                     [$usersGroupsTable.'.Auth_Group'],
-                                                    $selectionParams,
-                                                    false
+                                                    $selectionParams
                                                 ),
                                                 'IN'
                                             ];
@@ -1451,8 +1472,7 @@ namespace IOFrame{
                                                         '='
                                                     ],
                                                     [$groupsActionsTable.'.Auth_Group'],
-                                                    $selectionParams,
-                                                    false
+                                                    $selectionParams
                                                 ),
                                                 'IN'
                                             ];
@@ -1495,8 +1515,7 @@ namespace IOFrame{
                 $tables,
                 $selectionFilter,
                 $columns,
-                ['justTheQuery'=>true],
-                false
+                ['justTheQuery'=>true,'test'=>false]
             );
             $query .= ') as Meaningless_Alias ORDER BY '.$orderByExp;
 
@@ -1507,10 +1526,10 @@ namespace IOFrame{
                     $query .= ' LIMIT '.$limit;
             }
 
-            if($test)
+            if($verbose)
                 echo 'Query to send: '.$query.EOL;
-            $response = $this->sqlHandler->exeQueryBindParam($query,[],true);
-            if($test)
+            $response = $this->sqlHandler->exeQueryBindParam($query,[],['fetchAll'=>true]);
+            if($verbose)
                 var_dump($response);
 
 
@@ -1535,16 +1554,26 @@ namespace IOFrame{
         }
 
         /**
-         * Views all group actions (can be filtered with $params).
+         * Views all group actions (can be filtered with $params). Basically just calls getGroups with 'includeActions'
+         * @param array $params same as getGroups
+         *@returns array same as getGroups
          */
-        function getGroupActions(array $params = [], $test = false){
-            return $this->getGroups(array_merge($params,['includeActions'=>true]),$test);
+        function getGroupActions(array $params = []){
+            return $this->getGroups(array_merge($params,['includeActions'=>true]));
         }
 
         /**
          * Create new groups, or modifies existing ones (description).
+         * @param array $groups Array of the form {<Group Name> => <Description>}
+         * @param array $params of the form:
+         *                  'safeStr' => bool, default true - Whether to convert descriptions to safeString
+         * @returns bool
          */
-        function setGroups(array $groups, array $params = [], $test = false){
+        function setGroups(array $groups, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
             $prefix = $this->sqlHandler->getSQLPrefix();
             $groupsTable = $prefix.'GROUPS_AUTH';
 
@@ -1574,8 +1603,7 @@ namespace IOFrame{
                 $groupsTable,
                 ['Auth_Group','Description'],
                 $groupsToInsert,
-                ['onDuplicateKey'=>true],
-                $test
+                ['onDuplicateKey'=>true,'test'=>$test,'verbose'=>$verbose]
             );
 
             return $res;
@@ -1583,8 +1611,14 @@ namespace IOFrame{
 
         /**
          * Deletes groups
+         * @param string[] $groups Group names
+         * @param array $params
+         * @returns bool
          */
-        function deleteGroups(array $groups, array $params = [], $test = false){
+        function deleteGroups(array $groups, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
 
             $prefix = $this->sqlHandler->getSQLPrefix();
             $userTable = $prefix.'USERS_AUTH';
@@ -1602,8 +1636,7 @@ namespace IOFrame{
                     $groups,
                     'IN'
                 ],
-                [],
-                $test
+                ['test'=>$test,'verbose'=>$verbose]
             );
 
             if($res)
@@ -1616,13 +1649,11 @@ namespace IOFrame{
                             $usersGroupsTable,
                             ['Auth_Group',$groups,'IN'],
                             ['ID'],
-                            ['justTheQuery'=>true,'useBrackets'=>true,'DISTINCT'=>true],
-                            false
+                            ['justTheQuery'=>true,'useBrackets'=>true,'DISTINCT'=>true]
                         ),
                         'IN'
                     ],
-                    [],
-                    $test
+                    ['test'=>$test,'verbose'=>$verbose]
                 );
             return $res;
 
@@ -1633,32 +1664,44 @@ namespace IOFrame{
          * @param array $actions An array of the form:
          *                      <Action Name> => Bool true/false for set/delete. Will do both insertions and deletions.
          * @param array $params An array currently empty
+         * @returns bool
          */
-        function modifyUserActions(int $id, array $actions, array $params = [], $test = false){
-            return $this->modifyAuth($id, $actions, ['targetType' => 'userActions'], $test);
+        function modifyUserActions(int $id, array $actions, array $params = []){
+            $params['targetType'] = 'userActions';
+            return $this->modifyAuth($id, $actions, $params);
         }
 
         /** Adds/Removes groups to/from a user.
          * @param int $id User ID
          * @param array $groups An array of the form:
          *                      <Groups Name> => Bool true/false for set/delete. Will do both insertions and deletions.
-         * @param array $params An array currently empty
+         * @param array $params
+         * @returns bool
          */
-        function modifyUserGroups(int $id, array $groups, array $params = [], $test = false){
-            return $this->modifyAuth($id, $groups, ['targetType' => 'userGroups'], $test);
+        function modifyUserGroups(int $id, array $groups, array $params = []){
+            $params['targetType'] = 'userGroups';
+            return $this->modifyAuth($id, $groups, $params);
         }
 
         /** Adds/Removes actions to/from a group.
          * @param string $groupName Name of the group
-         * @param array $groups An array of the form:
+         * @param array $actions An array of the form:
          *                      <Action Name> => Bool true/false for set/delete. Will do both insertions and deletions.
-         * @param array $params An array currently empty
+         * @param array $params
+         * @returns bool
          */
-        function modifyGroupActions(string $groupName,  array $actions, array $params = [], $test = false){
-            return $this->modifyAuth($groupName, $actions, ['targetType' => 'groupActions'], $test);
+        function modifyGroupActions(string $groupName,  array $actions, array $params = []){
+            $params['targetType'] = 'groupActions';
+            return $this->modifyAuth($groupName, $actions, $params);
         }
 
-        function modifyAuth($identifier, array $targets, array $params, $test = false){
+        /** Basically a common function for modifyGroupActions, modifyUserGroups and modifyUserActions
+        */
+        protected function modifyAuth($identifier, array $targets, array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
 
             if(!isset($params['targetType']) ||
                 ($params['targetType'] != 'userGroups' && $params['targetType'] != 'userActions' && $params['targetType'] != 'groupActions' )
@@ -1705,8 +1748,7 @@ namespace IOFrame{
                     $targetTable,
                     [$idCol,$targetCol],
                     $insertArray,
-                    ['onDuplicateKey'=>true],
-                    $test
+                    ['onDuplicateKey'=>true,'test'=>$test,'verbose'=>$verbose]
                 );
             }
 
@@ -1725,8 +1767,7 @@ namespace IOFrame{
                 $res = $this->sqlHandler->deleteFromTable(
                     $targetTable,
                     $deleteArray,
-                    [],
-                    $test
+                    ['test'=>$test,'verbose'=>$verbose]
                 );
             }
 
@@ -1741,8 +1782,7 @@ namespace IOFrame{
                         $users,
                         ['Last_Changed = "'.time().'"'],
                         ['ID',$identifier,'='],
-                        [],
-                        $test
+                        ['test'=>$test,'verbose'=>$verbose]
                     );
                 //This happens when we update a a group
                 else
@@ -1755,75 +1795,15 @@ namespace IOFrame{
                                 $usersGroups,
                                 ['Auth_Group',$identifier,'='],
                                 ['ID'],
-                                ['justTheQuery'=>true,'useBrackets'=>true,'DISTINCT'=>true],
-                                false
+                                ['justTheQuery'=>true,'useBrackets'=>true,'DISTINCT'=>true]
                             ),
                             'IN'],
-                        [],
-                        $test
+                        ['test'=>$test,'verbose'=>$verbose]
                     );
             }
 
             return $res;
         }
-
-
-
-
-
-        /** Views the current actions of a user
-         * @param mixed $identifier Either user ID or user Mail
-         * @param array $params An array of the form:
-         *                      'includeGroups' - bool, whether to include group actions, default true
-         *
-         * @return String[] Array of all actions the user has (empty if he has no actions or does not exist)
-        function viewUserActions($identifier, array $params = [], $test = false){
-        $prefix = $this->sqlHandler->getSQLPrefix();
-        //set defaults
-        if(!isset($params['includeGroups']))
-        $includeGroups = true;
-        else
-        $includeGroups = $params['includeGroups'];
-
-        //Works both with user mail and ID
-        if(gettype($identifier) == 'integer'){
-        $identityCond = [$prefix.'USERS.ID',$identifier,'='];
-        }
-        else{
-        $identityCond = [$prefix.'USERS.Email',[$identifier,'STRING'],'='];
-        }
-
-        $query = $this->sqlHandler->selectFromTable(
-        $prefix.'USERS JOIN '.$prefix.'USERS_ACTIONS_AUTH ON '.$prefix.'USERS_ACTIONS_AUTH.ID = '.$prefix.'USERS.ID',
-        $identityCond,
-        ['Auth_Action'],
-        ['justTheQuery'=>true],
-        $test
-        );
-
-        if($includeGroups)
-        $query .= ' UNION '.
-        $this->sqlHandler->selectFromTable(
-        $prefix.'USERS JOIN '.$prefix.'USERS_GROUPS_AUTH ON '.$prefix.'USERS_GROUPS_AUTH.ID = '.$prefix.'USERS.ID
-        JOIN '.$prefix.'GROUPS_ACTIONS_AUTH ON '.$prefix.'USERS_GROUPS_AUTH.Auth_Group = '.$prefix.'GROUPS_ACTIONS_AUTH.Auth_Group',
-        $identityCond,
-        ['Auth_Action'],
-        ['justTheQuery'=>true],
-        $test
-        );
-
-        $actions = $this->sqlHandler->exeQueryBindParam($query,[],true);
-
-        $res = [];
-
-        foreach($actions as $tuple){
-        array_push($res,$tuple['Auth_Action']);
-        }
-
-        return $res;
-        }
-
-         */
     }
 
 }

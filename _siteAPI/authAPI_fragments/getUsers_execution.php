@@ -1,2 +1,3 @@
 <?php
-$result = $auth->getUsers($params, $test);
+$params['test'] = $test;
+$result = $auth->getUsers($params);

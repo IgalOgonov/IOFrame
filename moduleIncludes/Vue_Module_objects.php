@@ -319,8 +319,9 @@
             gaSubmit: function () {
                 this.inputs = JSON.stringify(this.ga);
                 //Encode request params
-                this.request.params['page'] = this.ga.pageName;
-                this.request.params['date'] = this.ga.date;
+                this.request.params['pages'] = {
+                };
+                this.request.params['pages'][this.ga.pageName] = this.ga.date;
                 //Send request
                 this.sendRequest();
             },

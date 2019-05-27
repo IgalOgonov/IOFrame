@@ -21,11 +21,8 @@ $IPHandler = new \IOFrame\IPHandler(
 );
 
 //IP check
-if($IPHandler->checkIP()){
-    if($test)
-        echo 'IP Blacklisted - login attempts not allowed.!'.EOL;
+if($IPHandler->checkIP(['test'=>$test]))
     exit('-3');
-}
 
 if(!isset($userSettings))
     $userSettings = new IOFrame\settingsHandler(

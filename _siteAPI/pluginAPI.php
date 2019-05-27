@@ -121,7 +121,7 @@
  */
 //TODO potentially add auto-generating, expiring security tokens to full (un)install
 
-require __DIR__ . '/../_Core/coreInit.php';
+require __DIR__ . '/../_main/coreInit.php';
 require __DIR__.'/../_util/validator.php';
 
 //If it's a test call..
@@ -413,9 +413,6 @@ function checkInput($settings,$sqlHandler,$logger ,$test = false){
 //Check input
 checkInput($settings,$sqlHandler,$logger,$test);
 
-//Create plugin handler
-$pluginHandler = new IOFrame\pluginHandler($settings,['sqlHandler'=>$sqlHandler,'logger'=>$logger]);
-
 //Do what needs to be done
 switch($_REQUEST['action']){
 
@@ -425,7 +422,7 @@ switch($_REQUEST['action']){
     case 'getAvailable':
         isset($_REQUEST['name'])?
             $name = $_REQUEST['name'] : $name = '' ;
-        $res = $pluginHandler->getAvailable($name);
+        $res = $pluginHandler->getAvailable(['name'=>$name]);
         foreach($res as $pName=>$status){
             $pluginHandler->ensurePublicImage($pName);
         }
@@ -434,14 +431,14 @@ switch($_REQUEST['action']){
     case 'getInfo':
         isset($_REQUEST['name'])?
             $name = $_REQUEST['name'] : $name = '' ;
-        $res = $pluginHandler->getInfo($name);
+        $res = $pluginHandler->getInfo(['name'=>$name,'test'=>$test]);
         foreach($res as $pluginInfo){
             $pluginHandler->ensurePublicImage($pluginInfo['fileName']);
         }
         echo json_encode($res);
         break;
     case 'getOrder':
-        echo json_encode($pluginHandler->getOrder());
+        echo json_encode($pluginHandler->getOrder(['local'=>false,'test'=>$test]));
         break;
     case 'pushToOrder':
             $name = $_REQUEST['name'];
@@ -453,7 +450,18 @@ switch($_REQUEST['action']){
             $verify = $_REQUEST['verify'] : $verify = true ;
         isset($_REQUEST['backUp'])?
             $backUp = $_REQUEST['backUp'] : $backUp = true ;
-        if($pluginHandler->pushToOrder($name, $index, $verify, $backUp, $test))
+        if(
+            $pluginHandler->pushToOrder(
+                $name,
+                [
+                    'index'=> $index,
+                    'verify'=> $verify,
+                    'backUp'=> $backUp,
+                    'local'=> false,
+                    'test'=>$test
+                ]
+            )
+        )
             echo 0;
         else
             echo 1;
@@ -467,7 +475,11 @@ switch($_REQUEST['action']){
         if(isset($_REQUEST['validate']))
             if($_REQUEST['validate'] == false)
                 $validate = false;
-        echo $pluginHandler->removeFromOrder($target, $type, $validate, $backUp, $test);
+        echo $pluginHandler->removeFromOrder(
+            $target,
+            $type,
+            ['verify'=>$validate,'backUp'=>$backUp,'local'=>false,'test'=>$test]
+        );
         break;
     case 'moveOrder':
         $from = $_REQUEST['from'];
@@ -478,7 +490,11 @@ switch($_REQUEST['action']){
         if(isset($_REQUEST['validate']))
             if($_REQUEST['validate'] == false)
                 $validate = false;
-        echo $pluginHandler->moveOrder($from,$to,$validate,$backUp,$test);
+        echo $pluginHandler->moveOrder(
+            $from,
+            $to,
+            ['verify'=>$validate,'backUp'=>$backUp,'local'=>false,'test'=>$test]
+        );
         break;
     case 'swapOrder':
         $num1 = $_REQUEST['p1'];
@@ -489,7 +505,11 @@ switch($_REQUEST['action']){
         if(isset($_REQUEST['validate']))
             if($_REQUEST['validate'] == false)
                 $validate = false;
-        echo $pluginHandler->swapOrder($num1,$num2,$validate,$backUp,$test);
+        echo $pluginHandler->swapOrder(
+            $num1,
+            $num2,
+            ['verify'=>$validate,'backUp'=>$backUp,'local'=>false,'test'=>$test]
+        );
         break;
     case 'install':
         $name = $_REQUEST['name'];
@@ -497,7 +517,7 @@ switch($_REQUEST['action']){
             $options = json_decode($_REQUEST['options'],true) : $options = array() ;
         isset($_REQUEST['override'])?
             $override = $_REQUEST['override'] : $override = false;
-        echo htmlspecialchars($pluginHandler->install($name,$options,$override,$test));
+        echo htmlspecialchars($pluginHandler->install($name,$options,['override'=>$override,'test'=>$test]));
         break;
     case 'fullInstall':
         $name = $_REQUEST['name'];
@@ -511,7 +531,7 @@ switch($_REQUEST['action']){
             $options = json_decode($_REQUEST['options'],true) : $options = array() ;
         isset($_REQUEST['override'])?
             $override = $_REQUEST['override'] : $override = true;
-        echo htmlspecialchars($pluginHandler->uninstall($name,$options,$override,$test));
+        echo htmlspecialchars($pluginHandler->uninstall($name,$options,['override'=>$override,'test'=>$test]));
         break;
     case 'fullUninstall':
         $name = $_REQUEST['name'];

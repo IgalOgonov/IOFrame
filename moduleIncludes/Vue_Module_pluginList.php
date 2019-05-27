@@ -212,12 +212,14 @@
                                 }
                                 let resPlugins = JSON.parse(xhr.responseText);
                                 for(let i=0; i<resPlugins.length; i++){
+                                    if(resPlugins[i].status != 'active')
+                                        continue;
                                     (resPlugins[i].icon)?
-                                        resPlugins[i].icon = '_img/'+resPlugins[i].fileName+'/icon.'+resPlugins[i].icon :
-                                        resPlugins[i].icon = '_img/def_icon.png';
+                                        resPlugins[i].icon = 'pluginImages/'+resPlugins[i].fileName+'/icon.'+resPlugins[i].icon :
+                                        resPlugins[i].icon = 'pluginImages/def_icon.png';
                                     (resPlugins[i].thumbnail)?
-                                        resPlugins[i].thumbnail = '_img/'+resPlugins[i].fileName+'/thumbnail.'+resPlugins[i].thumbnail :
-                                        resPlugins[i].thumbnail = '_img/def_thumbnail.png';
+                                        resPlugins[i].thumbnail = 'pluginImages/'+resPlugins[i].fileName+'/thumbnail.'+resPlugins[i].thumbnail :
+                                        resPlugins[i].thumbnail = 'pluginImages/def_thumbnail.png';
                                     delete resPlugins[i].status;
                                     delete resPlugins[i].version;
                                     delete resPlugins[i].summary;

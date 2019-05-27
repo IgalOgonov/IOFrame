@@ -112,32 +112,25 @@
  *        Examples: action=banUser&id=1&minutes=60000
  *
  * */
-require __DIR__ . '/../_Core/coreInit.php';
+require __DIR__ . '/../_main/coreInit.php';
 
 require 'defaultInputChecks.php';
 
 if(!isset($_REQUEST["action"]))
     exit('Action not specified!');
+$action = $_REQUEST["action"];
 
 if($test)
     echo 'Testing mode!'.EOL;
 //Handle inputs
 $inputs = [];
 
-switch($_REQUEST["action"]){
+switch($action){
     case 'addUser':
         //TODO Timing safe function
         $arrExpected =["u","m","p"];
 
-        foreach($arrExpected as $expected){
-            if(isset($_REQUEST[$expected]) && $_REQUEST[$expected] == '')
-                $inputs[$expected] = null;
-            else
-                if(isset($_REQUEST[$expected]))
-                    $inputs[$expected] = $_REQUEST[$expected];
-                else
-                    $inputs[$expected] = null;
-        }
+        require 'userAPI_fragments/setExpectedInputs.php';
 
         require 'userAPI_fragments/addUser_checks.php';
         require 'userAPI_fragments/addUser_execution.php';
@@ -158,15 +151,7 @@ switch($_REQUEST["action"]){
 
         $arrExpected =["userID","m","p","sesKey"];
 
-        foreach($arrExpected as $expected){
-            if(isset($_REQUEST[$expected]) && $_REQUEST[$expected] == '')
-                $inputs[$expected] = null;
-            else
-                if(isset($_REQUEST[$expected]))
-                    $inputs[$expected] = $_REQUEST[$expected];
-                else
-                    $inputs[$expected] = null;
-        }
+        require 'userAPI_fragments/setExpectedInputs.php';
 
         require 'userAPI_fragments/logUser_checks.php';
         require 'userAPI_fragments/logUser_execution.php';
@@ -179,30 +164,23 @@ switch($_REQUEST["action"]){
                     $defaultSettingsParams
                 );
             //Mark the IP as one who committed an incorrect login attempt
-            $securityHandler->commitEventIP(0,[],false);
+            $securityHandler->commitEventIP(0,[]);
             //Mark the user who had a bad login attempt into
             if($inputs['userID']!== null)
                 $id = $inputs['userID'];
             else
-                $id = $sqlHandler->selectFromTable($sqlHandler->getSQLPrefix().'USERS',['Email',$inputs['m'],'='],['ID'],[],false);
-            $securityHandler->commitEventUser(0,$id,false);
+                $id = $sqlHandler->selectFromTable($sqlHandler->getSQLPrefix().'USERS',['Email',$inputs['m'],'='],['ID'],[]);
+            $securityHandler->commitEventUser(0,$id);
         }
         echo ($result === 0)?
             '0' : $result;
         break;
 
     case 'pwdReset':
+
         $arrExpected =["id","code","mail","async"];
 
-        foreach($arrExpected as $expected){
-            if(isset($_REQUEST[$expected]) && $_REQUEST[$expected] == '')
-                $inputs[$expected] = null;
-            else
-                if(isset($_REQUEST[$expected]))
-                    $inputs[$expected] = $_REQUEST[$expected];
-                else
-                    $inputs[$expected] = null;
-        }
+        require 'userAPI_fragments/setExpectedInputs.php';
 
         require 'userAPI_fragments/reset_checks.php';
         require 'userAPI_fragments/pwdReset_execution.php';
@@ -217,15 +195,7 @@ switch($_REQUEST["action"]){
 
         $arrExpected =["newPassword"];
 
-        foreach($arrExpected as $expected){
-            if(isset($_REQUEST[$expected]) && $_REQUEST[$expected] == '')
-                $inputs[$expected] = null;
-            else
-                if(isset($_REQUEST[$expected]))
-                    $inputs[$expected] = $_REQUEST[$expected];
-                else
-                    $inputs[$expected] = null;
-        }
+        require 'userAPI_fragments/setExpectedInputs.php';
 
         require 'userAPI_fragments/changePassword_checks.php';
         require 'userAPI_fragments/changePassword_execution.php';
@@ -238,15 +208,7 @@ switch($_REQUEST["action"]){
 
         $arrExpected =["id","code","mail"];
 
-        foreach($arrExpected as $expected){
-            if(isset($_REQUEST[$expected]) && $_REQUEST[$expected] == '')
-                $inputs[$expected] = null;
-            else
-                if(isset($_REQUEST[$expected]))
-                    $inputs[$expected] = $_REQUEST[$expected];
-                else
-                    $inputs[$expected] = null;
-        }
+        require 'userAPI_fragments/setExpectedInputs.php';
 
         require 'userAPI_fragments/regConfirm_checks.php';
         require 'userAPI_fragments/regConfirm_execution.php';
@@ -258,15 +220,7 @@ switch($_REQUEST["action"]){
     case 'mailReset':
         $arrExpected =["id","code","mail","async"];
 
-        foreach($arrExpected as $expected){
-            if(isset($_REQUEST[$expected]) && $_REQUEST[$expected] == '')
-                $inputs[$expected] = null;
-            else
-                if(isset($_REQUEST[$expected]))
-                    $inputs[$expected] = $_REQUEST[$expected];
-                else
-                    $inputs[$expected] = null;
-        }
+        require 'userAPI_fragments/setExpectedInputs.php';
 
         require 'userAPI_fragments/reset_checks.php';
         require 'userAPI_fragments/mailReset_execution.php';
@@ -279,15 +233,7 @@ switch($_REQUEST["action"]){
     case 'changeMail':
         $arrExpected =["newMail"];
 
-        foreach($arrExpected as $expected){
-            if(isset($_REQUEST[$expected]) && $_REQUEST[$expected] == '')
-                $inputs[$expected] = null;
-            else
-                if(isset($_REQUEST[$expected]))
-                    $inputs[$expected] = $_REQUEST[$expected];
-                else
-                    $inputs[$expected] = null;
-        }
+        require 'userAPI_fragments/setExpectedInputs.php';
 
         require 'userAPI_fragments/changeMail_checks.php';
         require 'userAPI_fragments/changeMail_execution.php';
@@ -299,15 +245,7 @@ switch($_REQUEST["action"]){
     case 'banUser':
         $arrExpected =["minutes","id"];
 
-        foreach($arrExpected as $expected){
-            if(isset($_REQUEST[$expected]) && $_REQUEST[$expected] == '')
-                $inputs[$expected] = null;
-            else
-                if(isset($_REQUEST[$expected]))
-                    $inputs[$expected] = $_REQUEST[$expected];
-                else
-                    $inputs[$expected] = null;
-        }
+        require 'userAPI_fragments/setExpectedInputs.php';
 
         require 'userAPI_fragments/banUser_checks.php';
         require 'userAPI_fragments/banUser_execution.php';

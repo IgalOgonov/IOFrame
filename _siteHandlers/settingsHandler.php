@@ -76,6 +76,14 @@ namespace IOFrame{
             if(!defined('SETTINGS_TABLE_PREFIX'))
                 define('SETTINGS_TABLE_PREFIX', 'SETTINGS_');
 
+            if(!defined('EOL')){
+                if (php_sapi_name() == "cli") {
+                    define("EOL",PHP_EOL);
+                } else {
+                    define("EOL",'<br>');;
+                }
+            }
+
             //Set defaults
             if(!isset($params['initiate']))
                 $params['initiate'] = true;
@@ -178,7 +186,7 @@ namespace IOFrame{
                 }
             }
             if($params['initiate']){
-                $this->getFromCache();
+                $this->getFromCache($params);
                 $this->chkInit();
             }
         }
@@ -227,11 +235,17 @@ namespace IOFrame{
         /** Updates the settings of this object from disk/db. If given an argument, updates the settings on the disk/db with
          * that argument - be careful, it must be an ARRAY of settings!
          *
-         * @param mixed $arg '' to
+         * @param array $params of the form:
+         *                  'mode' => force operation mode
          *
          * @returns bool true on success
          * */
-        function updateSettings($mode = null,$test = false){
+        function updateSettings(array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            isset($params['mode'])?
+                $mode = $params['mode'] : $mode = null;
             //If not specified otherwise, update in default mode
             $res = false;
             if($mode == null)
@@ -251,13 +265,13 @@ namespace IOFrame{
                         $this->lastUpdateTimes[$name] = $updateTime;
                         $this->settingsArrays[$name] =  $setArray;
                     }
-                    else{
+                    if($verbose)
                         echo 'Updating local settings '.$name.' to '.$settings.' at '.$updateTime.EOL;
-                    }
+
                     //Update the cache if we're using it - note that this is called BECAUSE in local mode,
                     //updateSettings only gets called if some change was detected in chkInit or after setSetting
                     //This update might happen twice in MIXED mode - this is an acceptable casualty
-                    $this->updateCache(['settingsArray'=>$setArray,'name'=>$name,'settingsLastUpdate'=>$updateTime],$test);
+                    $this->updateCache(['settingsArray'=>$setArray,'name'=>$name,'settingsLastUpdate'=>$updateTime,'test'=>$test,'verbose'=>$verbose]);
                 }
                 $this->settingsArray = $combinedSettings;
                 $this->isInit = true;
@@ -273,17 +287,16 @@ namespace IOFrame{
                     $testQuery.= $this->sqlHandler->selectFromTable($tname,
                             [ [$tname, [['settingKey', '_Last_Changed', '='],['settingValue',$this->lastUpdateTimes[$name],'>='],'AND'], ['settingKey','settingValue'], [], 'SELECT'], 'EXISTS'],
                             ['settingKey','settingValue', '\''.$name.'\' as Source'],
-                            ['justTheQuery'=>true],
-                            false
+                            ['justTheQuery'=>true,'test'=>false]
                         ).' UNION ';
                 }
 
                 $testQuery =  substr($testQuery,0,-7);
 
-                if($test){
+                if($verbose){
                     echo 'Query to send: '.$testQuery.' at '.$updateTime.EOL;
                 }
-                $temp = $this->sqlHandler->exeQueryBindParam($testQuery, [], true);
+                $temp = $this->sqlHandler->exeQueryBindParam($testQuery, [], ['fetchAll'=>true]);
 
                 //Used to check whether there are duplicate settings - as ell as to remove '_Last_Changed'
                 $res = [];
@@ -298,7 +311,7 @@ namespace IOFrame{
                             if ($resArray['settingKey'] != '_Last_Changed') {
                                 if (!$test)
                                     $this->settingsArray[$resArray['settingKey']] = $resArray['settingValue'];
-                                else
+                                if($verbose)
                                     echo 'Setting ' . $resArray['settingKey'] . ' set to ' . $resArray['settingValue'] . EOL;
                             }
 
@@ -308,7 +321,8 @@ namespace IOFrame{
                             if (!$test) {
                                 $this->settingsArrays[$resArray['Source']][$resArray['settingKey']] = $resArray['settingValue'];
                                 $this->lastUpdateTimes[$resArray['Source']] = $updateTime;
-                            } else {
+                            }
+                            if($verbose) {
                                 echo 'Setting ' . $resArray['settingKey'] . ' in ' . $resArray['Source'] . ' set to ' .
                                     $resArray['settingValue'] . ' at ' . $updateTime . EOL;
                             }
@@ -316,7 +330,7 @@ namespace IOFrame{
                     }
                     //If we are running in mixed mode and we got new settings, it means the local settings are out of sync.
                     if($mode != SETTINGS_OP_MODE_MIXED)
-                        $this->initLocal($test);
+                        $this->initLocal(['test'=>$test,'verbose'=>$verbose]);
                 }
 
                 //Update the cache if we had any new results
@@ -324,7 +338,7 @@ namespace IOFrame{
                     foreach($this->names as $name){
                         //Update the cache if we're using it
                         //This update might happen twice in MIXED mode - this is an acceptable casualty
-                        $this->updateCache(['settingsArray'=>$this->settingsArrays[$name],'name'=>$name,'settingsLastUpdate'=>$updateTime],$test);
+                        $this->updateCache(['settingsArray'=>$this->settingsArrays[$name],'name'=>$name,'settingsLastUpdate'=>$updateTime,'test'=>$test]);
                     }
 
                 $res = true;
@@ -333,24 +347,24 @@ namespace IOFrame{
             return $res;
         }
 
-        /** Gets the settings from $_SESSION, if they exist there, and updates this handler.
-         * Note that in the future instead of storing a copy of the settings per user, there will be a shared cache
-         * for all users, probably using Redis.
+        /** Gets the settings from cache, if they exist there, and updates this handler.
          *
+         * @param array $params
          * @returns bool true on success
          * */
-        function getFromCache($params = [],$test = false){
-            /*
-            */
+        function getFromCache($params = []){
             if($this->redisHandler === null)
                 return false;
             //Indicates requested everything was found
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             $res = true;
             $combined_array = [];
             foreach($this->names as $name){
                 //If we are not using cache, just continue and set result to false
                 if(!isset($this->useCacheArray[$name]) || !$this->useCacheArray[$name]){
-                    if($test)
+                    if($verbose)
                         echo 'Tried to get '.$name.' from cache when useCache for it was false'.EOL;
                     $res = false;
                     continue;
@@ -364,9 +378,9 @@ namespace IOFrame{
                         $this->lastUpdateTimes[$name] = $settingsMeta;
                         $this->settingsArrays[$name] =  $settings;
                     }
-                    else{
+                    if($verbose)
                         echo 'Setting array '.$name.' updated from cache to '.$settingsJSON.', freshness: '.$settingsMeta.EOL;
-                    }
+
                 }
                 else
                     $res = false;
@@ -377,31 +391,34 @@ namespace IOFrame{
                     $this->settingsArray = $combined_array;
                     $this->isInit = true;
                 }
-                else{
+                if($verbose)
                     echo 'Setting array updated to '.json_encode($combined_array).EOL;
-                }
             }
             return $res;
         }
 
-        /** Updates the settings at $_SESSION.
-         * Note that in the future instead of storing a copy of the settings per user, there will be a shared cache
-         * for all users, probably using Redis.
+        /** Updates the settings at the cache.
          *
+         * @param array $params of the form:
+         *                  'settingsArray' => array of settings to set in the cache
+         *                  'settingsLastUpdate' => Last time said settings were updated (from DB)
          * @returns bool true on success
          * */
-        function updateCache($params = [],$test = false){
+        function updateCache($params = []){
             if($this->redisHandler === null)
                 return false;
 
             //Ensure required params
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             if(!isset($params['settingsArray']) || !isset($params['name']) )
                 return false;
             $name = $params['name'];
             $settingsJSON = json_encode($params['settingsArray']);
 
             if(!isset($this->useCacheArray[$name]) || !$this->useCacheArray[$name]){
-                if($test)
+                if($verbose)
                     echo 'Tried to update cache of '.$name.' when useCache was false'.EOL;
                 return false;
             }
@@ -416,24 +433,32 @@ namespace IOFrame{
                 $this->redisHandler->call('set',['_settings_'.$name,$settingsJSON]);
                 $this->redisHandler->call('set',['_settings_meta_'.$name,$settingsLastUpdate]);
             }
-            else{
+            if($verbose)
                 echo 'Updating cache settings array '.$name.' to '.$settingsJSON.' at '.$settingsLastUpdate.EOL;
-            }
+
             return true;
         }
 
         /** Checks if Settings has been initialized, if no initializes it.
          * Also, if they are initialized, checks if they are up to date, if no updates them.
-         *
+         * @param array $params of the form:
+         *                  'mode' => force operation mode
          * @returns bool true on success, false if unable to open the given settings url.
          * */
-        function chkInit($mode = null,$test = false){
+        function chkInit(array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            isset($params['mode'])?
+                $mode = $params['mode'] : $mode = null;
+
             if($mode == null)
                 $mode = $this->opMode;
 
             if(!$this->isInit){
                 return
-                    $this->updateSettings($mode,$test);
+                    $this->updateSettings(['mode'=>$mode,'test'=>$test,'verbose'=>$verbose]);
             }
             else{
                 //TODO initiate ALL of the settings
@@ -447,7 +472,7 @@ namespace IOFrame{
 
                         //This means that for whatever reason the _setMeta file doesn't exist or is wrong, so we gotta create it
                         if( preg_match_all('/[0-9]|\.|\s/',$lastUpdate)!=strlen($lastUpdate) || $lastUpdate = 0)
-                            $this->updateMeta($name,SETTINGS_OP_MODE_LOCAL,$test);
+                            $this->updateMeta($name,['mode'=>SETTINGS_OP_MODE_LOCAL,'test'=>$test,'verbose'=>$verbose]);
 
                         //If the last time we updated was BEFORE the last time the global settings were updated, we gotta close the gap.
                         if( (int)$lastUpdate > (int)$this->lastUpdateTimes[$name] )
@@ -455,14 +480,14 @@ namespace IOFrame{
                     }
 
                     if($shouldUpdate)
-                        return $this->updateSettings($mode,$test);
+                        return $this->updateSettings(['mode'=>$mode,'test'=>$test,'verbose'=>$verbose]);
                     else
                         return true;
                 }
                 //DB mode
                 else{
                     //DB mode only updates from tables we are outdated on anyway
-                    return $this->updateSettings($mode,$test);
+                    return $this->updateSettings(['mode'=>$mode,'test'=>$test,'verbose'=>$verbose]);
                 }
             }
         }
@@ -494,7 +519,7 @@ namespace IOFrame{
 
         /*** Gets the array of settings
          *
-         * @param string $str setting name
+         * @param array $arr array of specific setting names, can be [] to get all settings
          *
          * @returns mixed
          *      false if settings aren't initiated or updated, and we aren't using auto-update
@@ -519,17 +544,27 @@ namespace IOFrame{
                 }
             }
         }
+
         /**
          * @param string $set Sets a specific setting $set to value $val.
          * @param mixed $val If $val is exact match for null, removes that setting.
-         * @param bool $createNew If false, will not allow creating new settings, only updating.
-         *
+         * @param array $params of the form:
+         *              'createNew' bool, default false - If false, will not allow creating new settings, only updating.
+         *              'targetName' string, default null - Specific name of the setting group requested setting belongs to.
          * @returns mixed false if couldn't check/update settings, or -1 if setting requested doesn't exist.
         */
-        function setSetting(string $set, $val, bool $createNew = false, $targetName = null,$test = false){
+        function setSetting(string $set, $val, array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+            isset($params['createNew'])?
+                $createNew = $params['createNew'] : $createNew = false;
+            isset($params['targetName'])?
+                $targetName = $params['targetName'] : $targetName = null;
 
             //Make sure we are up to date - chkInit() will update us if we're behind and ONLY return false if it failed
-            if(!$this->chkInit(null,$test))
+            if(!$this->chkInit(['mode'=>null,'test'=>$test,'verbose'=>$verbose]))
                 return false;
             else if(!isset($this->settingsArray[$set])){
                 if($createNew);
@@ -568,10 +603,10 @@ namespace IOFrame{
                         json_encode($newSettings),
                         ['sec' => 2, 'backUp' => true, 'locakHandler' => $this->mutexes[$targetName]]
                     );
-                else
+                if($verbose)
                     echo 'Writing '.json_encode($newSettings).' to '.$this->settingsURLs[$targetName].' at '.time().EOL;
 
-                $this->updateMeta($targetName,SETTINGS_OP_MODE_LOCAL,$test);
+                $this->updateMeta($targetName,['mode'=>SETTINGS_OP_MODE_LOCAL,'test'=>$test,'verbose'=>$verbose]);
             }
             //Mixed/DB mode
             if($this->opMode == SETTINGS_OP_MODE_DB || $this->opMode == SETTINGS_OP_MODE_MIXED){
@@ -581,8 +616,7 @@ namespace IOFrame{
                     $this->sqlHandler->deleteFromTable(
                         $tname,
                         [['settingKey',(string)$set,'=']],
-                        [],
-                        $test
+                        ['test'=>$test,'verbose'=>$verbose]
                     );
                 }
                 //If we added or updated a setting
@@ -591,15 +625,14 @@ namespace IOFrame{
                         $tname,
                         ['settingKey','settingValue'],
                         [[$set,"STRING"],[(string)$val,"STRING"]],
-                        ['onDuplicateKey'=>$createNew],
-                        $test
+                        ['onDuplicateKey'=>$createNew,'test'=>$test,'verbose'=>$verbose]
                     );
                 }
-                $this->updateMeta($targetName,SETTINGS_OP_MODE_DB,$test);
+                $this->updateMeta($targetName,['mode'=>SETTINGS_OP_MODE_DB,'test'=>$test,'verbose'=>$verbose]);
             }
-            if($test)
+            if($verbose)
                 echo 'NOW UPDATING SETTINGS OBJECT: '.EOL;
-            $this->updateSettings(null,$test);
+            $this->updateSettings(['mode'=>null,'test'=>$test,'verbose'=>$verbose]);
             return true;
         }
 
@@ -612,15 +645,28 @@ namespace IOFrame{
             return false;
         }
 
-        /**Updates settings meta file _setMeta to <current UNIX time> - with microseconds.
+        /** Updates settings meta file _setMeta to <current UNIX time> - with microseconds.
+         * @param string $name Name of setting file
+         * @param array $params of the form:
+         *                  'mode' => force operation mode
+         *
         */
-        function updateMeta($name, $mode = null,$test = false){
+        function updateMeta(string $name, array $params = []){
+
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
+
+            isset($params['mode'])?
+                $mode = $params['mode'] : $mode = null;
+
             if($mode == null)
                 $mode = $this->opMode;
+
             if($mode == SETTINGS_OP_MODE_LOCAL){
                 if(!$test)
                     $this->fileHandler->writeFileWaitMutex($this->settingsURLs[$name],'_setMeta',time(),['useNative' => true]);
-                else
+                if($verbose)
                     echo 'Updating settings meta file of '.$name.' at '.time().EOL;
             }
             else{
@@ -629,28 +675,36 @@ namespace IOFrame{
                         $tname,
                         ['settingKey','settingValue'],
                         [["_Last_Changed","STRING"],[(string)time(),"STRING"]],
-                        ['onDuplicateKey'=>true],
-                        $test);
+                        ['onDuplicateKey'=>true,'test'=>$test,'verbose'=>$verbose]
+                    );
             }
         }
 
         /** Creates the next iteration in the settings changes history, moves all existing changes 1 step back,
          * and delets the $n-th (default = 10) change. This means the last 10 changes are saved by default.
          * Changing the n will resault in a LOSS of all changes earlier than the new n.
+         * @param string $name Name of setting file
+         * @param array $params
          */
-        function backupSettings($name,$test = false){
+        function backupSettings(string $name, array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             if(!$test)
                 $this->fileHandler->backupFile($this->settingsURLs[$name],'settings',['maxBackup'=>10]);
-            else
+            if($verbose)
                 echo 'Backing up settings named '.$name;
         }
 
         /** Creates the DB tables and copies the settings there.
          * Can only work in mixed Operation Mode.
-         *
+         * @param array $params
          * @returns bool
          * */
-        function initDB($test = false){
+        function initDB(array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             //This can only be done in mixed mode
             if($this->opMode != SETTINGS_OP_MODE_MIXED){
                 return false;
@@ -667,10 +721,10 @@ namespace IOFrame{
                                                               ) ENGINE=InnoDB DEFAULT CHARSET = utf8;
                                                               ';
                 if(!$test){
-                    $this->sqlHandler->exeQueryBindParam($query,[],false);
-                    $this->sqlHandler->exeQueryBindParam('TRUNCATE TABLE '.$tname,[],false);
+                    $this->sqlHandler->exeQueryBindParam($query,[]);
+                    $this->sqlHandler->exeQueryBindParam('TRUNCATE TABLE '.$tname,[]);
                 }
-                else{
+                if($verbose){
                     echo 'Query to send: '.$query.EOL;
                     echo 'Query to send: TRUNCATE TABLE '.$tname.EOL;
                 }
@@ -679,15 +733,19 @@ namespace IOFrame{
                 foreach($settings as $k=>$v){
                     array_push($toInsert,[[$k,"STRING"],[$v,"STRING"]]);
                 }
-                $this->sqlHandler->insertIntoTable($tname,['settingKey','settingValue'],$toInsert,[],$test);
+                $this->sqlHandler->insertIntoTable($tname,['settingKey','settingValue'],$toInsert,['test'=>$test,'verbose'=>$verbose]);
             }
             return true;
         }
         /** Initiates the local files.
          *  Will assume the URL of each setting is the URL where you *want* the setting file placed, not where it necessarily exists.
+         * @param array $params
          * @returns bool
          * */
-        function initLocal($test = false){
+        function initLocal(array $params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             //This can only be done in mixed mode
             if($this->opMode != SETTINGS_OP_MODE_MIXED){
                 return false;
@@ -711,9 +769,9 @@ namespace IOFrame{
                     fclose(fopen($url.'settings','w')) or die(false);
                     $this->fileHandler->writeFileWaitMutex($this->settingsURLs[$name], 'settings', json_encode($settings), ['backUp' => true, 'locakHandler' => $this->mutexes[$name]]);
                 }
-                else
+                if($verbose)
                     echo 'Creating and populating settings '.$name.' with '.json_encode($settings).EOL;
-                $this->updateMeta($name,SETTINGS_OP_MODE_LOCAL,$test);
+                $this->updateMeta($name,['mode'=>SETTINGS_OP_MODE_LOCAL,'test'=>$test,'verbose'=>$verbose]);
             }
             return true;
         }
@@ -729,7 +787,10 @@ namespace IOFrame{
          *                                            (just calls initDB as it's the same function)
          * @returns bool Whether we succeeded or not.
          */
-        function syncWithDB($params = [],$test = false){
+        function syncWithDB($params = []){
+            $test = isset($params['test'])? $params['test'] : $test = false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? $verbose = true : $verbose = false;
             //Set defaults
             if(!isset($params['localToDB']))
                 $params['localToDB'] = true;
@@ -738,10 +799,10 @@ namespace IOFrame{
 
             //Since we can only rewrite local files completely anyway, syncing is the same as initiating from scratch in this case
             if(!$params['localToDB'])
-                return $this->initLocal($test);
+                return $this->initLocal(['test'=>$test,'verbose'=>$verbose]);
             //If we are deleting new settings, we are essentially doing the same thing as recreating the table.
             if($params['deleteDifferent'])
-                return $this->initDB($test);
+                return $this->initDB(['test'=>$test,'verbose'=>$verbose]);
 
             //This can only be done in mixed mode
             if($this->opMode != SETTINGS_OP_MODE_MIXED){
@@ -749,7 +810,7 @@ namespace IOFrame{
             }
 
             //Check that we are up to date - reminder that at this point we are syncing local files to the db
-            $this->chkInit(SETTINGS_OP_MODE_LOCAL,$test);
+            $this->chkInit(['mode'=>SETTINGS_OP_MODE_LOCAL,'test'=>$test,'verbose'=>$verbose]);
 
             //In case of syncing local data to the db, we can do actual syncing
             foreach($this->names as $name){
@@ -759,12 +820,12 @@ namespace IOFrame{
                     array_push($values,[[(string)$k,'STRING'],[(string)$v,'STRING']]);
                 }
                 array_push($values,[['_Last_Changed','STRING'],[(string)time(),'STRING']]);
-                $this->sqlHandler->insertIntoTable($tname,
+                $this->sqlHandler->insertIntoTable(
+                    $tname,
                     ['settingKey','settingValue'],
                     $values,
-                    ['onDuplicateKey' => true],
-                    $test
-                    );
+                    ['onDuplicateKey' => true,'test'=>$test,'verbose'=>$verbose]
+                );
             }
 
             return true;

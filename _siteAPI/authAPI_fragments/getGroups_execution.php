@@ -1,3 +1,4 @@
 <?php
-$result = $auth->getGroups($params, $test);
+$params['test'] = $test;
+$result = $auth->getGroups($params);
 

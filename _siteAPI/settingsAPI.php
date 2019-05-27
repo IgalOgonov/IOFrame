@@ -48,7 +48,7 @@
  *          target=siteSettings&action=unsetSetting&params={"settingName":"maxInacTime"}
  * */
 
-require __DIR__ . '/../_Core/coreInit.php';
+require __DIR__ . '/../_main/coreInit.php';
 
 
 require 'defaultInputChecks.php';
@@ -59,23 +59,21 @@ if(!isset($_REQUEST["action"]))
 if(!isset($_REQUEST["target"]))
     exit('Target settings not specified!');
 
-if(isset($_REQUEST['params']))
-    $params = json_decode($_REQUEST['params'],true);
-else
-    $params = null;
-
 if($test)
     echo 'Testing mode!'.EOL;
 
+$target = $_REQUEST["target"];
+
 if(!isset($_REQUEST["action"]))
     exit('Action not specified!');
+$action = $_REQUEST["action"];
 
 if(isset($_REQUEST['params']))
     $params = json_decode($_REQUEST['params'],true);
 else
     $params = null;
 
-switch($_REQUEST["action"]){
+switch($action){
 
     case 'getSetting':
         require 'settingsAPI_fragments/get_checks.php';

@@ -27,8 +27,10 @@ class validator
         else
             return true;
     }
-
-    public static function validatePassword($password){
+    /** @var string $password Password to validate - might define custom validation parameters later.
+     * @return bool
+     * */
+    public static function validatePassword(string $password){
         if(strlen($password)>64||strlen($password)<8||preg_match_all('/(\s|<|>)/',$password)>0
                 ||preg_match_all('/\d/',$password)==0||preg_match_all('/[a-z]|[A-Z]/',$password)==0){
                 return false;

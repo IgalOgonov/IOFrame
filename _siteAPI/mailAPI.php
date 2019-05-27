@@ -3,7 +3,7 @@
  * As for sending mails, it is used ONLY to send the first mail to a user asynchronously - meaning no ccs, bccs, replies
  * and certainly no attachments are allowed.
 */
-require __DIR__ . '/../_Core/coreInit.php';
+require __DIR__ . '/../_main/coreInit.php';
 require __DIR__.'/../_siteHandlers/mailHandler.php';
 
 require 'defaultInputChecks.php';

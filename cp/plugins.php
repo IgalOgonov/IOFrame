@@ -4,7 +4,7 @@ Meant to manage objects throughout the system.
  */
 
 //Standard framework initialization
-if(!require __DIR__ . '/../_Core/coreInit.php')
+if(!require __DIR__ . '/../_main/coreInit.php')
     echo 'Core utils unavailable!'.'<br>';
 
 $dirToRoot = IOFrame\htmlDirDist($_SERVER['PHP_SELF'],$settings->getSetting('pathToRoot'));

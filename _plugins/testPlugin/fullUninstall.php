@@ -11,12 +11,12 @@
 if(!$test){
 
     $url = $settings->getSetting('absPathToRoot').'_plugins/'.$name.'/';   //Plugin folder
-    $depUrl = $settings->getSetting('absPathToRoot').'_plugins/_dependency.map/';
+    $depUrl = $settings->getSetting('absPathToRoot').'_siteFiles/pluginDependencyMap/';
     $lockHandler = new IOFrame\lockHandler($url);
     $fileHandler = new IOFrame\fileHandler();
     $sqlHandler = new IOFrame\sqlHandler($settings);
     $plugList = new IOFrame\settingsHandler($settings->getSetting('absPathToRoot').'_siteFiles/plugins/');
-    $plugName = $pluginHandler->getInfo($name)[0];
+    $plugName = $pluginHandler->getInfo(['name'=>$name])[0];
     //-------Check if the plugin is absent - or if override is false while the plugin isn't listed installed.
     $goOn = ($plugName['status'] != 'absent');
     if(!$goOn){
@@ -31,7 +31,7 @@ if(!$test){
         return 2;
     }
     //-------Check for dependencies
-    $dep = $pluginHandler->checkDependencies($name,true,$test);
+    $dep = $pluginHandler->checkDependencies($name,['validate'=>true,'test'=>$test]);
     if(!($dep === 0)){
         echo 'Plugin '.$name.' dependencies are '.$dep.', can not uninstall!'.EOL;
         return 3;
@@ -61,7 +61,11 @@ if(!$test){
         return 6;
     }
     //-------Remove plugin from order list
-    $pluginHandler->removeFromOrder($name, 'name', false, true, $test);
+    $pluginHandler->removeFromOrder(
+        $name,
+        'name',
+        ['verify'=>false,'backUp'=>true,'local'=>false,'test'=>$test]
+    );
     //-------Remove dependencies
     $dep = json_decode($fileHandler->readFileWaitMutex($url,'dependencies.json',[]),true);
     if($dep != '')
@@ -74,13 +78,13 @@ if(!$test){
         }
     //-------If the definitions file exists, remove them
     if(file_exists($url.'definitions.json')){
-        if(!$pluginHandler->validatePluginFile($url,'definitions',false,$test)){
+        if(!$pluginHandler->validatePluginFile($url,'definitions',['isFile'=>false,'test'=>$test])){
             echo 'Definitions for '.$name.' are not valid!'.EOL;
             return 5;
         }
         //Now remove the definitions from the system definition file
         try{
-            $gDefUrl = $settings->getSetting('absPathToRoot').'_Core/definitions/';
+            $gDefUrl = $settings->getSetting('absPathToRoot').'_siteFiles/definitions/';
             //Read definition files - and remove the matching ones
             $defFile = $fileHandler->readFileWaitMutex($url,'definitions.json',['lockHandler' => $lockHandler]);
             if($defFile != null){       //If the file is empty, don't bother doing work
