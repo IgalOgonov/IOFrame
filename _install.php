@@ -1,6 +1,5 @@
 <?php
 
-
 //-------------------- Define current version --------------------
 if(!defined("IOFRAME_VERSION"))
     define("IOFRAME_VERSION",1.0);
@@ -37,8 +36,7 @@ if(!is_dir('_siteFiles')){
 }
 //--------------------If the installation was complete, exit --------------------
 if(file_exists('_siteFiles/_installComplete'))
-    die('It seems the site is already installed! If this is an error, go to the /siteFiles folder
-    and delete _installComplete.');
+    die('It seems the site is already installed! If this is an error, go to the /siteFiles folder and delete _installComplete.');
 
 //--------------------Initialize temp files folder if it does not exist--------------------
 if(!is_dir('_siteFiles/temp')){
@@ -478,6 +476,7 @@ function install(IOFrame\settingsHandler $userSettings,
                     <input type="text" name="stage" value="4" hidden><br>
                     <input type="text" name="sql_table_prefix" placeholder="Prefered table Prefix (Max 6 Characters)"><br>
                     <input type="text" name="sql_addr" placeholder="Your SQL server address"><br>
+                    <input type="text" name="sql_port" placeholder="Your SQL server port"><br>
                     <input type="text" name="sql_u" placeholder="Your SQL server username"><br>
                     <input type="text" name="sql_p" placeholder="Your SQL server password"><br>
                     <input type="text" name="sql_db" placeholder="Your SQL server database name"><br>
@@ -530,6 +529,7 @@ function install(IOFrame\settingsHandler $userSettings,
 
             array_push($sqlArgs,["sql_table_prefix",$_REQUEST['sql_table_prefix']]);
             array_push($sqlArgs,["sql_server_addr",$_REQUEST['sql_addr']]);
+            array_push($sqlArgs,["sql_server_port",$_REQUEST['sql_port']]);
             array_push($sqlArgs,["sql_username",$_REQUEST['sql_u']]);
             array_push($sqlArgs,["sql_password",$_REQUEST['sql_p']]);
             array_push($sqlArgs,["sql_db_name",$_REQUEST['sql_db']]);
@@ -546,7 +546,13 @@ function install(IOFrame\settingsHandler $userSettings,
             }
 
             if($res){
-                echo 'All is well.'.EOL.'</div>';
+                try{
+                    $conn = prepareCon($sqlSettings);
+                    echo 'All is well.'.EOL.'</div>';
+                }
+                catch(\Exception $e){
+                    echo 'Failed to connect to DB! Error:'.$e;
+                }
                 echo '<form method="post" action="">
                     <input type="text" name="stage" value="5" hidden>
                     <input type="submit" value="Next">
@@ -754,7 +760,7 @@ function install(IOFrame\settingsHandler $userSettings,
                          title="Must be 6-16 characters long, must contain numbers and latters">?</a><br>
                         <input type="text" name="p" placeholder="Your password (not hidden here)">
                         <a href="#" data-html="true" data-placement="bottom" data-toggle="tooltip-p"
-                           title="Must be 8-20 characters long, must include latters and numbers, can include special characters except \'>\' and \'<\'">?</a><br>
+                           title="Must be 8-64 characters long, must include letters and numbers, can include special characters except \'>\' and \'<\'">?</a><br>
                         <input type="text" name="m" placeholder="Your mail"><br>
                         <input type="submit" value="Next">
                         </form>';

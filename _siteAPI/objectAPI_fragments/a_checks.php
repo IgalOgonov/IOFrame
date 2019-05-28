@@ -6,7 +6,7 @@
 function checkPageMapAuth($sesInfo, $auth){
     $res = false;
     //First, check if the rank of the user is 0
-    if($sesInfo!== null &&$sesInfo['Rank'] == 0)
+    if($sesInfo!== null &&$sesInfo['Auth_Rank'] == 0)
         $res = true;
     //If not, check USER_AUTH for the action 'Assign_Objects'
     if(!$res && $sesInfo!== null){

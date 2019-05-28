@@ -1205,15 +1205,15 @@ namespace IOFrame{
 
                     if(!$isOwner)
                         //Or he can modify the object due to his rank
-                        if($sesInfo['Rank'] == 0)
+                        if($sesInfo['Auth_Rank'] == 0)
                             $isOwner = true;
                         elseif(!$strict){
                             if($type == 1){
-                                if($obj['Min_Modify_Rank']>=$sesInfo['Rank'])
+                                if($obj['Min_Modify_Rank']>=$sesInfo['Auth_Rank'])
                                     $isOwner = true;
                             }
                             else if($type == 0){
-                                if( $obj['Min_View_Rank']>=$sesInfo['Rank'] || $obj['Min_View_Rank']== -1)
+                                if( $obj['Min_View_Rank']>=$sesInfo['Auth_Rank'] || $obj['Min_View_Rank']== -1)
                                     $isOwner = true;
                             }
                         }

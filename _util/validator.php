@@ -31,8 +31,8 @@ class validator
      * @return bool
      * */
     public static function validatePassword(string $password){
-        if(strlen($password)>64||strlen($password)<8||preg_match_all('/(\s|<|>)/',$password)>0
-                ||preg_match_all('/\d/',$password)==0||preg_match_all('/[a-z]|[A-Z]/',$password)==0){
+        if(strlen($password)>64||strlen($password)<8||preg_match('/(\s|<|>)/',$password)>0
+                ||preg_match('/\d/',$password)==0||preg_match('/[a-z]|[A-Z]/',$password)==0){
                 return false;
             }
         return true;

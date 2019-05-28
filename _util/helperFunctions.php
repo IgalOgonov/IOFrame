@@ -103,8 +103,12 @@ namespace IOFrame{
      * @returns \PDO New database connection
     */
     function prepareCon(settingsHandler $sqlSettings){
-        return new \PDO("mysql:host=".$sqlSettings->getSetting('sql_server_addr').";dbname=".$sqlSettings->getSetting('sql_db_name'),
-            $sqlSettings->getSetting('sql_username'), $sqlSettings->getSetting('sql_password'));
+        return new \PDO(
+            "mysql:host=".$sqlSettings->getSetting('sql_server_addr').
+            ";dbname=".$sqlSettings->getSetting('sql_db_name').
+            ";port=".$sqlSettings->getSetting('sql_server_port'),
+            $sqlSettings->getSetting('sql_username'),
+            $sqlSettings->getSetting('sql_password'));
     }
 
 

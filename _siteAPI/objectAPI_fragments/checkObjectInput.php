@@ -35,7 +35,7 @@ function checkObjectInput($obj = null ,$group = '' ,$minViewRank = null ,$minMod
             || strlen($minViewRank) == 0
             || $minViewRank<-1
             || $minViewRank>IOFrame\MAX_USER_RANK
-            || (($sesInfo['Rank']>$minViewRank) && $minViewRank!=-1)
+            || (($sesInfo['Auth_Rank']>$minViewRank) && $minViewRank!=-1)
         ){
             if($test)
                 echo 'Object view rank needs to be numbers within legal range, equal or higher (number) than the creator\'s rank. ';
@@ -47,7 +47,7 @@ function checkObjectInput($obj = null ,$group = '' ,$minViewRank = null ,$minMod
             strlen($minModifyRank) == 0 ||
             $minModifyRank<0 ||
             $minModifyRank>IOFrame\MAX_USER_RANK ||
-            (($sesInfo['Rank']>$minModifyRank) && $minModifyRank!=-1)
+            (($sesInfo['Auth_Rank']>$minModifyRank) && $minModifyRank!=-1)
         ){
             if($test)
                 echo 'Object modify rank needs to be numbers within legal range, equal or higher (number) than the creator\'s rank. ';

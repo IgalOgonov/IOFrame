@@ -165,8 +165,8 @@ namespace IOFrame{
             $verbose = isset($params['verbose'])?
                 $params['verbose'] : $test ? $verbose = true : $verbose = false;
             $query = "INSERT INTO ".$this->sqlHandler->getSQLPrefix().
-                "USERS(Username, Password, Email, Active, Rank, SessionID)
-             VALUES (:Username, :Password, :Email,:Active, :Rank,:SessionID)";
+                "USERS(Username, Password, Email, Active, Auth_Rank, SessionID)
+             VALUES (:Username, :Password, :Email,:Active, :Auth_Rank,:SessionID)";
             $queryBind = [];
             array_push($queryBind,[':Username', $inputs["u"]],[':Password', $hash],[':Email', $inputs["m"]]);
             //Decides whether to activate user on creation or not
@@ -177,20 +177,20 @@ namespace IOFrame{
                 array_push($queryBind,[':Active', 1]);
             //Deciding whether to give a user a specific rank or not
             if (isset($inputs["r"])){
-                if ( ($inputs["r"] < json_decode($_SESSION['details'],true)['Rank']))
-                    array_push($queryBind,[':Rank', $inputs["r"]]);
+                if ( ($inputs["r"] < json_decode($_SESSION['details'],true)['Auth_Rank']))
+                    array_push($queryBind,[':Auth_Rank', $inputs["r"]]);
                 else
-                    array_push($queryBind,[':Rank', 9999]);
+                    array_push($queryBind,[':Auth_Rank', 9999]);
             }
             else {
                 if(isset($_SESSION['INSTALLING'])){
                     if($_SESSION['INSTALLING'] = true)
-                        array_push($queryBind,[':Rank', 0]);
+                        array_push($queryBind,[':Auth_Rank', 0]);
                     else
-                        array_push($queryBind,[':Rank', 9999]);
+                        array_push($queryBind,[':Auth_Rank', 9999]);
                 }
                 else
-                    array_push($queryBind,[':Rank', 9999]);
+                    array_push($queryBind,[':Auth_Rank', 9999]);
             }
             //Push the session ID
             array_push($queryBind,[':SessionID', session_id()]);
@@ -874,15 +874,20 @@ namespace IOFrame{
                     $this->sqlHandler->exeQueryBindParam($query,$params);
 
                 //Will log out user with a specific session ID remotely - but also the current user!
+                session_destroy();
                 session_id($oldSesID);
-                @session_unset();
-                @session_destroy();
-                @session_start();
+                session_start();
+                session_unset();
+                session_destroy();
                 //If you were logging somebody out - log yourself back in
-                if(isset($currSesID))
+                if(isset($currSesID)){
                     session_id($currSesID);
-                else
+                    session_start();
+                }
+                else{
+                    session_start();
                     session_regenerate_id();
+                }
                 $_SESSION['discard_after'] = time() + $this->siteSettings->getSetting('maxInacTime');
             }
             if ($verbose)
@@ -1076,7 +1081,7 @@ namespace IOFrame{
                 "Username",
                 "Email",
                 "Active",
-                "Rank",
+                "Auth_Rank",
                 "Banned_Until"
             ];
             foreach($args as $val){

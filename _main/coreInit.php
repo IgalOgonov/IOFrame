@@ -98,36 +98,40 @@ if(!isset($skipCoreInit) || $skipCoreInit==false){
     //Get the order in which plugins should be included, if there is one. Get the local and global ones.
     $localOrder = $pluginHandler->getOrder(['local'=>true]);
     $order = $pluginHandler->getOrder(['local'=>false]);
-    //If there is a mismatch, specify it so the front end knows!
-    $pluginMismatch = false;
-    if(implode(',',$order)!=implode(',',$localOrder)){
-        //Since the mismatched plugins might just be in different order, but the same ones installed, check for it
-        if(count(array_diff($localOrder,$order)) == 0){
-            //If we are here, it means we may just use the correct order, and update the local one while we're at it
-            $url = $settings->getSetting('absPathToRoot').'/_siteFiles/pluginOrder/';
-            $filename = 'order';
-            $fileHandler->writeFileWaitMutex($url, $filename, $order, ['backUp' => $backUp]);
-        }
-        //If the plugins are still mismatched, die or notify the front-end (according to settings)
-        if($settings->getSetting('dieOnPluginMismatch')){
-            header('HTTP/1.0 500 Internal server plugin conflict');
-            die();
-        }
-        else
-            $pluginMismatch = true;
-    }
-    //First, require all includes that have an order
-    if(is_array($order))
-        foreach($order as $value){
-            if(isset($pluginList[$value])){
-                if($pluginHandler->getInfo(['name'=>$value])[0]['status'] == 'active' ){
-                    require $rootFolder.'_plugins/'.$value.'/include.php';
-                    array_push($orderedPlugins,$value);
-                }
-                unset($pluginList[$value]);
+    //If there are no plugins, we got nothing to do
+    if($order != []){
+        //If there is a mismatch, specify it so the front end knows!
+        $pluginMismatch = false;
+        if(implode(',',$order)!=implode(',',$localOrder)){
+            //Since the mismatched plugins might just be in different order, but the same ones installed, check for it
+            if(count(array_diff($localOrder,$order)) == 0){
+                //If we are here, it means we may just use the correct order, and update the local one while we're at it
+                $url = $settings->getSetting('absPathToRoot').'/_siteFiles/pluginOrder/';
+                $filename = 'order';
+                if(!isset($fileHandler))
+                    $fileHandler = new IOFrame\fileHandler();
+                $fileHandler->writeFileWaitMutex($url, $filename, implode(',',$order), ['backUp' => true]);
             }
+            //If the plugins are still mismatched, die or notify the front-end (according to settings)
+            elseif($settings->getSetting('dieOnPluginMismatch')){
+                header('HTTP/1.0 500 Internal server plugin conflict');
+                die('Plugin mismatch - contact the webmaster of this site!');
+            }
+            else
+                $pluginMismatch = true;
         }
-    //Then, require those that are orderless
+        //First, require all includes that have an order
+        if(is_array($order))
+            foreach($order as $value){
+                if(isset($pluginList[$value])){
+                    if($pluginHandler->getInfo(['name'=>$value])[0]['status'] == 'active' ){
+                        require $rootFolder.'_plugins/'.$value.'/include.php';
+                        array_push($orderedPlugins,$value);
+                    }
+                    unset($pluginList[$value]);
+                }
+            }
+        //Then, require those that are orderless
         if(is_array($pluginList))
             foreach($pluginList as $key => $value){
                 if($pluginHandler->getInfo(['name'=>$key])[0]['status'] == 'active' ){
@@ -135,5 +139,6 @@ if(!isset($skipCoreInit) || $skipCoreInit==false){
                     array_push($orderedPlugins,$key);
                 }
             }
+    }
 }
 ?>

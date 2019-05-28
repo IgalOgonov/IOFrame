@@ -69,7 +69,7 @@ else{
 $targetUser = $sqlHandler->selectFromTable(
     $sqlHandler->getSQLPrefix().'USERS',
     $identityCond,
-    ['Rank'],
+    ['Auth_Rank'],
     ['test'=>$test]
 );
 
@@ -79,7 +79,7 @@ if($targetUser == 0){
     exit('0');
 }
 
-$targetRank = $targetUser[0]['Rank'];
+$targetRank = $targetUser[0]['Auth_Rank'];
 
 if($targetRank <= $auth->getRank()){
     if($test)

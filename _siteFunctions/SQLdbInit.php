@@ -121,7 +121,7 @@ namespace IOFrame{
                                                               Password varchar(255) NOT NULL,
                                                               Email varchar(255) UNIQUE NOT NULL,
                                                               Active BOOLEAN NOT NULL,
-                                                              Rank int,
+                                                              Auth_Rank int,
                                                               SessionID varchar(255),
                                                               authDetails TEXT
                                                               ) ENGINE=InnoDB DEFAULT CHARSET = utf8;");

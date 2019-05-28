@@ -25,7 +25,7 @@ if( !( $auth->isAuthorized(0) || $auth->hasAction('BAN_USERS_AUTH') ) ){
     exit('-2');
 }
 
-$targetRank = $sqlHandler->selectFromTable($sqlHandler->getSQLPrefix().'USERS',['ID',$inputs['id'],'='],['Rank'],['test'=>$test])[0][0];
+$targetRank = $sqlHandler->selectFromTable($sqlHandler->getSQLPrefix().'USERS',['ID',$inputs['id'],'='],['Auth_Rank'],['test'=>$test])[0][0];
 
 //God I hate that this check is done here again
 if($targetRank === null){
@@ -36,7 +36,7 @@ if($targetRank === null){
 
 $sesInfo = json_decode($_SESSION['details'],true);
 
-if($sesInfo['Rank']>=$targetRank){
+if($sesInfo['Auth_Rank']>=$targetRank){
     if($test)
         echo 'Can only ban users of higher (worse) rank than yourself!'.EOL;
     exit('-2');

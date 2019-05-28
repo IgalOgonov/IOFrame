@@ -7,12 +7,15 @@ $resArr = array();
 
 foreach($_REQUEST as $key => $value){
     if(isset($_SESSION['logged_in'])){
+        $sessionDetails = json_decode($_SESSION['details'],true);
+        if(!isset($sessionDetails[$key]))
+            continue;
         if($key=='Email')
             $resArr[$key]=json_decode($_SESSION['details'],true)['Email'];
         else if($key=='Username')
             $resArr[$key]=json_decode($_SESSION['details'],true)['Username'];
-        else if($key=='Rank')
-            $resArr[$key]=json_decode($_SESSION['details'],true)['Rank'];
+        else if($key=='Auth_Rank')
+            $resArr[$key]=json_decode($_SESSION['details'],true)['Auth_Rank'];
         else if($key=='Active')
             $resArr[$key]=json_decode($_SESSION['details'],true)['Active'];
         else if($key=='logged_in')

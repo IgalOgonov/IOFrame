@@ -95,7 +95,7 @@ namespace IOFrame{
             if(isset($_SESSION['logged_in'],$_SESSION['details'])){
                 $this->details = json_decode($_SESSION['details'],true);
                 $this->loggedIn=true;
-                $this->rank=$this->details['Rank'];
+                $this->rank=$this->details['Auth_Rank'];
                 if($initiateUser)
                     $this->updateUserInfoFromDB($params);
 
@@ -737,7 +737,7 @@ namespace IOFrame{
 
             $res = $this->sqlHandler->updateTable(
                 $this->sqlHandler->getSQLPrefix().'USERS',
-                ['Rank = '.$newRank.''],
+                ['Auth_Rank = '.$newRank.''],
                 $identityCond,
                 ['test'=>$test,'verbose'=>$verbose]
             );

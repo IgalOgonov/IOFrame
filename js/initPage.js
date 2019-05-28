@@ -100,7 +100,7 @@ function initPage(pathToRoot){
 //-------------------Updates client with session info from the server
 function updateSesInfo(pathToRoot, reloadWhenDone){
     let action;
-    action = 'logged_in&Username&Rank&Actions&maxInacTime&Email&Active';
+    action = 'logged_in&Username&Auth_Rank&Actions&maxInacTime&Email&Active';
     // url
     let url=pathToRoot+"_siteAPI\/sessionAPI.php";
     //Request itself
