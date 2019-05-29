@@ -22,6 +22,9 @@ I will explain below how to configure PHP to use it, or you can use the instruct
 ..now, you want to have an actual redis server running on your machine.  
 Unless you have a remote one ready, you should head over to [redis-windows](https://github.com/ServiceStack/redis-windows/) and follow the instructions. The best option is one of the first 2.
 
+**IOFrame**  
+Download and extract (or use git to clone) IOFrame into C:\wamp64\www (or whatever your server root is).
+
 ### Linux
 
 **Apache**  
@@ -50,6 +53,10 @@ However, I myself installed php-redis through pecl, by running
 
 Once you install it, make sure to test it is running properly using redis-cli.
 
+**IOFrame**  
+Go to your server root (default /var/www/html), and run  
+
+    sudo git clone https://github.com/IgalOgonov/IOFrame.git
 
 ## Configurations  - Windows & Linux
 **PHP**  
