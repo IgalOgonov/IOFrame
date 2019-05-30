@@ -547,7 +547,7 @@ function install(IOFrame\settingsHandler $userSettings,
 
             if($res){
                 try{
-                    $conn = prepareCon($sqlSettings);
+                    $conn = IOFrame\prepareCon($sqlSettings);
                     echo 'All is well.'.EOL.'</div>';
                 }
                 catch(\Exception $e){

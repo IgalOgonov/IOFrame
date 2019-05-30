@@ -36,7 +36,7 @@ namespace IOFrame{
             /* Literally just the pivot time for now. */
             $makeTB = $conn->prepare("CREATE TABLE ".$prefix."CORE_VALUES(
                                                               tableKey varchar(255) UNIQUE NOT NULL,
-                                                              tableValue varchar(255) NOT NULL
+                                                              tableValue varchar(255)
                                                               ) ENGINE=InnoDB DEFAULT CHARSET = utf8;");
 
             $updateTB1 = $conn->prepare("INSERT INTO ".$prefix."CORE_VALUES (tableKey, tableValue)
