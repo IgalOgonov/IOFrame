@@ -7,6 +7,12 @@ There are three parts to the installation:
 In this section, I will describe how to do all 3, on Windows or Linux (Ubuntu 18).
 
 ## Dependencies  
+
+**PHP 5.6-7.3+**  
+**Apache2**  
+**MySQL 5.7-8, MariaDB 10.3++**  
+**Redis 4+**  
+
 ### Windows
 On windows, this is a bit simpler.  
 
