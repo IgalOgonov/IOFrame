@@ -95,21 +95,21 @@ if(!is_dir('localFiles/pluginDependencyMap')){
 }
 
 //--------------------Create plugins public image folder--------------------
-if(!is_dir($baseUrl.IOFrame\PLUGIN_IMAGE_FOLDER)){
-    if(!mkdir($baseUrl.IOFrame\PLUGIN_IMAGE_FOLDER))
+if(!is_dir($baseUrl.PLUGIN_IMAGE_FOLDER)){
+    if(!mkdir($baseUrl.PLUGIN_IMAGE_FOLDER))
         die('Cannot create plugin image folder!');
 }
 
 //-------------------- Copy default icon/thumbnail into plugins image folder --------------------
 //Only do this once during the install, cli or not
-if(!file_exists($baseUrl.IOFrame\PLUGIN_IMAGE_FOLDER.'/def_icon.png'))
+if(!file_exists($baseUrl.PLUGIN_IMAGE_FOLDER.'/def_icon.png'))
     file_put_contents(
-        $baseUrl.IOFrame\PLUGIN_IMAGE_FOLDER.'/def_icon.png',
+        $baseUrl.PLUGIN_IMAGE_FOLDER.'/def_icon.png',
         file_get_contents('plugins/def_icon.png')
     );
-if(!file_exists($baseUrl.IOFrame\PLUGIN_IMAGE_FOLDER.'/def_thumbnail.png'))
+if(!file_exists($baseUrl.PLUGIN_IMAGE_FOLDER.'/def_thumbnail.png'))
     file_put_contents(
-        $baseUrl.IOFrame\PLUGIN_IMAGE_FOLDER.'/def_thumbnail.png',
+        $baseUrl.PLUGIN_IMAGE_FOLDER.'/def_thumbnail.png',
         file_get_contents('plugins/def_thumbnail.png')
     );
 //--------------------Initialize local setting folders--------------------
@@ -699,7 +699,7 @@ function install(IOFrame\settingsHandler $userSettings,
             $matches = $routeHandler->setMatches(
                 [
                     'front'=>['front/[trailing]','php,html,htm'],
-                    'api'=>['api/[trailing]API','php'],
+                    'api'=>['api/[trailing]','php'],
                     '404'=>['404','html']
                 ]
             );

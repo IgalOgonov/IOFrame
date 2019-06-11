@@ -190,7 +190,7 @@ function checkMappedObjects(requestedMaps = []){
         let action;
         action = "action=ga&params="+JSON.stringify(params);
         // url
-        let url=document.pathToRoot+"api\/object";
+        let url=document.pathToRoot+"api\/objects";
         //Request itself
         var xhr = new XMLHttpRequest();
         xhr.open('GET', url+'?'+action);
@@ -324,7 +324,7 @@ function updateMappedObjects(maps,db){
             let action;
             action = "action=r&params="+objects;
             // url
-            let url=document.pathToRoot+"api\/object";
+            let url=document.pathToRoot+"api\/objects";
             //Request itself
             var xhr = new XMLHttpRequest();
             xhr.open('GET', url+'?'+action);

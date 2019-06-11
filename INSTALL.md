@@ -119,6 +119,19 @@ Go to the folder you cloned IOFrame to, and run
 There are probably safer ways to make it work, but this is the fastest, and a threat model where an attacker who compromises your linux VM / Server compromises the whole system is not irrational.  
 If you do know a safer solution for Linux, feel free to contact me.
 
+**Apache**  
+In order for the routing to work, the following must be true:  
+
+1. Apache has "rewrite_module" enabled.  
+This can be enabled in WAMP64->Apache->Modules on windows,  
+or by running the following on Linux:
+    sudo a2enmod rewrite
+	sudo service apache2 restart
+	
+2. You need to set "RewriteEngine On" and "Options FollowSymLinks" must be enabled.
+Those can be found in the Apache configuration directory, typically C:\wamp64\bin\apache\apache2.4.39\conf on windows, or in /etc/apache2 on linux.
+Without it, expect the router to fail, and the framework api calls fail with it.
+
 ## Installation
 
 Before you can do anything else, you need to clone the actual framework onto your PC.

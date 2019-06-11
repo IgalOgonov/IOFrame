@@ -91,7 +91,7 @@
                     //Data to be sent
                     let data = 'action=addUser'+'&u='+this.u+'&p='+this.p+'&m='+this.m+'&req='+this.req;
                     //Api url
-                    let url=document.pathToRoot+"api\/user";
+                    let url=document.pathToRoot+"api\/users";
                     //Request itself
                     var xhr = new XMLHttpRequest();
                     xhr.open('POST', url+'?'+data);
@@ -105,7 +105,7 @@
                                 let respType;
                                 let response = xhr.responseText;
                                 // success
-                                userReg.test1 = "Posted: "+data+" to userAPI"+" ,Succeeded in getting response to post.";
+                                userReg.test1 = "Posted: "+data+" to user API"+" ,Succeeded in getting response to post.";
                                 userReg.resp = response;
                                 /*This will display messages that the addUser page could return
                                  *0 - success
@@ -154,7 +154,7 @@
                         } else {
                             if(xhr.status < 200 || xhr.status > 299 ){
                                 // error
-                                userReg.test1 = "Posted: "+data+"to userAPI"+" ,Failed in getting response to post.";
+                                userReg.test1 = "Posted: "+data+"to user API"+" ,Failed in getting response to post.";
                                 userReg.resp = xhr.responseText;
                                 console.log('Error: ' + xhr.status); // An error occurred during the request.
                             }

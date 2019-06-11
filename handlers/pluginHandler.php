@@ -1,17 +1,16 @@
 <?php
 namespace IOFrame{
+    const PLUGIN_HAS_QUICK_UNINSTALL = 'quick';
+    const PLUGIN_HAS_FULL_UNINSTALL = 'full';
+    const PLUGIN_HAS_BOTH_UNINSTALL = 'both';
+    const PLUGIN_HAS_QUICK_INSTALL = 'quick';
+    const PLUGIN_HAS_FULL_INSTALL = 'full';
+    const PLUGIN_HAS_BOTH_INSTALL = 'both';
+    const PLUGIN_HAS_ICON = 1;
+    const PLUGIN_HAS_THUMBNAIL = 2;
+    const PLUGIN_HAS_ICON_THUMBNAIL = 3;
+
     define('pluginHandler',true);
-
-    if(!defined('abstractDBWithCache'))
-        require 'abstractDBWithCache.php';
-    if(!defined('fileHandler'))
-        require 'fileHandler.php';
-    if(!defined('orderHandler'))
-        require 'orderHandler.php';
-    use Monolog\Logger;
-    use Monolog\Handler\IOFrameHandler;
-
-
 
     //If we did not define PLUGIN_FOLDER_NAME, the default is "plugins"
     if(!defined('PLUGIN_FOLDER_NAME')){
@@ -27,50 +26,14 @@ namespace IOFrame{
         define('PLUGIN_IMAGE_FOLDER','front/img/ioframe/pluginImages/');
     }
 
-    //Signifies a plugin has quickInstall.php
-    if(!defined('PLUGIN_HAS_QUICK_INSTALL')){
-        define('PLUGIN_HAS_QUICK_INSTALL','quick');
-    }
-
-    //Signifies a plugin has fullInstall.php
-    if(!defined('PLUGIN_HAS_FULL_INSTALL')){
-        define('PLUGIN_HAS_FULL_INSTALL','full');
-    }
-
-    //Signifies a plugin has both fullInstall.php and quickInstall.php
-    if(!defined('PLUGIN_HAS_BOTH_INSTALL')){
-        define('PLUGIN_HAS_BOTH_INSTALL','both');
-    }
-
-    //Signifies a plugin has quickUninstall.php
-    if(!defined('PLUGIN_HAS_QUICK_UNINSTALL')){
-        define('PLUGIN_HAS_QUICK_UNINSTALL','quick');
-    }
-
-    //Signifies a plugin has fullUninstall.php
-    if(!defined('PLUGIN_HAS_FULL_UNINSTALL')){
-        define('PLUGIN_HAS_FULL_UNINSTALL','full');
-    }
-
-    //Signifies a plugin has both fullUninstall.php and quickUninstall.php
-    if(!defined('PLUGIN_HAS_BOTH_UNINSTALL')){
-        define('PLUGIN_HAS_BOTH_UNINSTALL','both');
-    }
-
-    //Signifies a plugin has only an icon
-    if(!defined('PLUGIN_HAS_ICON')){
-        define('PLUGIN_HAS_ICON',1);
-    }
-
-    //Signifies a plugin has only a thumbnail
-    if(!defined('PLUGIN_HAS_THUMBNAIL')){
-        define('PLUGIN_HAS_THUMBNAIL',2);
-    }
-
-    //Signifies a plugin has an icon and a thumbnail
-    if(!defined('PLUGIN_HAS_ICON_THUMBNAIL')){
-        define('PLUGIN_HAS_ICON_THUMBNAIL',3);
-    }
+    if(!defined('abstractDBWithCache'))
+        require 'abstractDBWithCache.php';
+    if(!defined('fileHandler'))
+        require 'fileHandler.php';
+    if(!defined('orderHandler'))
+        require 'orderHandler.php';
+    use Monolog\Logger;
+    use Monolog\Handler\IOFrameHandler;
 
     /*  This class handles every action related to plugins.
      *

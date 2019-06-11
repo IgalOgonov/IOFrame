@@ -138,7 +138,7 @@
                 let action;
                 action = 'action=getOrder';
                 //Api url
-                let url=document.pathToRoot+'api\/plugin';
+                let url=document.pathToRoot+'api\/plugins';
                 //Request itself
                 var xhr = new XMLHttpRequest();
                 xhr.open('GET', url+'?'+action);
@@ -194,7 +194,7 @@
                     let action;
                     action = 'action=getInfo';
                     //Api url
-                    let url=document.pathToRoot+'api\/plugin';
+                    let url=document.pathToRoot+'api\/plugins';
                     //Request itself
                     var xhr = new XMLHttpRequest();
                     xhr.open('GET', url+'?'+action);
@@ -252,7 +252,7 @@
                     action = 'action=swapOrder&p1='+num1+'&p2='+num2;
                     //---- Get available plugins
                     //Api url
-                    let url=document.pathToRoot+'api\/plugin';
+                    let url=document.pathToRoot+'api\/plugins';
                     //Request itself
                     var xhr = new XMLHttpRequest();
                     xhr.open('POST', url+'?'+action);
@@ -328,7 +328,7 @@
                     action = 'action=moveOrder&from='+from+'&to='+to;
                     //---- Get available plugins
                     //Api url
-                    let url=document.pathToRoot+'api\/plugin';
+                    let url=document.pathToRoot+'api\/plugins';
                     //Request itself
                     var xhr = new XMLHttpRequest();
                     xhr.open('POST', url+'?'+action);

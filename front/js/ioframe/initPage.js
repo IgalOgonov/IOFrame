@@ -56,7 +56,8 @@ function initPage(pathToRoot){
 
 
         //Check to see if our session timed out since the last time
-        if( localStorage.getItem('lastActionTime')==null || localStorage.getItem('maxInacTime')==null
+        if( localStorage.getItem('lastActionTime')==null || localStorage.getItem('lastActionTime')==undefined ||
+            localStorage.getItem('maxInacTime')==null ||localStorage.getItem('maxInacTime')==undefined
             ||
             (timenow > parseInt(localStorage.getItem('lastActionTime')) + parseInt(localStorage.getItem('maxInacTime')) )
             ||
@@ -102,12 +103,12 @@ function updateSesInfo(pathToRoot, reloadWhenDone){
     let action;
     action = 'logged_in&Username&Auth_Rank&Actions&maxInacTime&Email&Active';
     // url
-    let url=pathToRoot+"api\/sessionAPI.php";
+    let url=pathToRoot+"api\/session";
     //Request itself
     var xhr = new XMLHttpRequest();
     xhr.open('GET', url+'?'+action);
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
-    //-console.log('To url',url,' , send: ',action);
+    //console.log('To url',url,' , send: ',action);
     //-return;
     xhr.send(null);
     xhr.onreadystatechange = function () {
@@ -117,7 +118,7 @@ function updateSesInfo(pathToRoot, reloadWhenDone){
             if (xhr.status === OK){
                 let response = xhr.responseText;
                 //Notify the console we got a response!
-                //console.log('Got response from getAuthData!');
+                //console.log('Got response!',response);
                 //Update local storage
                 localStorage.setItem('sesInfo',response);
                 //Now, we need to do some work with the response, unless it's []
@@ -127,7 +128,7 @@ function updateSesInfo(pathToRoot, reloadWhenDone){
                     localStorage.setItem('myMail',sesInfo['Email']);
                 }
 
-                if(reloadWhenDone === true) location.reload();
+                //if(reloadWhenDone === true) location.reload();
             }
         } else {
             if(xhr.status < 200 || xhr.status > 299 )
@@ -174,7 +175,7 @@ function autoLogin(pathToRoot,timeout,test = false){
             {mode:CryptoJS.mode.ECB, padding:CryptoJS.pad.ZeroPadding});
         dataToSend +='&sesKey='+tokenToSend.ciphertext.toString(CryptoJS.enc.Hex);
 
-        const url = pathToRoot+"api/userAPI.php";
+        const url = pathToRoot+"api/users";
         const header = 'application/x-www-form-urlencoded;charset=utf-8;';
         //console.log('To url',url,' , send: ',dataToSend);
         //return;
@@ -189,7 +190,7 @@ function autoLogin(pathToRoot,timeout,test = false){
             if (xhr.readyState === DONE) {
                 if (xhr.status === OK){
                     let response = xhr.responseText;
-                    //-console.log('Got ',xhr.responseText);
+                    //console.log('Got ',xhr.responseText);
                     //-return;
                     //Notify the console we got a response! React to each case accodingly.
                     //console.log('Got response trying to auto log in! Response '+response);

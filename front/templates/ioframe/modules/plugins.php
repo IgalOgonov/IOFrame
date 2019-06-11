@@ -442,7 +442,7 @@
                     requestData['action'] = this.currentAction;
                     requestData['name'] = this.currentPlugin;
                     requestData['options'] = JSON.stringify(values);
-                    let url=document.pathToRoot+'api\/plugin';
+                    let url=document.pathToRoot+'api\/plugins';
                     let sendData = '';
                     for (let key in requestData) {
                         sendData += encodeURIComponent(key) + '=' +
@@ -543,7 +543,7 @@
                         case 'fi':
                             redirect = location.href;
                             redirect = redirect.substring(0, redirect.indexOf('/plugins')+8);
-                            redirect = redirect+'/../../api/pluginAPI.php?name='+this.currentPlugin+'&action=fullInstall';
+                            redirect = redirect+'/../../api/plugins?name='+this.currentPlugin+'&action=fullInstall';
                             if(pluginList.testMode)
                                 redirect += '&req=test';
                             location.assign(redirect);
@@ -551,7 +551,7 @@
                         case 'fu':
                             redirect = location.href;
                             redirect = redirect.substring(0, redirect.indexOf('/plugins')+8);
-                            redirect = redirect+'/../../api/pluginAPI.php?name='+this.currentPlugin+'&action=fullUninstall';
+                            redirect = redirect+'/../../api/plugins?name='+this.currentPlugin+'&action=fullUninstall';
                             if(pluginList.testMode)
                                 redirect += '&req=test';
                             location.assign(redirect);
@@ -574,7 +574,7 @@
                     action +='&name='+name;
                 //---- Get available plugins
                 //Api url
-                let url=document.pathToRoot+'api\/plugin';
+                let url=document.pathToRoot+'api\/plugins';
                 //Request itself
                 var xhr = new XMLHttpRequest();
                 xhr.open('GET', url+'?'+action);

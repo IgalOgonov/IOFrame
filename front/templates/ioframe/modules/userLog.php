@@ -66,7 +66,7 @@
                     if(this.rMe)
                         data +='&userID='+localStorage.getItem('deviceID');
                     //Api url
-                    let url=document.pathToRoot+"api\/user";
+                    let url=document.pathToRoot+"api\/users";
                     console.log(url,data);
                     //Request itself
                     var xhr = new XMLHttpRequest();

@@ -13,7 +13,7 @@
         methods:{
             logOut: function(){
                 let data = 'action=logUser&log=out&req=new';
-                let url=document.pathToRoot+"api\/user";
+                let url=document.pathToRoot+"api\/users";
                 //Send logout request
                 var xhr = new XMLHttpRequest();
                 xhr.open('POST', url+'?'+data);

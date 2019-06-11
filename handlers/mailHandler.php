@@ -350,7 +350,7 @@ namespace IOFrame{
 
             $ch = curl_init();
 
-            curl_setopt($ch, CURLOPT_URL,"http://".$_SERVER['SERVER_NAME'].$this->settings->getSetting('pathToRoot')."/api/mailAPI.php");
+            curl_setopt($ch, CURLOPT_URL,"http://".$_SERVER['SERVER_NAME'].$this->settings->getSetting('pathToRoot')."/api/mail.php");
             curl_setopt($ch, CURLOPT_POST, 1);
             curl_setopt($ch, CURLOPT_USERAGENT, 'api');
             curl_setopt($ch, CURLOPT_TIMEOUT, 1);
