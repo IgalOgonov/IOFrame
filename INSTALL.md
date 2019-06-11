@@ -124,12 +124,20 @@ In order for the routing to work, the following must be true:
 
 1. Apache has "rewrite_module" enabled.  
 This can be enabled in WAMP64->Apache->Modules on windows,  
-or by running the following on Linux:
+or by running the following on Linux: 
+
     sudo a2enmod rewrite
-	sudo service apache2 restart
+    sudo service apache2 restart
 	
 2. You need to set "RewriteEngine On" and "Options FollowSymLinks" must be enabled.
-Those can be found in the Apache configuration directory, typically C:\wamp64\bin\apache\apache2.4.39\conf on windows, or in /etc/apache2 on linux.
+Those can be found in the Apache configuration directory, typically  
+
+    C:\wamp64\bin\apache\apache2.4.39\conf on windows, 
+or in 
+
+    /etc/apache2 
+on linux.
+
 Without it, expect the router to fail, and the framework api calls fail with it.
 
 ## Installation
