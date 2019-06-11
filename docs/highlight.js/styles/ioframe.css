@@ -1,0 +1,99 @@
+/*
+
+IOFrame docs - Igal Ogonov (igal1333@hotmail.com)
+
+*/
+
+.hljs {
+    display: block;
+    overflow-x: auto;
+    padding: 0.5em;
+    color: #000;
+    background: rgb(231, 235, 255)
+}
+
+.hljs-comment,
+.hljs-quote {
+    color: rgb(149, 162, 194);
+    font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-subst {
+    color: rgb(0, 160, 240);
+    font-weight: 700;
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag .hljs-attr {
+    color: rgb(62, 153, 255);
+}
+
+.hljs-string,
+.hljs-doctag {
+    color: rgb(65, 105, 195);
+}
+
+.hljs-title,
+.hljs-section,
+.hljs-selector-id {
+    color: rgb(0, 75, 188);
+    font-weight: 700;
+}
+
+.hljs-subst {
+    font-weight: normal;
+}
+
+.hljs-type,
+.hljs-class .hljs-title {
+    color: rgb(0, 75, 188);
+    font-weight: bold;
+}
+
+.hljs-tag,
+.hljs-name,
+.hljs-attribute {
+    color: rgb(0, 0, 175);
+    font-weight: normal;
+}
+
+.hljs-regexp,
+.hljs-link {
+    color: rgb(0, 66, 255)
+}
+
+.hljs-symbol,
+.hljs-bullet {
+    color: rgb(0, 111, 255);
+}
+
+.hljs-built_in,
+.hljs-builtin-name {
+    color: rgb(0, 111, 255);
+}
+
+.hljs-meta {
+    color: rgb(138, 138, 138);
+    font-weight: bold;
+}
+
+.hljs-deletion {
+    background: #fdd;
+}
+
+.hljs-addition {
+    background: #dfd;
+}
+
+.hljs-emphasis {
+    font-style: italic;
+}
+
+.hljs-strong {
+    font-weight: bold;
+}

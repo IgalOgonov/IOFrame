@@ -1,27 +1,34 @@
-DirectoryIndex home.php index.php Home.php Index.php cp
+DirectoryIndex index.php home.php
 
+RewriteEngine on
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule . index.php [L]
+
+#How long to cache stuff for
 <IfModule mod_expires.c>
-# Enable expirations
-ExpiresActive On 
-# Default directive
-ExpiresDefault "access plus 1 day"
-# Images
-ExpiresByType image/gif "access plus 1 day"
-ExpiresByType image/png "access plus 1 day"
-ExpiresByType image/jpg "access plus 1 day"
-ExpiresByType image/jpeg "access plus 1 day"
-# CSS
-ExpiresByType text/css "access plus 1 day"
-# Javascript
-ExpiresByType application/javascript "access plus 1 day"
+	# Enable expirations
+	ExpiresActive On 
+	# Default directive
+	ExpiresDefault "access plus 1 day"
+	# Images
+	ExpiresByType image/gif "access plus 1 day"
+	ExpiresByType image/png "access plus 1 day"
+	ExpiresByType image/jpg "access plus 1 day"
+	ExpiresByType image/jpeg "access plus 1 day"
+	# CSS
+	ExpiresByType text/css "access plus 1 day"
+	# Javascript
+	ExpiresByType application/javascript "access plus 1 day"
 </IfModule>
 
+#headers
 <IfModule mod_headers.c>
   <FilesMatch ".(js|css|xml|gz|html)$">
     Header append Vary: Accept-Encoding
   </FilesMatch>
 </IfModule>
 
+#A little bit of browser compitability
 <IfModule mod_deflate.c>
     SetOutputFilter DEFLATE
   <IfModule mod_setenvif.c>

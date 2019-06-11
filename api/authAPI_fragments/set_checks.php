@@ -1,0 +1,49 @@
+<?php
+
+if(!defined('validator'))
+    require __DIR__ . '/../../util/validator.php';
+
+if($params == null){
+    if($test)
+        echo 'Params must be set!';
+    exit('-1');
+}
+if($action == 'setActions')
+    $expectedParam = 'actions';
+else
+    $expectedParam = 'groups';
+
+if(!is_array($params[$expectedParam])){
+    if($test)
+        echo $expectedParam.' must be an associative array!'.EOL;
+    exit('-1');
+}
+
+foreach($params[$expectedParam] as $name=>$description){
+    //Correction
+    if(strtolower((string)$description) === 'null' || $description == ''){
+        $params[$expectedParam][$name] = null;
+    }
+
+    if(!\IOFrame\validator::validateSQLKey($name)){
+        if($test)
+            echo 'Each member of '.$expectedParam.' must be a valid string of 1 to 256 characters!'.EOL;
+        exit('-1');
+    }
+
+    if($description != null && (!gettype($description) == 'string' || strlen($description)>10000 || strlen($description) == 0) ){
+        if($test)
+            echo 'Each description that is not null must be a string of 1 to 10,000 characters!'.EOL;
+        exit('-1');
+    }
+}
+
+//Auth check TODO Add relevant actions, not just rank 0
+//TODO REMEMBER DIFFERENT ACTIONS - DEPENDING ON REQUEST
+
+if(!$auth->isAuthorized(0)){
+    if($test)
+        echo 'Authorization rank must be 0!';
+    exit('-2');
+}
+

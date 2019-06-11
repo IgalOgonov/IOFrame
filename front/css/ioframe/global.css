@@ -1,0 +1,59 @@
+* {
+    box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+}
+
+*, ::after, ::before {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: rgb(0,0,0);
+    text-align: left;
+    background-color: #fff;
+}
+
+p {
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+form{
+    margin: 0vw 0vw 0vw 5px;
+    background-color: aliceblue;
+}
+
+form > input:not([type=submit]) {
+    margin: 3px 0px 3px 0px;
+    background-color: rgba(200,200,200,0.1);
+    border: none;
+    border-left: solid 3px darkgrey;
+}
+
+form > input[type=submit],button {
+    background: rgba(230,230,230,0.5);
+    border: 2px solid rgba(50,50,50,0.6);
+}
+
+form > input[type=submit]:hover , button:hover{
+    background: rgba(250,250,250,0.9);
+    border: 2px solid rgba(20,20,20,1);
+    transition: 0.2s ease-in-out;
+}
+
+button.activeButton{
+    background: rgba(250,250,250,0.9);
+    border: 2px solid rgba(20,20,20,1);
+}
+
+.alert{
+    text-align: center;
+    font-weight: 800;
+    padding: 10px 35px 5px 5px;
+    margin-bottom: 5px;
+}

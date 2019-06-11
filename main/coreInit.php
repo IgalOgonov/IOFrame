@@ -1,0 +1,153 @@
+<?php
+
+define('coreInit',true);
+
+session_start();
+
+
+//First, include all user includes
+if(!defined('helperFunctions'))
+    require __DIR__ . '/../util/helperFunctions.php';
+IOFrame\include_all_php(__DIR__.'/include/', true);
+use Monolog\Logger;
+use Monolog\Handler\IOFrameHandler;
+
+//This gives the user a way to run his own script through his include, independent of this framework.
+if(!isset($skipCoreInit) || $skipCoreInit==false){
+    //Require basic things needed to function
+    require 'definitions.php';
+    require __DIR__ . '/../handlers/ext/monolog/vendor/autoload.php';
+    if(!defined('settingsHandler'))
+        require __DIR__ . '/../handlers/settingsHandler.php';
+    if(!defined('sqlHandler'))
+        require __DIR__ . '/../handlers/sqlHandler.php';
+    if(!defined('redisHandler'))
+        require __DIR__ . '/../handlers/redisHandler.php';
+    if(!defined('authHandler'))
+        require __DIR__ . '/../handlers/authHandler.php';
+    if(!defined('sessionHandler'))
+        require __DIR__ . '/../handlers/sessionHandler.php';
+    if(!defined('pluginHandler'))
+        require __DIR__ . '/../handlers/pluginHandler.php';
+
+    /*Changes connection type to https if it isn't already*/
+    function convertToHTTPS(){
+        if(empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] == "off"){
+            $redirect = 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+            header('HTTP/1.1 301 Moved Permanently');
+            header('Location: ' . $redirect);
+            exit();
+        }
+    }
+
+    //--------------------The global settings parameters. They'll get updated as we go.--------------------
+    $defaultSettingsParams = [];
+
+    //--------------------Initialize redis handler--------------------
+    $redisSettings = new IOFrame\settingsHandler(IOFrame\getAbsPath().'/'.SETTINGS_DIR_FROM_ROOT.'/redisSettings/',['useCache'=>false]);
+    $redisHandler = new IOFrame\redisHandler($redisSettings);
+    if($redisHandler->isInit){
+        $defaultSettingsParams['useCache'] = true;
+    }
+    $defaultSettingsParams['redisHandler'] = $redisHandler;
+
+    //--------------------Initialize local settings handlers--------------------
+    $settings = new IOFrame\settingsHandler(IOFrame\getAbsPath().'/'.SETTINGS_DIR_FROM_ROOT.'/localSettings/');
+
+    //--------------------Save the root folder for shorter syntax later--------------------
+    $rootFolder = $settings->getSetting('absPathToRoot');
+
+    //--------------------Decide what mode of operation we're in--------------------
+    if($settings->getSetting('opMode')!=null)
+        $opMode = $settings->getSetting('opMode');
+    else
+        $opMode = IOFrame\SETTINGS_OP_MODE_MIXED;
+    $defaultSettingsParams['opMode'] = $opMode;
+
+    //--------------------Initialize sql handler--------------------
+    $sqlHandler = new IOFrame\sqlHandler(
+        $settings,
+        $defaultSettingsParams
+    );
+    $defaultSettingsParams['sqlHandler'] = $sqlHandler;
+    //--------------------Initialize site settings handler--------------------
+    $siteSettings = new IOFrame\settingsHandler(
+        IOFrame\getAbsPath().'/'.SETTINGS_DIR_FROM_ROOT.'/siteSettings/',
+        $defaultSettingsParams
+    );
+    $defaultSettingsParams['siteSettings'] = $siteSettings;
+
+    //-------------------Convert to SSL if needed-------------------
+    if($_SERVER['REMOTE_ADDR']!="::1" && $_SERVER['REMOTE_ADDR']!="127.0.0.1")
+        if($siteSettings->getSetting('sslOn') == 1)
+            convertToHTTPS();
+
+    //--------------------Initialize sql handler--------------------
+    $sqlHandler = new IOFrame\sqlHandler($settings);
+
+    //-------------------Iniitialize other soft singletons-------------------
+    $loggerHandler = new IOFrameHandler($settings, $sqlHandler, 'local');
+    // Create the main logger of the app
+    $logger = new Logger('testChannel1');
+    $logger->pushHandler($loggerHandler);
+    $sessionHandler = new IOFrame\sessionHandler($settings,$defaultSettingsParams);
+    $auth = new IOFrame\authHandler($settings,$defaultSettingsParams);
+    //-----AuthHandler should be a part of the default setting parameters-----
+    $defaultSettingsParams['authHandler'] = $auth;
+    //-------------------Perform default checks-------------------
+    $sessionHandler->checkSessionNotExpired();
+    //-------------------Include Installed Plugins----------------
+    //Get the list of active plugins
+    $orderedPlugins = [];                                               //To be used later, after initiation
+    $plugins = new IOFrame\settingsHandler(IOFrame\getAbsPath().'/'.SETTINGS_DIR_FROM_ROOT.'/plugins/');
+    $pluginHandler = new IOFrame\pluginHandler($settings,$defaultSettingsParams);
+    $pluginList = $plugins->getSettings();
+    if(count($pluginList)<1)
+        $pluginList =[];
+    //Get the order in which plugins should be included, if there is one. Get the local and global ones.
+    $localOrder = $pluginHandler->getOrder(['local'=>true]);
+    $order = $pluginHandler->getOrder(['local'=>false]);
+    //If there is a mismatch, specify it so the front end knows!
+    $pluginMismatch = false;
+    //If there are no plugins, we got nothing to do
+    if($order != [] || $localOrder!=[]){
+        if(implode(',',$order)!=implode(',',$localOrder)){
+            //Since the mismatched plugins might just be in different order, but the same ones installed, check for it
+            if(count(array_diff($localOrder,$order)) == 0){
+                //If we are here, it means we may just use the correct order, and update the local one while we're at it
+                $url = $settings->getSetting('absPathToRoot').'/localFiles/plugin_order/';
+                $filename = 'order';
+                if(!isset($fileHandler))
+                    $fileHandler = new IOFrame\fileHandler();
+                $fileHandler->writeFileWaitMutex($url, $filename, implode(',',$order), ['backUp' => true]);
+            }
+            //If the plugins are still mismatched, die or notify the front-end (according to settings)
+            elseif($settings->getSetting('dieOnPluginMismatch')){
+                header('HTTP/1.0 500 Internal server plugin conflict');
+                die('Plugin mismatch - contact the webmaster of this site!');
+            }
+            else
+                $pluginMismatch = true;
+        }
+        //First, require all includes that have an order
+        if(is_array($order))
+            foreach($order as $value){
+                if(isset($pluginList[$value])){
+                    if($pluginHandler->getInfo(['name'=>$value])[0]['status'] == 'active' ){
+                        require $rootFolder.'plugins/'.$value.'/include.php';
+                        array_push($orderedPlugins,$value);
+                    }
+                    unset($pluginList[$value]);
+                }
+            }
+        //Then, require those that are orderless
+        if(is_array($pluginList))
+            foreach($pluginList as $key => $value){
+                if($pluginHandler->getInfo(['name'=>$key])[0]['status'] == 'active' ){
+                    require $rootFolder.'plugins/'.$key.'/include.php';
+                    array_push($orderedPlugins,$key);
+                }
+            }
+    }
+}
+?>

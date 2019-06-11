@@ -1,5 +1,5 @@
 <?php
-/* To install silently, run the command with flag -f and place the following file at /_siteFiles:
+/* To install silently, run the command with flag -f and place the following file at /localFiles:
  * File name: installOptionFile.json
  * Contents are of the following form, where optional options are marked with *:
     {
@@ -31,18 +31,18 @@ echo EOL.'---------Install IOFrame in CLI mode!--------'.EOL;
 if(!defined('INSTALL_CLI'))
     exit('Must be included from _install.php to run!');
 
-require_once '_siteHandlers/fileHandler.php';
+require_once 'handlers/fileHandler.php';
 
 //This should only be true if we are installing on a system that is inside a VM, and this environment variable is set in
 //the Dockerfile / Vagrantfile / etc, OR if we are running with a flag -f.
 $installFromFile = getenv('IOFRAME_CLI_INSTALL_FROM_FILE') || isset(getopt('f')['f']);
 if($installFromFile){
     //Exit if the install options file does not exist despite the fact it should
-    if(!file_exists($baseUrl.'/_siteFiles/installOptionFile.json'))
+    if(!file_exists($baseUrl.'/localFiles/installOptionFile.json'))
         exit('Install Options file does not exist!');
     //If the file exists, read it
     $fileHandler = new IOFrame\fileHandler();
-    $installOptions = json_decode($fileHandler->readFileWaitMutex($baseUrl.'/_siteFiles/','installOptionFile.json',[]),true);
+    $installOptions = json_decode($fileHandler->readFileWaitMutex($baseUrl.'/localFiles/','installOptionFile.json',[]),true);
 
     //Check required options
     if(isset($installOptions['redis']) && !isset($installOptions['redis']['redis_addr']))
@@ -361,7 +361,7 @@ catch(Exception $e){
 }
 
 //This means installation was complete!
-$myFile = fopen('_siteFiles/_installComplete', 'w');
+$myFile = fopen('localFiles/_installComplete', 'w');
 fclose($myFile);
 
 exit('--------Installation complete!--------'.EOL);

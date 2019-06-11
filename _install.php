@@ -4,19 +4,19 @@
 if(!defined("IOFRAME_VERSION"))
     define("IOFRAME_VERSION",1.0);
 
-require '_main/definitions.php';
+require 'main/definitions.php';
 if(!defined('settingsHandler'))
-    require '_siteHandlers/settingsHandler.php';
+    require 'handlers/settingsHandler.php';
 if(!defined('helperFunctions'))
-    require '_util/helperFunctions.php';
+    require 'util/helperFunctions.php';
 if(!defined('abstractDB'))
-    require '_siteHandlers/abstractDB.php';
+    require 'handlers/abstractDB.php';
 if(!defined('userHandler'))
-    require '_siteHandlers/userHandler.php';
+    require 'handlers/userHandler.php';
 if(!defined('pluginHandler'))
-    require '_siteHandlers/pluginHandler.php';
+    require 'handlers/pluginHandler.php';
 
-require '_siteFunctions/updateGeoIP.php';
+require 'procedures/updateGeoIP.php';
 
 //--------------------Initialize Current DIR--------------------
 $baseUrl = IOFrame\replaceInString('\\','/',__DIR__).'/';
@@ -30,67 +30,67 @@ if(!defined("EOL"))
     }
 
 //--------------------Initialize local files folder if it does not exist--------------------
-if(!is_dir('_siteFiles')){
-    if(!mkdir('_siteFiles'))
+if(!is_dir('localFiles')){
+    if(!mkdir('localFiles'))
         die('Cannot create files directory for some reason - most likely insufficient user privileges, or it already exists');
 }
 //--------------------If the installation was complete, exit --------------------
-if(file_exists('_siteFiles/_installComplete'))
+if(file_exists('localFiles/_installComplete'))
     die('It seems the site is already installed! If this is an error, go to the /siteFiles folder and delete _installComplete.');
 
 //--------------------Initialize temp files folder if it does not exist--------------------
-if(!is_dir('_siteFiles/temp')){
-    if(!mkdir('_siteFiles/temp'))
+if(!is_dir('localFiles/temp')){
+    if(!mkdir('localFiles/temp'))
         die('Cannot create temp directory for some reason - most likely insufficient user privileges, or it already exists');
 }
-if(!is_dir('_siteFiles/logs')){
-    if(!mkdir('_siteFiles/logs'))
+if(!is_dir('localFiles/logs')){
+    if(!mkdir('localFiles/logs'))
         die('Cannot create logs directory for some reason - most likely insufficient user privileges, or it already exists');
 }
 //-------------------- Throw in an htaccess (from a place it already exists) to deny access to local files --------------------
-if(!file_exists('_siteFiles/.htaccess'))
+if(!file_exists('localFiles/.htaccess'))
     file_put_contents(
-        '_siteFiles/.htaccess',
-        file_get_contents('_plugins/.htaccess')
+        'localFiles/.htaccess',
+        file_get_contents('plugins/.htaccess')
     );
 
 //--------------------Initialize the version --------------------
-file_put_contents('_siteFiles/ver.txt',(string)IOFRAME_VERSION);
+file_put_contents('localFiles/ver.txt',(string)IOFRAME_VERSION);
 
 //--------------------Create the definitions json file --------------------
-if(!is_dir('_siteFiles/definitions')){
-    if(!mkdir('_siteFiles/definitions'))
+if(!is_dir('localFiles/definitions')){
+    if(!mkdir('localFiles/definitions'))
         die('Cannot create definitions directory for some reason - most likely insufficient user privileges, or it already exists');
-    fclose(fopen('_siteFiles/definitions/definitions.json','w'));
+    fclose(fopen('localFiles/definitions/definitions.json','w'));
 }
 
 
 //--------------------Initialize plugin "settings" folders--------------
-if(!is_dir('_siteFiles/plugins')){
-    if(!mkdir('_siteFiles/plugins'))
+if(!is_dir('localFiles/plugins')){
+    if(!mkdir('localFiles/plugins'))
         die('Cannot create plugins directory for some reason - most likely insufficient user privileges, or it already exists');
-    fclose(fopen('_siteFiles/plugins/settings','w'));
+    fclose(fopen('localFiles/plugins/settings','w'));
 }
 
 //--------------------Create and update GeoIP--------------------
-if(!is_dir('_siteFiles/geoip-db')){
-    if(!mkdir('_siteFiles/geoip-db'))
+if(!is_dir('localFiles/geoip-db')){
+    if(!mkdir('localFiles/geoip-db'))
         die('Cannot create geoIP directory for some reason - most likely insufficient user privileges, or it already exists');
 }
 //Only do this once during the install, cli or not
-if(!file_exists($baseUrl.'_siteFiles/geoip-db/GeoLite2-Country.mmdb'))
+if(!file_exists($baseUrl.'localFiles/geoip-db/GeoLite2-Country.mmdb'))
     updateGeoIP($baseUrl);
 
 //--------------------Create empty plugin order--------------------
-if(!is_dir('_siteFiles/pluginOrder')){
-    if(!mkdir('_siteFiles/pluginOrder'))
+if(!is_dir('localFiles/plugin_order')){
+    if(!mkdir('localFiles/plugin_order'))
         die('Cannot create plugin order directory for some reason - most likely insufficient user privileges, or it already exists');
-    fclose(fopen('_siteFiles/pluginOrder/order','w'));
+    fclose(fopen('localFiles/plugin_order/order','w'));
 }
 
 //--------------------Create empty plugin dependency map--------------------
-if(!is_dir('_siteFiles/pluginDependencyMap')){
-    if(!mkdir('_siteFiles/pluginDependencyMap'))
+if(!is_dir('localFiles/pluginDependencyMap')){
+    if(!mkdir('localFiles/pluginDependencyMap'))
         die('Cannot create plugin dependency map for some reason - most likely insufficient user privileges, or it already exists');
 }
 
@@ -105,35 +105,35 @@ if(!is_dir($baseUrl.IOFrame\PLUGIN_IMAGE_FOLDER)){
 if(!file_exists($baseUrl.IOFrame\PLUGIN_IMAGE_FOLDER.'/def_icon.png'))
     file_put_contents(
         $baseUrl.IOFrame\PLUGIN_IMAGE_FOLDER.'/def_icon.png',
-        file_get_contents('_plugins/def_icon.png')
+        file_get_contents('plugins/def_icon.png')
     );
 if(!file_exists($baseUrl.IOFrame\PLUGIN_IMAGE_FOLDER.'/def_thumbnail.png'))
     file_put_contents(
         $baseUrl.IOFrame\PLUGIN_IMAGE_FOLDER.'/def_thumbnail.png',
-        file_get_contents('_plugins/def_thumbnail.png')
+        file_get_contents('plugins/def_thumbnail.png')
     );
 //--------------------Initialize local setting folders--------------------
-if(!is_dir('_siteFiles/localSettings')){
-    if(!mkdir('_siteFiles/localSettings'))
+if(!is_dir('localFiles/localSettings')){
+    if(!mkdir('localFiles/localSettings'))
         die('Cannot create settings directory for some reason - most likely insufficient user privileges, or it already exists');
-    fclose(fopen('_siteFiles/localSettings/settings','w'));
+    fclose(fopen('localFiles/localSettings/settings','w'));
 }
 
-if(!is_dir('_siteFiles/sqlSettings')){
-    if(!mkdir('_siteFiles/sqlSettings'))
+if(!is_dir('localFiles/sqlSettings')){
+    if(!mkdir('localFiles/sqlSettings'))
         die('Cannot create settings directory for some reason - most likely insufficient user privileges, or it already exists');
-    fclose(fopen('_siteFiles/sqlSettings/settings','w'));
+    fclose(fopen('localFiles/sqlSettings/settings','w'));
 }
 
-if(!is_dir('_siteFiles/redisSettings')){
-    if(!mkdir('_siteFiles/redisSettings'))
+if(!is_dir('localFiles/redisSettings')){
+    if(!mkdir('localFiles/redisSettings'))
         die('Cannot create settings directory for some reason - most likely insufficient user privileges, or it already exists');
-    fclose(fopen('_siteFiles/redisSettings/settings','w'));
+    fclose(fopen('localFiles/redisSettings/settings','w'));
 }
 
-$redisSettings = new IOFrame\settingsHandler($baseUrl.'/_siteFiles/redisSettings/',['useCache'=>false]);
-$sqlSettings = new IOFrame\settingsHandler($baseUrl.'/_siteFiles/sqlSettings/');
-$localSettings = new IOFrame\settingsHandler($baseUrl.'/_siteFiles/localSettings/');
+$redisSettings = new IOFrame\settingsHandler($baseUrl.'/localFiles/redisSettings/',['useCache'=>false]);
+$sqlSettings = new IOFrame\settingsHandler($baseUrl.'/localFiles/sqlSettings/');
+$localSettings = new IOFrame\settingsHandler($baseUrl.'/localFiles/localSettings/');
 
 //--------------------From this point on, if we are in CLI mode, the installation is different--------------------
 if(php_sapi_name() == "cli"){
@@ -143,57 +143,57 @@ if(php_sapi_name() == "cli"){
 }
 
 //Only require this if it is not a local install
-require_once '_siteFunctions/SQLdbInit.php';
+require_once 'procedures/SQLdbInit.php';
 
 echo '<head>
-    <link rel="stylesheet" type="text/css" href="css/install.css" media="all">
-    <script src="js/jQuery_3_1_1/jquery.js"></script>
-    <script src="css/bootstrap_3_3_7/js/bootstrap.js"></script>
+    <link rel="stylesheet" type="text/css" href="front/css/ioframe/install.css" media="all">
+    <script src="front/js/ioframe/jQuery_3_1_1/jquery.js"></script>
+    <script src="front/css/ioframe/bootstrap_3_3_7/js/bootstrap.js"></script>
     </head>';
 //--------------------Initialize settings handler--------------------
-if(!is_dir('_siteFiles/userSettings')){
-    if(!mkdir('_siteFiles/userSettings'))
+if(!is_dir('localFiles/userSettings')){
+    if(!mkdir('localFiles/userSettings'))
         die('Cannot create settings directory for some reason - most likely insufficient user privileges, or it already exists');
-    fclose(fopen('_siteFiles/userSettings/settings','w'));
+    fclose(fopen('localFiles/userSettings/settings','w'));
 }
 
-if(!is_dir('_siteFiles/pageSettings')){
-    if(!mkdir('_siteFiles/pageSettings'))
+if(!is_dir('localFiles/pageSettings')){
+    if(!mkdir('localFiles/pageSettings'))
         die('Cannot create settings directory for some reason - most likely insufficient user privileges, or it already exists');
-    fclose(fopen('_siteFiles/pageSettings/settings','w'));
+    fclose(fopen('localFiles/pageSettings/settings','w'));
 }
 
-if(!is_dir('_siteFiles/siteSettings')){
-    if(!mkdir('_siteFiles/siteSettings'))
+if(!is_dir('localFiles/siteSettings')){
+    if(!mkdir('localFiles/siteSettings'))
         die('Cannot create settings directory for some reason - most likely insufficient user privileges, or it already exists');
-    fclose(fopen('_siteFiles/siteSettings/settings','w'));
+    fclose(fopen('localFiles/siteSettings/settings','w'));
 }
 
-if(!is_dir('_siteFiles/mailSettings')){
-    if(!mkdir('_siteFiles/mailSettings'))
+if(!is_dir('localFiles/mailSettings')){
+    if(!mkdir('localFiles/mailSettings'))
         die('Cannot create settings directory for some reason - most likely insufficient user privileges, or it already exists');
-    fclose(fopen('_siteFiles/mailSettings/settings','w'));
+    fclose(fopen('localFiles/mailSettings/settings','w'));
 }
 
-$userSettings = new IOFrame\settingsHandler($baseUrl.'/_siteFiles/userSettings/');
-$pageSettings = new IOFrame\settingsHandler($baseUrl.'/_siteFiles/pageSettings/');
-$mailSettings = new IOFrame\settingsHandler($baseUrl.'/_siteFiles/mailSettings/');
-$siteSettings = new IOFrame\settingsHandler($baseUrl.'/_siteFiles/siteSettings/');
+$userSettings = new IOFrame\settingsHandler($baseUrl.'/localFiles/userSettings/');
+$pageSettings = new IOFrame\settingsHandler($baseUrl.'/localFiles/pageSettings/');
+$mailSettings = new IOFrame\settingsHandler($baseUrl.'/localFiles/mailSettings/');
+$siteSettings = new IOFrame\settingsHandler($baseUrl.'/localFiles/siteSettings/');
 
 //--------------------
-if(!file_exists('_siteFiles/_installSes') && isset($_SERVER['REMOTE_ADDR'])){
-    $myFile = fopen('_siteFiles/_installSes', 'w+');
+if(!file_exists('localFiles/_installSes') && isset($_SERVER['REMOTE_ADDR'])){
+    $myFile = fopen('localFiles/_installSes', 'w+');
     fwrite($myFile,$_SERVER['REMOTE_ADDR']);
     install($userSettings,$pageSettings,$mailSettings,$localSettings,$siteSettings,$sqlSettings,$redisSettings,0,$baseUrl);
 }
 else{
-    $myFile = fopen('_siteFiles/_installSes', 'r+');
+    $myFile = fopen('localFiles/_installSes', 'r+');
     $temp = fread($myFile,100);
 
     if($temp!=$_SERVER['REMOTE_ADDR']){
-    echo 'Previous install seems to have been made from a different IP.'.EOL.
-         'Please, go to the folder /siteFiles on your website, and delete file _installSes, they try again.'.EOL;
-    die();
+        echo 'Previous install seems to have been made from a different IP.'.EOL.
+            'Please, go to the folder /siteFiles on your website, and delete file _installSes, they try again.'.EOL;
+        die();
     }
     else{
         $installStage = 0;
@@ -214,6 +214,22 @@ function install(IOFrame\settingsHandler $userSettings,
                 <input type="text" name="stage" value="'.($stage-1).'" hidden>
                 <input type="submit" value="Previous Stage">
                 </form>';
+
+    if($stage>=6){
+        $defaultSettingsParams = [];
+        $redisHandler = new IOFrame\redisHandler($redisSettings);
+        $defaultSettingsParams['redisHandler'] = $redisHandler;
+        if($redisHandler->isInit){
+            $defaultSettingsParams['useCache'] = true;
+        }
+        $sqlHandler = new IOFrame\sqlHandler(
+            $localSettings,
+            $defaultSettingsParams
+        );
+        $defaultSettingsParams['sqlHandler'] = $sqlHandler;
+        $defaultSettingsParams['opMode'] = 'mixed';
+    }
+
     switch($stage){
         //-------------2nd installation stage
         case 1:
@@ -238,9 +254,9 @@ function install(IOFrame\settingsHandler $userSettings,
             echo '</div>';
             echo 'Install stage 2:'.EOL.
                 'Please choose your additional settings:'.EOL.EOL;
-                //Settings to set..
+            //Settings to set..
 
-             echo   '<form method="post" action="">
+            echo   '<form method="post" action="">
                     <span>Private key:</span>
                     <input type="text" name="privateKey" value="'.$privKey.'"><br>
                      <small>MUST BE 64 digits long, numbers or latters a-f, don\'t change it if you do not know what this is</small><br>
@@ -585,7 +601,8 @@ function install(IOFrame\settingsHandler $userSettings,
             break;
         //-------------7th installation stage
         case 6:
-            require_once '_util/safeSTR.php';
+            require_once 'util/safeSTR.php';
+            require_once 'handlers/routeHandler.php';
             echo 'Install stage 7:<div id="notice"> ';
             $sqlHandler = new IOFrame\sqlHandler($localSettings);
 
@@ -660,13 +677,48 @@ function install(IOFrame\settingsHandler $userSettings,
                 die();
             }
 
+            $routeHandler = new IOFrame\routeHandler($localSettings,$defaultSettingsParams);
+
+            $routesAdded = $routeHandler->addRoutes(
+                [
+                    ['GET|POST','api/[*:trailing]','api',null],
+                    ['GET|POST','[*:trailing]','front',null],
+                    ['GET|POST','*','404']
+                ]
+            );
+
+            if($routesAdded>=1){
+                echo EOL.'Default Routes initiated!' . EOL;
+            }
+            else{
+                echo EOL.'Default Routes NOT initiated properly!'.EOL;
+                die();
+            }
+
+
+            $matches = $routeHandler->setMatches(
+                [
+                    'front'=>['front/[trailing]','php,html,htm'],
+                    'api'=>['api/[trailing]API','php'],
+                    '404'=>['404','html']
+                ]
+            );
+
+            if($matches['front']===0 && $matches['api']===0 && $matches['404']===0 ){
+                echo EOL.'Default Matches initiated!' . EOL;
+            }
+            else{
+                echo EOL.'Default Matches NOT initiated properly!'.EOL;
+                die();
+            }
+
             echo ' </div>';
 
             echo 'Please input the mail account settings (Optional but highly recommended!). <br>
                           <small>If you are using cPanel,go into Mail Accounts, create a new account, click "Set Up Mail Client"<br>
                           under Actions of that account, and copy the relevant info.</small>'.EOL;
 
-                echo '<form method="post" action="">
+            echo '<form method="post" action="">
                     <input type="text" name="stage" value="7" hidden>
                     <span>Host Name:</span> <input type="text" name="mailHost" placeholder="yourHostName.com"><br>
                     <span>Encryption (default recommended):</span> <input type="text" name="mailEncryption" value="ssl"><br>
@@ -715,18 +767,6 @@ function install(IOFrame\settingsHandler $userSettings,
             }
 
             //Initiate all settings handlers that need to by synced
-            $defaultSettingsParams = [];
-            $redisHandler = new IOFrame\redisHandler($redisSettings);
-            if($redisHandler->isInit){
-                $defaultSettingsParams['useCache'] = true;
-                $defaultSettingsParams['redisHandler'] = $redisHandler;
-            }
-            $sqlHandler = new IOFrame\sqlHandler(
-                $localSettings,
-                $defaultSettingsParams
-            );
-            $defaultSettingsParams['sqlHandler'] = $sqlHandler;
-            $defaultSettingsParams['opMode'] = 'mixed';
 
             $userSettings = new IOFrame\settingsHandler(
                 IOFrame\getAbsPath().'/'.SETTINGS_DIR_FROM_ROOT.'/userSettings/',
@@ -826,14 +866,14 @@ function install(IOFrame\settingsHandler $userSettings,
                 Die();
             }
             //This means installation was complete!
-            $myFile = fopen('_siteFiles/_installComplete', 'w');
+            $myFile = fopen('localFiles/_installComplete', 'w');
             fclose($myFile);
             //The private key should stay inside the db, not in a setting file.
             $siteSettings->setSetting('privateKey',null,['createNew'=>true]);
             echo 'Installation complete!'.EOL;
             $_SESSION['INSTALLING']=false;
             //Create Install Complete file
-            echo '<form method="get" action="cp/admin.php">
+            echo '<form method="get" action="cp/admin">
                          <input type="submit" value="Go to admin panel">
                          </form>';
 
@@ -932,19 +972,17 @@ function install(IOFrame\settingsHandler $userSettings,
             }
 
             echo EOL;
-            if($res){
-                //If we aren't in cli, this is how we go to the next page
-                if(php_sapi_name()!='cli')
-                    echo 'All default settings set!</div>'.EOL.
-                        '<form method="post" action="">
-                        <span>Please choose the website name:</span><input type="text" name="siteName" value="My Website">'.EOL.'
-                        <input type="text" name="stage" value="1" hidden>
-                        <input type="submit" value="Next">
-                        </form>';
-            }
-            else{
 
-            }
+            if(!$res)
+                die('Failed to set default settings!</div>');
+
+            echo 'All default settings set!</div>'.EOL;
+
+            echo '<form method="post" action="">
+                <span>Please choose the website name:</span><input type="text" name="siteName" value="My Website">'.EOL.'
+                <input type="text" name="stage" value="1" hidden>
+                <input type="submit" value="Next">
+                </form>';
 
             break;
     }
