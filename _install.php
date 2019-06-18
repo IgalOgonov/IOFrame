@@ -94,24 +94,6 @@ if(!is_dir('localFiles/pluginDependencyMap')){
         die('Cannot create plugin dependency map for some reason - most likely insufficient user privileges, or it already exists');
 }
 
-//--------------------Create plugins public image folder--------------------
-if(!is_dir($baseUrl.PLUGIN_IMAGE_FOLDER)){
-    if(!mkdir($baseUrl.PLUGIN_IMAGE_FOLDER))
-        die('Cannot create plugin image folder!');
-}
-
-//-------------------- Copy default icon/thumbnail into plugins image folder --------------------
-//Only do this once during the install, cli or not
-if(!file_exists($baseUrl.PLUGIN_IMAGE_FOLDER.'/def_icon.png'))
-    file_put_contents(
-        $baseUrl.PLUGIN_IMAGE_FOLDER.'/def_icon.png',
-        file_get_contents('plugins/def_icon.png')
-    );
-if(!file_exists($baseUrl.PLUGIN_IMAGE_FOLDER.'/def_thumbnail.png'))
-    file_put_contents(
-        $baseUrl.PLUGIN_IMAGE_FOLDER.'/def_thumbnail.png',
-        file_get_contents('plugins/def_thumbnail.png')
-    );
 //--------------------Initialize local setting folders--------------------
 if(!is_dir('localFiles/localSettings')){
     if(!mkdir('localFiles/localSettings'))
@@ -146,9 +128,9 @@ if(php_sapi_name() == "cli"){
 require_once 'procedures/SQLdbInit.php';
 
 echo '<head>
-    <link rel="stylesheet" type="text/css" href="front/css/ioframe/install.css" media="all">
-    <script src="front/js/ioframe/jQuery_3_1_1/jquery.js"></script>
-    <script src="front/css/ioframe/bootstrap_3_3_7/js/bootstrap.js"></script>
+    <link rel="stylesheet" type="text/css" href="front/ioframe/css/install.css" media="all">
+    <script src="front/ioframe/js/jQuery_3_1_1/jquery.js"></script>
+    <script src="front/ioframe/css/bootstrap_3_3_7/js/bootstrap.js"></script>
     </head>';
 //--------------------Initialize settings handler--------------------
 if(!is_dir('localFiles/userSettings')){

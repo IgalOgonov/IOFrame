@@ -8,7 +8,7 @@ $urlsToRemove = array();
 $foldersToRemove = array();
 array_push($urlsToRemove,$this->settings->getSetting('absPathToRoot').'api/commentAPI.php');
 array_push($urlsToRemove,$this->settings->getSetting('absPathToRoot').'front/cp/comments.php');
-array_push($urlsToRemove,$this->settings->getSetting('absPathToRoot').'front/templates/ioframe/modules/comments.php');
+array_push($urlsToRemove,$this->settings->getSetting('absPathToRoot').'front/ioframe/templates/modules/comments.php');
 array_push($foldersToRemove,$this->settings->getSetting('absPathToRoot').'api/commentAPI_fragments');
 
 foreach($urlsToRemove as $url){

@@ -7,19 +7,19 @@ if(!defined('coreInit'))
 
 
 <!DOCTYPE html>
-<?php require $settings->getSetting('absPathToRoot').'front/templates/ioframe/headers.php';
+<?php require $settings->getSetting('absPathToRoot').'front/ioframe/templates/headers.php';
 
 /* ----- All css might be skipped and replaced with something else if you would like*/
-echo '<link rel="stylesheet" href="'.$dirToRoot.'front/css/ioframe/global.css">';
+echo '<link rel="stylesheet" href="'.$dirToRoot.'front/ioframe/css/global.css">';
 
-echo '<script src="'.$dirToRoot.'front/js/ioframe/ezPopup.js"></script>';
-echo '<link rel="stylesheet" href="'.$dirToRoot.'front/css/ioframe/popUpTooltip.css">';
-echo '<link rel="stylesheet" href="'.$dirToRoot.'front/css/ioframe/bootstrap_3_3_7/css/bootstrap.min">';
+echo '<script src="'.$dirToRoot.'front/ioframe/js/ezPopup.js"></script>';
+echo '<link rel="stylesheet" href="'.$dirToRoot.'front/ioframe/css/popUpTooltip.css">';
+echo '<link rel="stylesheet" href="'.$dirToRoot.'front/ioframe/css/bootstrap_3_3_7/css/bootstrap.min">';
 
 if($auth->isAuthorized(0))
-    echo '<script src="'.$dirToRoot.'front/js/ioframe/vue/2.6.10/vue.js"></script>';
+    echo '<script src="'.$dirToRoot.'front/ioframe/js/vue/2.6.10/vue.js"></script>';
 else
-    echo '<script src="'.$dirToRoot.'front/js/ioframe/vue/2.6.10/vue.min.js"></script>';
+    echo '<script src="'.$dirToRoot.'front/ioframe/js/vue/2.6.10/vue.min.js"></script>';
 
 echo '<title>Admin Panel</title>';
 
@@ -30,14 +30,14 @@ echo '<title>Admin Panel</title>';
 <p id="errorLog"></p>
 
 <h1>User Creation</h1>
-<?php include $settings->getSetting('absPathToRoot').'front/templates/ioframe/modules/userReg.php'?>
+<?php include $settings->getSetting('absPathToRoot').'front/ioframe/templates/modules/userReg.php'?>
 
 <h1>User Login</h1>
 
 <div id="userFields" style="background: aliceblue; border-left: 5px solid rgba(135,135,255,0.3); padding: 3px;">
     <?php //Notice the styles are inline!
-     include $settings->getSetting('absPathToRoot').'front/templates/ioframe/modules/userLog.php';
-     include $settings->getSetting('absPathToRoot').'front/templates/ioframe/modules/logOut.php';
+     include $settings->getSetting('absPathToRoot').'front/ioframe/templates/modules/userLog.php';
+     include $settings->getSetting('absPathToRoot').'front/ioframe/templates/modules/logOut.php';
     ?>
 </div>
 
@@ -74,4 +74,4 @@ echo '<title>Admin Panel</title>';
 </script>
 
 
-<?php require $settings->getSetting('absPathToRoot').'front/templates/ioframe/footers.php';?>
+<?php require $settings->getSetting('absPathToRoot').'front/ioframe/templates/footers.php';?>

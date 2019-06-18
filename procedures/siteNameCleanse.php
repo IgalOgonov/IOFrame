@@ -14,7 +14,7 @@ function cleanseFile($url,$strRemove,$strRep, array $params = []){
         $params['verbose'] : $test ?
             true : false;
 
-    if(preg_match('/_siteNameCleanse\.php/',$url) ||
+    if(preg_match('/siteNameCleanse\.php/',$url) ||
         preg_match('/\/localFiles/',$url) ||
         preg_match('/\/_install\.php/',$url) ||
         preg_match('/\/handlers\/ext/',$url) ||
@@ -85,12 +85,10 @@ function cleanseFolder($url,$strRemove,$strRep, array $params = []){
 
 /*
 cleanseFolder(
-    substr(__DIR__,0,-14),
-    '            $verbose = isset($params[\'verbose\'])?
-                $params[\'verbose\'] : $test ? $verbose = true : $verbose = false;',
-    '            $verbose = isset($params[\'verbose\'])?
-                $params[\'verbose\'] : $test ? true : false;',
-    ['test'=>false, 'verbose'=>true,'subFolders'=>true]
+    substr(__DIR__,0,-10),
+    'templates/ioframe',
+    'ioframe/templates',
+    ['test'=>true, 'verbose'=>true,'subFolders'=>true]
 )
 */
 ?>

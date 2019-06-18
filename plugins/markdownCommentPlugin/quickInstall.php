@@ -23,7 +23,7 @@ array_push(
     $filesToCopy,
     [
         $this->settings->getSetting('absPathToRoot').'plugins/markdownCommentPlugin/php/Module_comments.php',
-        $this->settings->getSetting('absPathToRoot').'front/templates/ioframe/modules/comments.php'
+        $this->settings->getSetting('absPathToRoot').'front/ioframe/templates/modules/comments.php'
     ]
 );
 foreach($filesToCopy as $file) {

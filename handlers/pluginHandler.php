@@ -23,7 +23,7 @@ namespace IOFrame{
     }
     //If we did not define PLUGIN_IMAGE_PATH, the default is here
     if(!defined('PLUGIN_IMAGE_FOLDER')){
-        define('PLUGIN_IMAGE_FOLDER','front/img/ioframe/pluginImages/');
+        define('PLUGIN_IMAGE_FOLDER','front/ioframe/img/pluginImages/');
     }
 
     if(!defined('abstractDBWithCache'))
@@ -1464,8 +1464,24 @@ namespace IOFrame{
             }
             //Here we will try to create existing folders if needed, and copy the images if they are outdated (or dont exist).
             try{
-                //If a folder does not exist, create it and move on
+                //If a folder does not exist, create it
                 if(!is_dir($imgUrl)){
+                    //--------------------Create plugins public image folder if needed--------------------
+                    if(!is_dir($this->settings->getSetting('absPathToRoot').PLUGIN_IMAGE_FOLDER)){
+                        if(!mkdir($this->settings->getSetting('absPathToRoot').PLUGIN_IMAGE_FOLDER))
+                            die('Cannot create base plugin image folder!');
+                        //-------------------- Copy default icon/thumbnail into plugins image folder --------------------
+                        if(!file_exists($this->settings->getSetting('absPathToRoot').PLUGIN_IMAGE_FOLDER.'/def_icon.png'))
+                            file_put_contents(
+                                $this->settings->getSetting('absPathToRoot').PLUGIN_IMAGE_FOLDER.'/def_icon.png',
+                                file_get_contents('plugins/def_icon.png')
+                            );
+                        if(!file_exists($this->settings->getSetting('absPathToRoot').PLUGIN_IMAGE_FOLDER.'/def_thumbnail.png'))
+                            file_put_contents(
+                                $this->settings->getSetting('absPathToRoot').PLUGIN_IMAGE_FOLDER.'/def_thumbnail.png',
+                                file_get_contents('plugins/def_thumbnail.png')
+                            );
+                    }
                     if($verbose)
                         echo 'Plugin folder in '.PLUGIN_IMAGE_FOLDER.' does not exist, creating..!'.EOL;
                     if(!$test)

@@ -6,19 +6,19 @@ if(!require __DIR__ . '/../main/coreInit.php')
 ?>
 
 <!DOCTYPE html>
-<?php require $settings->getSetting('absPathToRoot').'front/templates/ioframe/headers.php';
+<?php require $settings->getSetting('absPathToRoot').'front/ioframe/templates/headers.php';
 
 
 echo '<meta name="viewport" content="width=device-width, initial-scale=1">';
 echo '<script src="highlight.js/highlight.pack.js"></script>';
-echo '<script src="'.$dirToRoot.'front/js/ioframe/ezPopup.js"></script>';
+echo '<script src="'.$dirToRoot.'front/ioframe/js/ezPopup.js"></script>';
 echo '<script>hljs.initHighlightingOnLoad();</script>';
 echo '<link rel="stylesheet" href="ioframe-highlight.css">';
 echo '<link rel="stylesheet" href="IOFrameDocs.css">';
 if($auth->isAuthorized(0))
-    echo '<script src="'.$dirToRoot.'front/js/ioframe/vue/2.6.10/vue.js"></script>';
+    echo '<script src="'.$dirToRoot.'front/ioframe/js/vue/2.6.10/vue.js"></script>';
 else
-    echo '<script src="'.$dirToRoot.'front/js/ioframe/vue/2.6.10/vue.min.js"></script>';
+    echo '<script src="'.$dirToRoot.'front/ioframe/js/vue/2.6.10/vue.min.js"></script>';
 
 echo '<title>IOFrame - Overview</title>';
 ?>
@@ -245,4 +245,4 @@ This document is meant to host all documentation of the IOFrame framework. Insid
 
 
 
-<?php require $settings->getSetting('absPathToRoot').'front/templates/ioframe/footers.php';
+<?php require $settings->getSetting('absPathToRoot').'front/ioframe/templates/footers.php';

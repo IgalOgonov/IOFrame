@@ -213,11 +213,11 @@
                                 let resPlugins = JSON.parse(xhr.responseText);
                                 for(let i=0; i<resPlugins.length; i++){
                                     (resPlugins[i].icon)?
-                                        resPlugins[i].icon = 'front/img/ioframe/pluginImages/'+resPlugins[i].fileName+'/icon.'+resPlugins[i].icon :
-                                        resPlugins[i].icon = 'front/img/ioframe/pluginImages/def_icon.png';
+                                        resPlugins[i].icon = 'front/ioframe/img/pluginImages/'+resPlugins[i].fileName+'/icon.'+resPlugins[i].icon :
+                                        resPlugins[i].icon = 'front/ioframe/img/pluginImages/def_icon.png';
                                     (resPlugins[i].thumbnail)?
-                                        resPlugins[i].thumbnail = 'front/img/ioframe/pluginImages/'+resPlugins[i].fileName+'/thumbnail.'+resPlugins[i].thumbnail :
-                                        resPlugins[i].thumbnail = 'front/img/ioframe/pluginImages/def_thumbnail.png';
+                                        resPlugins[i].thumbnail = 'front/ioframe/img/pluginImages/'+resPlugins[i].fileName+'/thumbnail.'+resPlugins[i].thumbnail :
+                                        resPlugins[i].thumbnail = 'front/ioframe/img/pluginImages/def_thumbnail.png';
                                     delete resPlugins[i].status;
                                     delete resPlugins[i].version;
                                     delete resPlugins[i].summary;

@@ -8,21 +8,21 @@ if(!defined('coreInit'))
 
 
 <!DOCTYPE html>
-<?php require $settings->getSetting('absPathToRoot').'front/templates/ioframe/headers.php';
+<?php require $settings->getSetting('absPathToRoot').'front/ioframe/templates/headers.php';
 
 /* ----- All css might be skipped and replaced with something else if you would like*/
-echo '<link rel="stylesheet" href="'.$dirToRoot.'front/css/ioframe/global.css">';
+echo '<link rel="stylesheet" href="'.$dirToRoot.'front/ioframe/css/global.css">';
 
-echo '<script src="'.$dirToRoot.'front/js/ioframe/ezPopup.js"></script>';
-echo '<link rel="stylesheet" href="'.$dirToRoot.'front/css/ioframe/popUpTooltip.css">';
-echo '<link rel="stylesheet" href="'.$dirToRoot.'front/css/ioframe/bootstrap_3_3_7/css/bootstrap.min">';
+echo '<script src="'.$dirToRoot.'front/ioframe/js/ezPopup.js"></script>';
+echo '<link rel="stylesheet" href="'.$dirToRoot.'front/ioframe/css/popUpTooltip.css">';
+echo '<link rel="stylesheet" href="'.$dirToRoot.'front/ioframe/css/bootstrap_3_3_7/css/bootstrap.min">';
 
 if($auth->isAuthorized(0))
-    echo '<script src="'.$dirToRoot.'front/js/ioframe/vue/2.6.10/vue.js"></script>';
+    echo '<script src="'.$dirToRoot.'front/ioframe/js/vue/2.6.10/vue.js"></script>';
 else
-    echo '<script src="'.$dirToRoot.'front/js/ioframe/vue/2.6.10/vue.min.js"></script>';
+    echo '<script src="'.$dirToRoot.'front/ioframe/js/vue/2.6.10/vue.min.js"></script>';
 
-echo '<script src="'.$dirToRoot.'front/js/ioframe/objects.js"></script>';
+echo '<script src="'.$dirToRoot.'front/ioframe/js/objects.js"></script>';
 echo '<script>startObjectDB({\'updateObjects\':true,\'updateObjectMap\':true,\'extraMaps\':[\'objects\']})</script>';
 
 echo '<title>Objects API</title>';
@@ -32,8 +32,8 @@ echo '<title>Objects API</title>';
 <p id="errorLog"></p>
 
 <h1>Objects</h1>
-<?php include $settings->getSetting('absPathToRoot').'front/templates/ioframe/modules/objects.php'?>
+<?php include $settings->getSetting('absPathToRoot').'front/ioframe/templates/modules/objects.php'?>
 
-<?php require $settings->getSetting('absPathToRoot').'front/templates/ioframe/footers.php';?>
+<?php require $settings->getSetting('absPathToRoot').'front/ioframe/templates/footers.php';?>
 
 </body>

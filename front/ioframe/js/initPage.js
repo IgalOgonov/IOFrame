@@ -128,7 +128,7 @@ function updateSesInfo(pathToRoot, reloadWhenDone){
                     localStorage.setItem('myMail',sesInfo['Email']);
                 }
 
-                //if(reloadWhenDone === true) location.reload();
+                if(reloadWhenDone === true) location.reload();
             }
         } else {
             if(xhr.status < 200 || xhr.status > 299 )
