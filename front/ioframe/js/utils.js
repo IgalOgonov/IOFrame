@@ -114,6 +114,11 @@ function debounce(func, wait, timerName = '') {
 	};
 };
 
+//To be used with await
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
 //Checks if we are logged in, returns resault using the dfd because it might need to call the server
 function checkLoggedIn(pathToRoot,trustLocalStorage=false){
     return new Promise(function(resolve, reject) {
