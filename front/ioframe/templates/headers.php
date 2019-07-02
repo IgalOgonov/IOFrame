@@ -19,16 +19,18 @@ echo '<script src="'.$dirToRoot.'front/ioframe/js/initPage.js"></script>';
 echo '<script src="'.$dirToRoot.'front/ioframe/js/fp.js"></script>';
 //echo '<script src="'.$dirToRoot.'js/objectDB.js"></script>';
 $jsIncludes = $orderedPlugins;
-$dirArray = scandir($settings->getSetting('absPathToRoot').'front/ioframe/js/plugins');
-foreach($jsIncludes as $key => $val){
-    $jsIncludes[$key] .= '.js';
-    $jsInclude = $settings->getSetting('absPathToRoot').'front/ioframe/js/plugins/'.$jsIncludes[$key];
-     if(file_exists($jsInclude))
-         echo '<script src="'.$dirToRoot.'front/ioframe/js/plugins/'.$jsIncludes[$key].'"></script>';
-}
-foreach($dirArray as $key => $fileName){
-    if(preg_match('/^[a-zA-Z0-9_-]+\.js$/',$fileName) && !in_array($fileName,$jsIncludes)){
-        echo '<script src="'.$dirToRoot.'front/ioframe/js/plugins/'.$fileName.'"></script>';
+if(is_dir($settings->getSetting('absPathToRoot').'front/ioframe/js/plugins')){
+    $dirArray = scandir($settings->getSetting('absPathToRoot').'front/ioframe/js/plugins');
+    foreach($jsIncludes as $key => $val){
+        $jsIncludes[$key] .= '.js';
+        $jsInclude = $settings->getSetting('absPathToRoot').'front/ioframe/js/plugins/'.$jsIncludes[$key];
+         if(file_exists($jsInclude))
+             echo '<script src="'.$dirToRoot.'front/ioframe/js/plugins/'.$jsIncludes[$key].'"></script>';
+    }
+    foreach($dirArray as $key => $fileName){
+        if(preg_match('/^[a-zA-Z0-9_-]+\.js$/',$fileName) && !in_array($fileName,$jsIncludes)){
+            echo '<script src="'.$dirToRoot.'front/ioframe/js/plugins/'.$fileName.'"></script>';
+        }
     }
 }
 ?>
@@ -44,6 +46,8 @@ foreach($dirArray as $key => $fileName){
     document.rootURI = encodeURI("<?php echo $rootURI;?>");
     //Path to the current page from root
     document.loggedIn = <?php echo $auth->isLoggedIn()? "true" : "false";  ?>;
+    //Difference between local time and server time - in seconds!
+    document.serverTimeDelta = Math.floor(Date.now()/1000 - <?php echo time();  ?>);
 
     document.addEventListener('DOMContentLoaded', function(e) {
         //console.log('Doc loaded',Date.now());

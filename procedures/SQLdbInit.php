@@ -736,6 +736,8 @@ namespace IOFrame{
              * of altorouter over at http://altorouter.com/usage/matching-requests.html .
              *
              * If $match = $router->match(), then Target is $match['target'].
+             *
+             * -- SIMPLE URL ROUTING --
              * On match, code akin to
                  1.   $ext = ['php','html','htm'];
                  2.   foreach($ext as $extension){
@@ -745,7 +747,7 @@ namespace IOFrame{
                  6.           return;
                  7.       }
                  8.   }
-             * will be executed.
+             * will be executed (can be found in index.php).
              * $ext is determined by a comma separated array stored at Extensions, and defaults to the above.
              * $filename will always start with __DIR__ (as routing is relative to the root), but URL is built as following:
              *  The requested URL is stored at the URL column, and has to be a valid URL (no double "/"'s, either).
@@ -756,6 +758,25 @@ namespace IOFrame{
              *  "/front/[trailing]".
              *  Finally, the $extension will be appended in order it appears in Extensions (or default, if Extensions is null).
              *
+             * -- ADVANCED URL ROUTING (Exclusion)--
+             * The code shown above is actually a simplified version of the real thing.
+             * In reality, the URL may be an object (assoc array) of the form:
+             * [
+             *  'include' => '<Include Path Like In The Basic Example>'
+             *  'exclude' => <Array of regex patterns to forbid matching with>
+             * ]
+             * What happens here is that basically, if a match is found, the path is then checked against each of the
+             * exclusion regex patterns, and if it matches one of them, the match is considered invalid.
+             * This is useful for forbidding specific folders/files that would otherwise be included and avoid
+             * server restrictions like .htaccess.
+             *
+             * -- ADVANCED URL ROUTING (Multiple Possible Matches)--
+             * The URL may also be an array of strings, or of inclusion/exclusion objects.
+             * It may also contain a mix between the two.
+             * What then happens is that the router will match to the first valid match out of the posible ones.
+             * If multiple ones are possible, the chronologically first one will be matched.
+             * This is useful for setting up multiple backup matches (for example, if your front end modules / api may
+             * sit in two potential locations, you may try to match the first one, then the 2nd).
              *
              *  --- COMPLEX ROUTING ---
              *  What to do if you want to do some complex logic based on the named parameters?

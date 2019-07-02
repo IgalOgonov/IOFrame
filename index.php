@@ -42,18 +42,61 @@ if( is_array($match)) {
 //Get required matches from the db/cache
 $matches = $routeHandler->getMatches($matchNames);
 
+//If the correct match is found, proccess it
 if(isset($matches[$routeTarget]) && is_array($matches[$routeTarget])){
+
+    //DB array
     $matchArray = $matches[$routeTarget];
+    //Get DB extensions, or set default ones
     $extensions = ($matchArray['Extensions']!==null)? explode(',',$matchArray['Extensions']): ['php','html','htm','js','css'];
 
-    $filename = __DIR__.'/'.$matchArray['URL'];
-    foreach($routeParams as $paramName => $paramValue){
-        $filename = preg_replace('/\['.$paramName.'\]/',$paramValue,$filename);
+    //If the match is a string, enclose it in a JSON object
+    if(!\IOFrame\is_json($matchArray['URL']))
+        $matchArray['URL'] = [
+            ['include' => $matchArray['URL'], 'exclude'=>[]]
+        ];
+    //If the match is an array, see if it's an array of rules or just one include/exclude pair
+    else{
+        $matchArray['URL'] = json_decode($matchArray['URL'], true);
+        //In case it's just one include/exclude, envelope it in an array
+        if(isset($matchArray['URL']['include']))
+            $matchArray['URL'] = [$matchArray['URL']];
+        //In this case, check for each element if it's a string or an object
+        else{
+            foreach($matchArray['URL'] as $key => $object){
+                if(gettype($object) == 'string')
+                    $matchArray['URL'][$key] = ['include' => $object, 'exclude'=>[]];
+            }
+        }
     }
-    foreach($extensions as $extension){
-        if((file_exists($filename.'.'.$extension))){
-            require $filename.'.'.$extension;
-            die();
+
+    //Check the rules
+    foreach($matchArray['URL'] as $ruleArray){
+
+        //The include file
+        $filename = __DIR__.'/'.$ruleArray['include'];
+
+        //Replace the relevant parts with route parameters.
+        foreach($routeParams as $paramName => $paramValue){
+            $filename = preg_replace('/\['.$paramName.'\]/',$paramValue,$filename);
+        }
+
+        //Check whether the file exists, for each extension
+        foreach($extensions as $extension){
+            if((file_exists($filename.'.'.$extension))){
+                //If the file does exist, make sure it does not violate the exclusion regex.
+                $shouldBeExcluded = false;
+                foreach($ruleArray['exclude'] as $exclusionRegex){
+                    if(preg_match('/'.$exclusionRegex.'/',$filename.'.'.$extension)){
+                        $shouldBeExcluded = true;
+                        break;
+                    }
+                }
+                if(!$shouldBeExcluded){
+                    require $filename.'.'.$extension;
+                    die();
+                }
+            }
         }
     }
 }

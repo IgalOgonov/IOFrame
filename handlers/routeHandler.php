@@ -536,7 +536,14 @@ namespace IOFrame{
          *  Any call to set a non-existent match where $url is null will be discarded.
          *
          * @param string $match Name of the match
-         * @param string|null $url URL of the match
+         * @param string|array|null $url May be a string that represents the URL of the match,
+         *                          an associative array of the form:
+         *                          [
+         *                           'include' => <URL of the match>,
+         *                           'exclude' => <Array of regex patterns - if the URL matches one, it's invalid>
+         *                          ]
+         *                          or an array of strings and associative arrays of the format above.
+         *                          What each option does is explained in the documentation, as well as in SQLdbInit.
          * @param array|null $extensions Valid extensions to match with
          * @param array $params
          *              'override' - bool, default true - Whether to override existing match.
@@ -546,7 +553,7 @@ namespace IOFrame{
          *          1 - match exists and cannot be overwritten
          *          2 - Trying to create a new match with insufficient values.
          * */
-        function setMatch(string $match, string $url = null, array $extensions = null, array $params = []){
+        function setMatch(string $match, $url = null, array $extensions = null, array $params = []){
             return $this->setMatches([$match=>[$url,$extensions]],$params)[$match];
         }
 
@@ -590,6 +597,8 @@ namespace IOFrame{
             foreach($inputs as $matchName=>$input){
                 array_push($matchNames,$matchName);
                 $isFullInput[$matchName] = ($input[0]!== null)? true : false;
+                if(gettype($inputs[$matchName][0]) === 'array')
+                    $inputs[$matchName][0] = json_encode($inputs[$matchName][0]);
                 if($safeStr && $inputs[$matchName][0]!=null)
                     $inputs[$matchName][0] = str2SafeStr($inputs[$matchName][0]);
                 $res[$matchName] = -1;
