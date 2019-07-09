@@ -62,7 +62,7 @@
  *          Examples:
  *              action=rg&params={"groupName":"courses","updated":1523379254}&req=test
  *_________________________________________________
- *        c (create)
+ *        c (create) [CSRF protected]
  *              params:
  *              a JSON array of the form:
  *              {
@@ -82,7 +82,7 @@
  *          Examples:
  *              action=c&params={"obj":"test01_@%23$_(){}[]","minViewRank":12,"minModifyRank":2,"group":"g1"}&req=test
  *_________________________________________________
- *         u (update)
+ *         u (update) [CSRF protected]
  *              params:
  *              a JSON array of the form:
  *              {
@@ -107,7 +107,7 @@
  *          Examples:
  *              action=u&params={"id":9,"content":"Test content!**^","group":"g2","newVRank":-1,"newMRank":2,"mainOwner":1,"addOwners":{"2":2,"3":3},"remOwners":{"4":4,"3":3}}&req=test
  *_________________________________________________
- *         d (delete),
+ *         d (delete) [CSRF protected]
  *              params:
  *              a JSON array of the form:
  *              {
@@ -126,7 +126,7 @@
  *              action=d&params={"id":16}&req=test
  *              action=d&params={"id":16,"time":1523379256,"after":0}&req=test
  *_________________________________________________
- *          a (assign)
+ *          a (assign) [CSRF protected]
  *              params:
  *              a JSON array of the form:
  *               {
@@ -143,7 +143,7 @@
  *          Examples:
  *              action=a&params={"id":16,"page":"testPage.php"}&req=test
  *_________________________________________________
- *          ra (remove assignment)
+ *          ra (remove assignment) [CSRF protected]
  *              params:
  *              a JSON array of the form:
  *               {
@@ -185,6 +185,7 @@ require __DIR__ . '/../handlers/objectHandler.php';
 
 //Fix any values that are strings due to softly typed language bullshit
 require 'defaultInputChecks.php';
+require 'CSRF.php';
 
 //Session Info
 $sesInfo = isset($_SESSION['details'])? json_decode($_SESSION['details'],true) : null;
@@ -245,30 +246,40 @@ switch($action){
         echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS);
         break;
     case "c":
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'objectAPI_fragments/c_checks.php';
         require 'objectAPI_fragments/c_execution.php';
         echo ($result === 0)?
             '0' : $result;
         break;
     case "u":
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'objectAPI_fragments/u_checks.php';
         require 'objectAPI_fragments/u_execution.php';
         echo ($result === 0)?
             '0' : $result;
         break;
     case "d":
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'objectAPI_fragments/d_checks.php';
         require 'objectAPI_fragments/d_execution.php';
         echo ($result === 0)?
             '0' : $result;
         break;
     case "a":
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'objectAPI_fragments/a_checks.php';
         require 'objectAPI_fragments/a_execution.php';
         echo ($result === 0)?
             '0' : $result;
         break;
     case "ga":
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'objectAPI_fragments/ga_checks.php';
         require 'objectAPI_fragments/ga_execution.php';
         echo json_encode($result);

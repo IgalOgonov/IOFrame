@@ -47,12 +47,16 @@ if(is_dir($settings->getSetting('absPathToRoot').'front/ioframe/js/plugins')){
     //Path to the current page from root
     document.loggedIn = <?php echo $auth->isLoggedIn()? "true" : "false";  ?>;
     //Difference between local time and server time - in seconds!
-    document.serverTimeDelta = Math.floor(Date.now()/1000 - <?php echo time();  ?>);
+    document.serverTimeDelta = Math.floor( Math.floor(Date.now()/1000 - <?php echo time();?>) / 10) * 10;
+    //CSRF Token
+    document.CSRF_token = '<?php echo $_SESSION['CSRF_token'];?>';
 
     document.addEventListener('DOMContentLoaded', function(e) {
         //console.log('Doc loaded',Date.now());
         //Initiate the page
-        initPage(document.pathToRoot, document.currentPage );
+        initPage(document.pathToRoot, {
+
+        });
     }, true);
 
 </script>

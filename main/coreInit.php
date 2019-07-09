@@ -4,13 +4,13 @@ define('coreInit',true);
 
 session_start();
 
-
 //First, include all user includes
 if(!defined('helperFunctions'))
     require __DIR__ . '/../util/helperFunctions.php';
 IOFrame\include_all_php(__DIR__.'/include/', true);
 use Monolog\Logger;
 use Monolog\Handler\IOFrameHandler;
+
 
 //This gives the user a way to run his own script through his include, independent of this framework.
 if(!isset($skipCoreInit) || $skipCoreInit==false){
@@ -96,6 +96,9 @@ if(!isset($skipCoreInit) || $skipCoreInit==false){
     $defaultSettingsParams['authHandler'] = $auth;
     //-------------------Perform default checks-------------------
     $sessionHandler->checkSessionNotExpired();
+    if(!isset($_SESSION['CSRF_token'])){
+        $sessionHandler->reset_CSRF_token();
+    }
     //-------------------Include Installed Plugins----------------
     //Get the list of active plugins
     $orderedPlugins = [];                                               //To be used later, after initiation

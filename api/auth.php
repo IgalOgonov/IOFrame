@@ -21,7 +21,7 @@
  *
  *      Examples: action=isLoggedIn
  *_________________________________________________
- * modifyUserRank
+ * modifyUserRank [CSRF protected]
  *      Modifies user rank.
  *      params:
  *          'identifier' - Either a user ID (only digits) or a mail. Identifies the target who's rank to change.
@@ -77,7 +77,7 @@
  * Examples:
  *          action=getActions&params={"limit":10,"offset":10}
  *_________________________________________________
- * setActions
+ * setActions [CSRF protected]
  *       Create new actions, or modifies existing ones.
  *      params:
  *              'actions' => An array of the form <Action Name> => <Description>|null
@@ -86,7 +86,7 @@
  * Examples:
  *      action=setActions&params={"actions":{"TEST_ACTION":"Test Action.","BAN_USERS_AUTH":null}}
  *_________________________________________________
- * deleteActions
+ * deleteActions [CSRF protected]
  *       Deletes actions
  *      params:
  *              'actions' => An array of action names
@@ -115,7 +115,7 @@
  * Examples:
  *      action=getGroupActions&params={"id":[["=","1"]],"action":["=","BAN_USERS_AUTH"],"separator":"AND"}
  *_________________________________________________
- * setGroups
+ * setGroups [CSRF protected]
  *       Create new groups, or modifies existing ones (description).
  *      params:
  *              'groups' => A JSON object of the form <Group Name> => <Description>|null
@@ -124,7 +124,7 @@
  * Examples:
  *      action=setGroups&params={"groups":{"Test Group":"Test Description.","Another Test Group":"Test Description II - The Description Strikes Back."}}
  *_________________________________________________
- * deleteGroups
+ * deleteGroups [CSRF protected]
  *       Deletes groups
  *      params:
  *              'groups' => An array of group names
@@ -133,7 +133,7 @@
  * Examples:
  *      action=deleteGroups&params={"groups":["Fake Test Group","Faker Test Group"]}
  *_________________________________________________
- * modifyUserActions
+ * modifyUserActions [CSRF protected]
  *        Adds/Removes actions to/from a user.
  *        params:
  *              'id' => int, User ID
@@ -142,7 +142,7 @@
  * Examples:
  *      action=modifyUserActions&params={"id":1,"actions":{"TEST_1":true,"TEST_2":false,"ASSIGN_OBJECT_AUTH":false}}
  *_________________________________________________
- * modifyUserGroups
+ * modifyUserGroups [CSRF protected]
  *        Adds/Removes groups to/from a user.
  *        params:
  *              'id' => int, User ID
@@ -151,7 +151,7 @@
  * Examples:
  *      action=modifyUserGroups&params={"id":2,"groups":{"TEST_G1":true,"TEST_G2":false,"G6":false}}
  *_________________________________________________
- * modifyGroupActions
+ * modifyGroupActions [CSRF protected]
  *        Adds/Removes actions to/from a group.
  *        params:
  *              'groupName' => string, Name of the group
@@ -165,6 +165,7 @@ if(!defined('coreInit'))
     require __DIR__ . '/../main/coreInit.php';
 
 require 'defaultInputChecks.php';
+require 'CSRF.php';
 
 if($test)
     echo 'Testing mode!'.EOL;
@@ -192,6 +193,8 @@ switch($action){
         break;
 
     case 'modifyUserRank':
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'authAPI_fragments/modifyUserRank_checks.php';
         require 'authAPI_fragments/modifyUserRank_execution.php';
         echo ($result)? '1' : '0';
@@ -216,12 +219,16 @@ switch($action){
         break;
 
     case 'setActions':
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'authAPI_fragments/set_checks.php';
         require 'authAPI_fragments/setActions_execution.php';
         echo ($result)? '1' : '0';
         break;
 
     case 'deleteActions':
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'authAPI_fragments/delete_checks.php';
         require 'authAPI_fragments/deleteActions_execution.php';
         echo ($result)? '1' : '0';
@@ -243,6 +250,8 @@ switch($action){
 
 
     case 'setGroups':
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'authAPI_fragments/set_checks.php';
         require 'authAPI_fragments/setGroups_execution.php';
         echo ($result)? '1' : '0';
@@ -250,6 +259,8 @@ switch($action){
 
 
     case 'deleteGroups':
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'authAPI_fragments/delete_checks.php';
         require 'authAPI_fragments/deleteGroups_execution.php';
         echo ($result)? '1' : '0';
@@ -257,6 +268,8 @@ switch($action){
 
 
     case 'modifyUserActions':
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'authAPI_fragments/modify_checks.php';
         require 'authAPI_fragments/modifyUserActions_execution.php';
         echo ($result)? '1' : '0';
@@ -264,12 +277,16 @@ switch($action){
 
 
     case 'modifyUserGroups':
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'authAPI_fragments/modify_checks.php';
         require 'authAPI_fragments/modifyUserGroups_execution.php';
         echo ($result)? '1' : '0';
         break;
 
     case 'modifyGroupActions':
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'authAPI_fragments/modify_checks.php';
         require 'authAPI_fragments/modifyGroupActions_execution.php';
         echo ($result)? '1' : '0';

@@ -448,94 +448,97 @@
                         sendData += encodeURIComponent(key) + '=' +
                             encodeURIComponent(requestData[key]) + '&';
                     };
-                    if(this.testMode === true)
-                        console.log('Data to send:',sendData, 'Url: ', url);
-                    //Request itself
-                    var xhr = new XMLHttpRequest();
-                    xhr.open('POST', url+'?'+sendData);
-                    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
-                    xhr.send(null);
-                    xhr.onreadystatechange = function () {
-                        var DONE = 4; // readyState 4 means the request is done.
-                        var OK = 200; // status 200 is a successful return.
-                        if (xhr.readyState === DONE) {
-                            if (xhr.status === OK){
-                                let response = xhr.responseText;
-                                //How we handle it in test mode
-                                if(pluginList.testMode === true){
-                                    pluginList.serverResponse = response;
-                                    pluginList.showResponse = true;
-                                }
-                                //How we handle it otherwise:
-                                else switch(response){
-                                    case "-2":    //Validation failure
-                                        alertLog('Some of your input is illegal or missing. Try installing/uninstalling again in test mode ' +
-                                            'to find the problem, or contact the plugin author.','danger');
-                                        break;
-                                    case "-1":    //Authentication failure
-                                        alertLog('Authentication failure. You are not authorized to install/uninstall this plugin','danger');
-                                        break;
-                                    case "0":
-                                        if(pluginList.currentAction == 'install' || pluginList.currentAction == 'perform full installation on'){
-                                            alertLog('Plugin installation successful!','success');
-                                        }
-                                        else{
-                                            alertLog('Plugin uninstall successful!','success');
-                                        }
-                                        pluginList.updatePlugin(pluginList.currentPlugin);
-                                        break;
-                                    case "1":
-                                        if(pluginList.currentAction == 'install' || pluginList.currentAction == 'perform full installation on'){
-                                            alertLog('Plugin has already been installed, or is installed incorrectly.','warning');
-                                        }
-                                        else{
-                                            alertLog('Plugin is either uninstalled or does not exist!','warning');
-                                        }
-                                        break;
-                                    case "2":
-                                        if(pluginList.currentAction == 'install' || pluginList.currentAction == 'perform full installation on'){
-                                            alertLog('Plugin install file is missing, or plugin format is illegal!','warning');
-                                        }
-                                        else{
-                                            alertLog('Plugin uninstall file is missing!','warning');
-                                        }
-                                        break;
-                                    case "3":
-                                        if(pluginList.currentAction == 'install' || pluginList.currentAction == 'perform full installation on'){
-                                            alertLog('Dependencies missing! Could not install plugin!','warning');
-                                        }
-                                        else{
-                                            alertLog('Dependencies still exist! Could not uninstall plugin!','warning');
-                                        }
-                                        break;
-                                    case "4":
-                                        alertLog('Options mismatch - provided options do not match plugin options. Try running in test mode.','warning');
-                                        break;
-                                    case "5":
-                                        if(pluginList.currentAction == 'install' || pluginList.currentAction == 'perform full installation on'){
-                                            alertLog('Plugin definitions could not be added - possibly because similar ones already exist!','warning');
-                                        }
-                                        else{
-                                            alertLog('Unable to remove plugin definitions!','warning');
-                                        }
-                                        break;
-                                    case "6":
-                                        alertLog('An exception occurred during the (un)installation! Please contact plugin author.','warning');
-                                        break;
-                                    default :
-                                        alertLog('Unknown error occurred, showing at the bottom:.','danger');
-                                        pluginList.testMode = true;
+                    updateCSRFToken().then(function(){
+                        sendData += 'CSRF_token='+document.CSRF_token;
+                        if(pluginList.testMode === true)
+                            console.log('Data to send:',sendData, 'Url: ', url);
+                        //Request itself
+                        var xhr = new XMLHttpRequest();
+                        xhr.open('POST', url+'?'+sendData);
+                        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
+                        xhr.send(null);
+                        xhr.onreadystatechange = function () {
+                            var DONE = 4; // readyState 4 means the request is done.
+                            var OK = 200; // status 200 is a successful return.
+                            if (xhr.readyState === DONE) {
+                                if (xhr.status === OK){
+                                    let response = xhr.responseText;
+                                    //How we handle it in test mode
+                                    if(pluginList.testMode === true){
                                         pluginList.serverResponse = response;
                                         pluginList.showResponse = true;
+                                    }
+                                    //How we handle it otherwise:
+                                    else switch(response){
+                                        case "-2":    //Validation failure
+                                            alertLog('Some of your input is illegal or missing. Try installing/uninstalling again in test mode ' +
+                                                'to find the problem, or contact the plugin author.','danger');
+                                            break;
+                                        case "-1":    //Authentication failure
+                                            alertLog('Authentication failure. You are not authorized to install/uninstall this plugin','danger');
+                                            break;
+                                        case "0":
+                                            if(pluginList.currentAction == 'install' || pluginList.currentAction == 'perform full installation on'){
+                                                alertLog('Plugin installation successful!','success');
+                                            }
+                                            else{
+                                                alertLog('Plugin uninstall successful!','success');
+                                            }
+                                            pluginList.updatePlugin(pluginList.currentPlugin);
+                                            break;
+                                        case "1":
+                                            if(pluginList.currentAction == 'install' || pluginList.currentAction == 'perform full installation on'){
+                                                alertLog('Plugin has already been installed, or is installed incorrectly.','warning');
+                                            }
+                                            else{
+                                                alertLog('Plugin is either uninstalled or does not exist!','warning');
+                                            }
+                                            break;
+                                        case "2":
+                                            if(pluginList.currentAction == 'install' || pluginList.currentAction == 'perform full installation on'){
+                                                alertLog('Plugin install file is missing, or plugin format is illegal!','warning');
+                                            }
+                                            else{
+                                                alertLog('Plugin uninstall file is missing!','warning');
+                                            }
+                                            break;
+                                        case "3":
+                                            if(pluginList.currentAction == 'install' || pluginList.currentAction == 'perform full installation on'){
+                                                alertLog('Dependencies missing! Could not install plugin!','warning');
+                                            }
+                                            else{
+                                                alertLog('Dependencies still exist! Could not uninstall plugin!','warning');
+                                            }
+                                            break;
+                                        case "4":
+                                            alertLog('Options mismatch - provided options do not match plugin options. Try running in test mode.','warning');
+                                            break;
+                                        case "5":
+                                            if(pluginList.currentAction == 'install' || pluginList.currentAction == 'perform full installation on'){
+                                                alertLog('Plugin definitions could not be added - possibly because similar ones already exist!','warning');
+                                            }
+                                            else{
+                                                alertLog('Unable to remove plugin definitions!','warning');
+                                            }
+                                            break;
+                                        case "6":
+                                            alertLog('An exception occurred during the (un)installation! Please contact plugin author.','warning');
+                                            break;
+                                        default :
+                                            alertLog('Unknown error occurred, showing at the bottom:.','danger');
+                                            pluginList.testMode = true;
+                                            pluginList.serverResponse = response;
+                                            pluginList.showResponse = true;
+                                    }
+                                }
+                            } else {
+                                if(xhr.status < 200 || xhr.status > 299 ){
+                                    console.log('Failed to reach plugins, status: ' + xhr.status); // An error occurred during the request.
+                                    alertLog('Could not get plugins!','danger');
                                 }
                             }
-                        } else {
-                            if(xhr.status < 200 || xhr.status > 299 ){
-                                console.log('Failed to reach plugins, status: ' + xhr.status); // An error occurred during the request.
-                                alertLog('Could not get plugins!','danger');
-                            }
-                        }
-                    };
+                        };
+                    });
                 }
                 else{
                     let redirect;

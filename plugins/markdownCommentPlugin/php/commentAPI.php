@@ -32,6 +32,7 @@ if(!defined('objectHandler'))
 
 //Fix any values that are strings due to softly typed language bullshit
 require 'defaultInputChecks.php';
+require 'CSRF.php';
 
 //Session Info
 $sesInfo = json_decode($_SESSION['details'],true);
@@ -87,6 +88,8 @@ switch($action){
         echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS);
         break;
     case "rg":
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'commentAPI_fragments/extra_params_read.php';
         require 'objectAPI_fragments/rg_checks.php';
         require 'objectAPI_fragments/rg_execution.php';
@@ -94,6 +97,8 @@ switch($action){
         echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS);
         break;
     case "c":
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'commentAPI_fragments/write_check.php';
         require 'commentAPI_fragments/extra_params_create.php';
         require 'objectAPI_fragments/c_checks.php';
@@ -102,6 +107,8 @@ switch($action){
             '0' : $result;
         break;
     case "u":
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'commentAPI_fragments/write_check.php';
         require 'commentAPI_fragments/extra_params_update.php';
         require 'objectAPI_fragments/u_checks.php';

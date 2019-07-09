@@ -355,32 +355,37 @@
                     sendData += encodeURIComponent(key) + '=' +
                         encodeURIComponent(content) + '&';
                 };
-                //sendData = sendData.substr(0,sendData.length-1); No need to waste resources
-                console.log(sendData);
+                updateCSRFToken().then(
+                    function(){
+                        sendData += 'CSRF_token='+document.CSRF_token;
+                        //sendData = sendData.substr(0,sendData.length-1); No need to waste resources
+                        console.log(sendData);
 
-                let url=document.pathToRoot+"api\/objects";
-                var xhr = new XMLHttpRequest();
-                xhr.open('POST', url+'?'+sendData);
-                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
-                xhr.send(null);
-                xhr.onreadystatechange = function () {
-                    var DONE = 4; // readyState 4 means the request is done.
-                    var OK = 200; // status 200 is a successful return.
-                    if (xhr.readyState === DONE) {
-                        if (xhr.status === OK){
-                            let response = xhr.responseText;
-                            console.log(response);
-                            alertLog(response,'info');
-                            objectManager.request.action =null;
-                            objectManager.request.params ={};
-                            objectManager.request.req ='test';
-                        }
-                    } else {
-                        if(xhr.status < 200 || xhr.status > 299 ){
+                        let url=document.pathToRoot+"api\/objects";
+                        var xhr = new XMLHttpRequest();
+                        xhr.open('POST', url+'?'+sendData);
+                        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
+                        xhr.send(null);
+                        xhr.onreadystatechange = function () {
+                            var DONE = 4; // readyState 4 means the request is done.
+                            var OK = 200; // status 200 is a successful return.
+                            if (xhr.readyState === DONE) {
+                                if (xhr.status === OK){
+                                    let response = xhr.responseText;
+                                    console.log(response);
+                                    alertLog(response,'info');
+                                    objectManager.request.action =null;
+                                    objectManager.request.params ={};
+                                    objectManager.request.req ='test';
+                                }
+                            } else {
+                                if(xhr.status < 200 || xhr.status > 299 ){
 
-                        }
+                                }
+                            }
+                        };
                     }
-                };
+                )
             }
         },
         created: function(){

@@ -139,6 +139,43 @@ function checkLoggedIn(pathToRoot,trustLocalStorage=false){
     });
 }
 
+//Updated CSRF Token
+function updateCSRFToken(){
+
+    return new Promise(function(resolve, reject) {
+        let action;
+        action = 'CSRF_token';
+        // url
+        let url=document.pathToRoot+"api\/session";
+        //Request itself
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url+'?'+action);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
+        //console.log('To url',url,' , send: ',action);
+        //-return;
+        xhr.send(null);
+        xhr.onreadystatechange = function () {
+            var DONE = 4; // readyState 4 means the request is done.
+            var OK = 200; // status 200 is a successful return.
+            if (xhr.readyState === DONE) {
+                if (xhr.status === OK){
+                    let response = xhr.responseText;
+                    if(response!="[]"){
+                        var sesInfo=JSON.parse(response);
+                        document['CSRF_token'] = sesInfo['CSRF_token'];
+                    }
+                    resolve(true);
+                }
+            } else {
+                if(xhr.status < 200 || xhr.status > 299 ){
+                    console.log('Error: ' + xhr.status); // An error occurred during the request.
+                    resolve(false);
+                }
+            }
+        };
+    });
+}
+
 //-------------------Encrypts text given the text, key and IV
 function encryptText(data,key,iv){
 

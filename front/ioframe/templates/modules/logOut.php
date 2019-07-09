@@ -29,7 +29,11 @@
                             localStorage.removeItem("sesIV");
                             localStorage.removeItem("myMail");
                             //Set 2nd parameter to false or remove it if you don't want a page reload.
-                            updateSesInfo(document.pathToRoot,true);
+                            updateSesInfo(document.pathToRoot,{
+                                'sessionInfoUpdated': function(){
+                                    location.reload();
+                                }
+                            });
                         }
                     } else {
                         if(xhr.status < 200 || xhr.status > 299 ){

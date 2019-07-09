@@ -41,29 +41,35 @@
                 //Api url
                 let url=document.pathToRoot+"api/"+this.target;
                 //Request itself
-                fetch(url, {
-                    method: 'post',
-                    headers: {
-                        "Content-type": "application/x-www-form-urlencoded; charset=UTF-8"
-                    },
-                    body: data,
-                    mode: 'cors'
-                })
-                    .then(function (json) {
-                        return json.text();
-                    })
-                    .then(function (data) {
-                        console.log('Request succeeded with JSON response!');
-                        apiTest.resp = data;
-                        alertLog(apiTest.resp);
-                        if(IsJsonString(data))
-                            data = JSON.parse(data);
-                        console.log(data);
-                    })
-                    .catch(function (error) {
-                        console.log('Request failed', error);
-                        apiTest.resp = error;
-                    });
+                updateCSRFToken().then(
+                    function(){
+                        data += '&CSRF_token='+document.CSRF_token;
+                        fetch(url, {
+                            method: 'post',
+                            headers: {
+                                "Content-type": "application/x-www-form-urlencoded; charset=UTF-8"
+                            },
+                            body: data,
+                            mode: 'cors'
+                        })
+                        .then(function (json) {
+                            return json.text();
+                        })
+                        .then(function (data) {
+                            console.log('Request succeeded with JSON response!');
+                            apiTest.resp = data;
+                            alertLog(apiTest.resp);
+                            if(IsJsonString(data))
+                                data = JSON.parse(data);
+                            console.log(data);
+                        })
+                        .catch(function (error) {
+                            console.log('Request failed', error);
+                            apiTest.resp = error;
+                        });
+                    }
+                )
+
             }
         }
     });

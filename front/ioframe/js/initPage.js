@@ -1,5 +1,23 @@
-//-------------------Function to be called on top of each page
-function initPage(pathToRoot){
+/*-------------------Function to be called on top of each page
+
+* pathToRoot is the same as "document.PathToRoot" in the default headers.
+*
+* Callbacks is an object of functions, where each key represents where the callback is invoked:
+* 'notLoggedIn' - Called if you are not logged in.
+* 'noRelog' - Called if you are not logged in AND don't have credentials to relog.
+* 'loggedIn' - Called if you are logged in
+* 'beforeRelog' - Called if you are not logged in, but have credentials to relog, before relog.
+* 'afterRelogSuccess' - Called after you successfully tried to relog.
+* 'afterRelogFailure' - Called after you tried to relog and failed.
+* 'sessionInfoUpdated' - The default function to call aftersession info is updated - usually just page reload.
+*
+* */
+function initPage(pathToRoot, callbacks = {}){
+
+    if(callbacks['sessionInfoUpdated'] === undefined)
+        callbacks['sessionInfoUpdated'] = function(){
+            location.reload();
+        };
 
     //Get current time in seconds
     var timenow = new Date().getTime();
@@ -9,8 +27,6 @@ function initPage(pathToRoot){
         alertLog('Local storage not enabled! Certain functions will be available to you.', 'warning');
     }
     else{
-        //Indicate localStorage is avalible
-        var hasStorage = true;
 
         //--Crash Handler--//
         /*Add in a listener. It marks 'good_exit' true if the page was closed 'properly' - aka
@@ -28,18 +44,23 @@ function initPage(pathToRoot){
             checkLoggedIn(document.pathToRoot, false).then(function(res){
                     //If we are not logged in, log in. Else, carry on
                     if(!res){
+                        if(callbacks['notLoggedIn']!==undefined)
+                            callbacks['notLoggedIn']();
                         localStorage.setItem("sesInfo","[]");
-                        if(localStorage.getItem('myMail')!==undefined)
-                            autoLogin(pathToRoot,1).then(function(res){
+                        if(localStorage.getItem('myMail')!==undefined){
+                            autoLogin(pathToRoot,1,callbacks).then(function(res){
                                 sessionStorage.setItem('autologDebug'+Date.now(),'Crash recovery attempt!');
-                                updateSesInfo(pathToRoot,true);
+                                updateSesInfo(pathToRoot,callbacks);
                             });
+                        }
                         else{
                             sessionStorage.setItem('autologDebug'+Date.now(),'Crash recovery attempt!');
-                            updateSesInfo(pathToRoot,true);
+                            updateSesInfo(pathToRoot,callbacks);
                         }
                     }
                     else{
+                        if(callbacks['loggedIn']!==undefined)
+                            callbacks['loggedIn']();
                         console.log('All clear, still logged in.');
                     }
                 }, function(error) {
@@ -65,6 +86,8 @@ function initPage(pathToRoot){
         ){
             //If we did time out, let the client know
             localStorage.setItem("sesInfo","[]");
+            if(callbacks['notLoggedIn']!==undefined)
+                callbacks['notLoggedIn']();
         }
 
 
@@ -82,59 +105,72 @@ function initPage(pathToRoot){
             if(localStorage.getItem("sesInfo")=="[]" ){
                 //Our "only hope" is that our auto relog info is valid
                 if(localStorage.getItem("sesID")!==null && localStorage.getItem("sesIV")!==null ){
-                    autoLogin(pathToRoot).then(function(res){
-                        updateSesInfo(pathToRoot,true);
+                    autoLogin(pathToRoot,0,callbacks).then(function(res){
+                        updateSesInfo(pathToRoot,callbacks);
                     });
+                }
+                else{
+                    if(callbacks['noRelog']!==undefined)
+                        callbacks['noRelog']();
                 }
             }
             else{
-
+                if(callbacks['loggedIn']!==undefined)
+                    callbacks['loggedIn']();
             }
         }
         else{
-            updateSesInfo(pathToRoot);
+            updateSesInfo(pathToRoot,{});
             initPage(pathToRoot);
         }
     }
 }
 
 //-------------------Updates client with session info from the server
-function updateSesInfo(pathToRoot, reloadWhenDone){
-    let action;
-    action = 'logged_in&Username&Auth_Rank&Actions&maxInacTime&Email&Active';
-    // url
-    let url=pathToRoot+"api\/session";
-    //Request itself
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', url+'?'+action);
-    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
-    //console.log('To url',url,' , send: ',action);
-    //-return;
-    xhr.send(null);
-    xhr.onreadystatechange = function () {
-        var DONE = 4; // readyState 4 means the request is done.
-        var OK = 200; // status 200 is a successful return.
-        if (xhr.readyState === DONE) {
-            if (xhr.status === OK){
-                let response = xhr.responseText;
-                //Notify the console we got a response!
-                //console.log('Got response!',response);
-                //Update local storage
-                localStorage.setItem('sesInfo',response);
-                //Now, we need to do some work with the response, unless it's []
-                if(response!="[]"){
-                    var sesInfo=JSON.parse(response);
-                    localStorage.setItem('maxInacTime',sesInfo['maxInacTime']);
-                    localStorage.setItem('myMail',sesInfo['Email']);
-                }
+function updateSesInfo(pathToRoot, callbacks = {}){
 
-                if(reloadWhenDone === true) location.reload();
+    return new Promise(function(resolve, reject) {
+        let action;
+        action = 'logged_in&Username&Auth_Rank&Actions&maxInacTime&Email&Active&CSRF_token';
+        // url
+        let url=pathToRoot+"api\/session";
+        //Request itself
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url+'?'+action);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
+        //console.log('To url',url,' , send: ',action);
+        //-return;
+        xhr.send(null);
+        xhr.onreadystatechange = function () {
+            var DONE = 4; // readyState 4 means the request is done.
+            var OK = 200; // status 200 is a successful return.
+            if (xhr.readyState === DONE) {
+                if (xhr.status === OK){
+                    let response = xhr.responseText;
+                    //Notify the console we got a response!
+                    //console.log('Got response!',response);
+                    //Update local storage
+                    localStorage.setItem('sesInfo',response);
+                    //Now, we need to do some work with the response, unless it's []
+                    if(response!="[]"){
+                        var sesInfo=JSON.parse(response);
+                        localStorage.setItem('maxInacTime',sesInfo['maxInacTime']);
+                        document['CSRF_token'] = sesInfo['CSRF_token'];
+                        if(sesInfo['Email'] != undefined)
+                            localStorage.setItem('myMail',sesInfo['Email']);
+                    }
+                    resolve(true);
+                    if(callbacks['sessionInfoUpdated'] !== undefined)
+                        callbacks['sessionInfoUpdated']();
+                }
+            } else {
+                if(xhr.status < 200 || xhr.status > 299 ){
+                    console.log('Error: ' + xhr.status); // An error occurred during the request.
+                    resolve(false);
+                }
             }
-        } else {
-            if(xhr.status < 200 || xhr.status > 299 )
-                console.log('Error: ' + xhr.status); // An error occurred during the request.
-        }
-    };
+        };
+    });
 }
 
 //-------------------Updates client with time of last action taken, in seconds since 01.01.1970
@@ -148,11 +184,13 @@ function updateLastActionTime(){
 * -------------------Returns true and updates relevant fields on success.
 * -------------------Deletes relevant fields and returns false on faliure.
 * */
-function autoLogin(pathToRoot,timeout,test = false){
+function autoLogin(pathToRoot, timeout = 0, callbacks = {}, test = false){
 
     return new Promise(function(resolve, reject) {
-        if(timeout === undefined)
-            timeout = 0;
+
+        if(callbacks['beforeRelog']!==undefined)
+            callbacks['beforeRelog']();
+
         var req;
         if(test)
             req = 'test';
@@ -174,6 +212,7 @@ function autoLogin(pathToRoot,timeout,test = false){
             CryptoJS.enc.Hex.parse(keyToUse),
             {mode:CryptoJS.mode.ECB, padding:CryptoJS.pad.ZeroPadding});
         dataToSend +='&sesKey='+tokenToSend.ciphertext.toString(CryptoJS.enc.Hex);
+        dataToSend += '&CSRF_token='+document.CSRF_token;
 
         const url = pathToRoot+"api/users";
         const header = 'application/x-www-form-urlencoded;charset=utf-8;';
@@ -221,6 +260,8 @@ function autoLogin(pathToRoot,timeout,test = false){
                                 (response.match(/(\W)/g)==null) ){
                                 //We got a new sesID
                                 if(validateServer(response,keyToUse)){
+                                    if(callbacks['afterRelogSuccess']!==undefined)
+                                        callbacks['afterRelogSuccess']();
                                     resolve(true);
                                     return;
                                 }
@@ -234,6 +275,8 @@ function autoLogin(pathToRoot,timeout,test = false){
                                 localStorage.removeItem("sesIV");
                             }
                     }
+                    if(callbacks['afterRelogFailure']!==undefined)
+                        callbacks['afterRelogFailure']();
                     resolve(false);
                     return;
                 }
@@ -244,7 +287,7 @@ function autoLogin(pathToRoot,timeout,test = false){
                         sessionStorage.setItem('autologDebug'+d.getTime(),'Error, logUser not reachable!' +
                             ' Timeout is '+timeout+', trying again..');
                         setTimeout(function(){
-                            autoLogin(pathToRoot,timeout-1).then(function(res){
+                            autoLogin(pathToRoot,timeout-1,callbacks,test).then(function(res){
                                 resolve(res);
                                 return;
                             });
@@ -253,6 +296,8 @@ function autoLogin(pathToRoot,timeout,test = false){
                     //If we have no timeout, report so and resolve with false.
                     else{
                         sessionStorage.setItem('autologDebug'+d.getTime(),'Error, logUser not reachable!');
+                        if(callbacks['afterRelogFailure']!==undefined)
+                            callbacks['afterRelogFailure']();
                         resolve(false);
                         return;
                     }

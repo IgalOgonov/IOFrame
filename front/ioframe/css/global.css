@@ -8,20 +8,14 @@
     box-sizing: border-box;
 }
 
-*:focus {
-    outline:none;
-}
-
 body {
     margin: 0;
-    font-size: 1em;
+    font-size: 1rem;
     font-weight: 400;
     line-height: 1.5;
     color: rgb(0,0,0);
     text-align: left;
     background-color: #fff;
-    overflow-x: hidden;
-    position: initial;
 }
 
 p {
@@ -29,19 +23,9 @@ p {
     margin-bottom: 1rem;
 }
 
-a {
-    text-decoration: none;
-    color: inherit;
-}
-
 form{
     margin: 0vw 0vw 0vw 5px;
     background-color: aliceblue;
-}
-
-form input, form button {
-    padding: 0;
-    margin:0;
 }
 
 form > input:not([type=submit]) {

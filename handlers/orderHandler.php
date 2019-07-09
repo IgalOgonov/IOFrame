@@ -1,11 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: IO
- * Date: 5/30/2019
- * Time: 9:05 PM
- */
-
 namespace IOFrame{
     define('orderHandler',true);
 
@@ -13,6 +6,13 @@ namespace IOFrame{
         require 'abstractDBWithCache.php';
     if(!defined('fileHandler'))
         require 'fileHandler.php';
+
+    /*  This class handles orders - originally defined in pluginHandler.
+     *
+     * @author Igal Ogonov <igal1333@hotmail.com>
+     * @license LGPL
+     * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
+     * */
 
     class orderHandler extends abstractDBWithCache
     {

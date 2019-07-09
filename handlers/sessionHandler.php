@@ -62,6 +62,15 @@ namespace IOFrame{
 
             return $res;
         }
+
+        /*Creates a new CSRF token*/
+        function reset_CSRF_token(){
+            $hex_secure = false;
+            $hex = '';
+            while(!$hex_secure)
+                $hex=bin2hex(openssl_random_pseudo_bytes(16,$hex_secure));
+            $_SESSION['CSRF_token'] = $hex;
+        }
     }
 
 }

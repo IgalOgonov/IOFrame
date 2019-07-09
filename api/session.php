@@ -9,8 +9,11 @@ $resArr = array();
 foreach($_REQUEST as $key => $value){
 
     if($key=='maxInacTime'){
-            $resArr[$key]=$siteSettings->getSetting('maxInacTime');
-        }
+        $resArr[$key]=$siteSettings->getSetting('maxInacTime');
+    }
+    else if($key=='CSRF_token'){
+        $resArr[$key]=$_SESSION['CSRF_token'];
+    }
 
     if(isset($_SESSION['logged_in'])){
         $sessionDetails = json_decode($_SESSION['details'],true);
@@ -26,9 +29,6 @@ foreach($_REQUEST as $key => $value){
             $resArr[$key]=json_decode($_SESSION['details'],true)['Active'];
         else if($key=='logged_in')
             $resArr[$key]=$_SESSION[$key];
-        else if($key=='maxInacTime'){
-            $resArr[$key]=$siteSettings->getSetting('maxInacTime');
-        }
 
     }
     else if($key=='logged_in')

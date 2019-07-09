@@ -23,7 +23,7 @@
  *
  *      Examples: target=siteSettings&action=getSettings
  *_________________________________________________
- * setSetting
+ * setSetting [CSRF protected]
  *      Modifies or creates a setting.
  *      params:
  *          'settingName' - Name of the setting.
@@ -36,7 +36,7 @@
  *          target=siteSettings&action=setSetting&params={"settingName":"maxInacTime","settingValue":7200}
  *          target=siteSettings&action=setSetting&params={"settingName":"meaninglessNumber","settingValue":43,"createNew":1}
  *_________________________________________________
- * unsetSetting
+ * unsetSetting [CSRF protected]
  *      Deletes a setting.
  *      params:
  *          'settingName' - Name of the setting.
@@ -53,6 +53,7 @@ if(!defined('coreInit'))
 
 
 require 'defaultInputChecks.php';
+require 'CSRF.php';
 
 if(!isset($_REQUEST["action"]))
     exit('Action not specified!');
@@ -90,6 +91,8 @@ switch($action){
         break;
 
     case 'setSetting':
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'settingsAPI_fragments/set_checks.php';
         require 'settingsAPI_fragments/setSetting_execution.php';
         echo $result === true ?
@@ -97,6 +100,8 @@ switch($action){
         break;
 
     case 'unsetSetting':
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
         require 'settingsAPI_fragments/unset_checks.php';
         require 'settingsAPI_fragments/unsetSetting_execution.php';
         echo ($result === false)?

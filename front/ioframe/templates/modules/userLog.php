@@ -62,7 +62,7 @@
                 if(errors<1){
                     this.resp = "Logging in...";
                     //Data to be sent
-                    let data = 'action=logUser&m='+this.m+'&p='+this.p+'&req='+this.req+'&log=in';
+                    let data = 'action=logUser&m='+this.m+'&p='+this.p+'&req='+this.req+'&log=in&'+'CSRF_token='+document.CSRF_token;
                     if(this.rMe)
                         data +='&userID='+localStorage.getItem('deviceID');
                     //Api url
@@ -106,7 +106,11 @@
                                             localStorage.removeItem("sesIV");
                                         }
                                         //Remember to udate session info!
-                                        updateSesInfo(document.pathToRoot,true);
+                                        updateSesInfo(document.pathToRoot,{
+                                            'sessionInfoUpdated': function(){
+                                                location.reload();
+                                            }
+                                        });
                                         break;
                                     case '1':
                                         userLog.resp = 'User login failed - username and password combination is wrong!';
@@ -151,7 +155,11 @@
                                                 respType='success';
                                                 respColor = 'rgb(210, 210, 256)';
                                                 //Remember to udate session info!
-                                                updateSesInfo(document.pathToRoot,true);
+                                                updateSesInfo(document.pathToRoot,{
+                                                    'sessionInfoUpdated': function(){
+                                                        location.reload();
+                                                    }
+                                                });
                                             }
                                         }
                                         //Means this is something else...
@@ -167,6 +175,7 @@
                                 alertLog(userLog.resp,respType);
                                 userLog.mStyle = respColor;
                                 userLog.pStyle = respColor;
+                                updateCSRFToken();
                             }
                         } else {
                             if(xhr.status < 200 || xhr.status > 299 ){

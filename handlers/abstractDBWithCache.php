@@ -47,6 +47,9 @@ namespace IOFrame{
                 $this->defaultSettingsParams['useCache'] = true;
             }
 
+            //If we are caching for a custom duration, this should stated here
+            if(isset($params['cacheTTL']))
+                $this->cacheTTL = $params['cacheTTL'];
 
         }
 

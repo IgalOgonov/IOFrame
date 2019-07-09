@@ -25,10 +25,11 @@
  *
  *  Always returns -1 on input validation failure
  *  Always returns -2 on auth failure.make sure to call ensurePublicImages on each.
+ *  Mostly returns -3 on CSRF token mismatch, unless stated otherwise
  *
  * Available operations include:
  *_________________________________________________
- *      addTrees:
+ *      addTrees [CSRF protected]
  *      - Add trees to the database.
  *        'inputs' should be a JSON encoded string of the (original) form:
  *          {
@@ -44,7 +45,7 @@
  *
  *        Examples: action=addTrees&inputs={"test_euler_tree3":{"content":[{"content":"test","smallestEdge":0,"largestEdge":0}],"override":false}}
  *_________________________________________________
- *      removeTrees:
+ *      removeTrees [CSRF protected]
  *      - Removes trees from the database.
  *        'inputs' should be a JSON encoded string of the (original) form:
  *          {
@@ -59,7 +60,7 @@
  *
  *        Examples: action=removeTrees&inputs={"test_euler_tree1":{"onlyEmpty":true}}
  *_________________________________________________
- *      updateNodes:
+ *      updateNodes [CSRF protected]
  *      - Updates specific nodes
  *        'treeName' - the name of the tree to update
  *        'content' - json encoded array of the form [ [<nodeID*>,<newNodeContent>], ... ]
@@ -82,7 +83,7 @@
  *
  *        Examples: action=getSubtree&treeName=someTree&nodeID=3&returnType=euler&lastUpdated=0
  *_________________________________________________
- *      getTrees:
+ *      getTrees [CSRF protected]
  *      - Returns a tree (or multiple trees)
  *        'inputs' should be a JSON of the form {'treeName':{"returnType":<return Type>,'lastUpdated':<as in getSubTree>}, ...} where the return type is
  *                 is the same as in getSubtree
@@ -92,7 +93,7 @@
  *
  *        Examples: action=getTrees&inputs={"treeName":{"returnType":"assoc","lastUpdated":0},"treeName2":{"returnType":"assoc","lastUpdated":3525235}}
  *_________________________________________________
- *      linkNodes:
+ *      linkNodes [CSRF protected]
  *      - Links one tree to be a subtree of an existing node in an existing tree.
  *        'treeName' should be the name of the tree to link to
  *        'nodeID' should be the ID of the node to add the new subtree to
@@ -104,7 +105,7 @@
  *
  *        Examples: action=linkNodes&treeName=someTree&nodeID=4&nodeChildNumber=1&newNodeArray=[{"content":"test","smallestEdge":0,"largestEdge":0}]
  *_________________________________________________
- *      cutNodes:
+ *      cutNodes [CSRF protected]
  *      - Cuts nodes from an existing tree.
  *        'treeName' the name of the tree to cut from
  *        'nodeID' the node to cut
@@ -115,7 +116,7 @@
  *
  *        Examples: action=cutNodes&treeName=someTree&nodeID=1&returnType=euler
  *_________________________________________________
- *      moveNodes:
+ *      moveNodes [CSRF protected]
  *      - Cuts nodes from one tree, and links them to either that or a different tree.
  *        'treeName' the name of the tree to cut from
  *        'nodeID' the node to cut
@@ -141,6 +142,7 @@ require __DIR__ . '/../util/validator.php';
 
 //If it's a test call..
 require 'defaultInputChecks.php';
+require 'CSRF.php';
 
 if($test){
     echo 'Testing mode!'.EOL;
@@ -195,8 +197,10 @@ switch($_REQUEST['action']){
     /*Auth, and ensure needed inputs are present*/
     case 'addTrees':
 
-        //inputs array - existence and validation
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
 
+        //inputs array - existence and validation
         if(!isset($_REQUEST['inputs'])){
             if($test)
                 echo 'Inputs array must be specified with addTrees!'.EOL;
@@ -261,6 +265,10 @@ switch($_REQUEST['action']){
         break;
     //--------------------
     case 'removeTrees':
+
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
+
         //Will be used to check which trees we may remove
         $treesToRemoveAuth = [];
 
@@ -328,6 +336,9 @@ switch($_REQUEST['action']){
         break;
     //--------------------
     case 'updateNodes':
+
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
 
         if(!isset($_REQUEST['treeName'])){
             if($test)
@@ -487,6 +498,9 @@ switch($_REQUEST['action']){
     //--------------------
     case 'linkNodes':
 
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
+
         if(!isset($_REQUEST['treeName'])){
             if($test)
                 echo 'Missing a valid tree name!'.EOL;
@@ -550,6 +564,9 @@ switch($_REQUEST['action']){
     //--------------------
     case 'cutNodes':
 
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
+
         if(!isset($_REQUEST['treeName'])){
             if($test)
                 echo 'Missing a valid tree name!'.EOL;
@@ -598,6 +615,9 @@ switch($_REQUEST['action']){
         break;
     //--------------------
     case 'moveNodes':
+
+        if(!validateThenRefreshCSRFToken($sessionHandler))
+            die('-3');
 
         if(!isset($_REQUEST['treeName'])){
             if($test)
