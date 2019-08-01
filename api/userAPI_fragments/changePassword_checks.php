@@ -1,18 +1,18 @@
 <?php
 
 if(!defined('validator'))
-    require __DIR__ . '/../../util/validator.php';
+    require __DIR__ . '/../../IOFrame/Util/validator.php';
 
-if(!isset($inputs['newPassword']) || !IOFrame\validator::validatePassword($inputs['newPassword'])){
+if(!isset($inputs['newPassword']) || !IOFrame\Util\validator::validatePassword($inputs['newPassword'])){
     if($test)
         echo 'Invalid password!';
-    exit('-1');
+    exit(INPUT_VALIDATION_FAILURE);
 }
 
 if(!isset($_SESSION['PWD_RESET_ID']) || !isset($_SESSION['PWD_RESET_EXPIRES']) ){
     if($test)
         echo 'Password reset not authorized!';
-    exit('-2');
+    exit(AUTHENTICATION_FAILURE);
 }
 
 if($_SESSION['PWD_RESET_EXPIRES']<time()){

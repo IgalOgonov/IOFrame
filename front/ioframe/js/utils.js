@@ -112,7 +112,7 @@ function debounce(func, wait, timerName = '') {
 		clearTimeout(document[timerName].function);
 		document[timerName].function = setTimeout(later, wait);
 	};
-};
+}
 
 //To be used with await
 function sleep(ms) {
@@ -140,39 +140,51 @@ function checkLoggedIn(pathToRoot,trustLocalStorage=false){
 }
 
 //Updated CSRF Token
-function updateCSRFToken(){
+function updateCSRFToken(consumeExisting = true){
 
     return new Promise(function(resolve, reject) {
-        let action;
-        action = 'CSRF_token';
-        // url
-        let url=document.pathToRoot+"api\/session";
-        //Request itself
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url+'?'+action);
-        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
-        //console.log('To url',url,' , send: ',action);
-        //-return;
-        xhr.send(null);
-        xhr.onreadystatechange = function () {
-            var DONE = 4; // readyState 4 means the request is done.
-            var OK = 200; // status 200 is a successful return.
-            if (xhr.readyState === DONE) {
-                if (xhr.status === OK){
-                    let response = xhr.responseText;
-                    if(response!="[]"){
-                        var sesInfo=JSON.parse(response);
-                        document['CSRF_token'] = sesInfo['CSRF_token'];
+        let currentToken = localStorage.getItem('CSRF_token');
+        if(currentToken){
+            localStorage.removeItem('CSRF_token');
+            resolve(currentToken);
+            return;
+        }
+        else{
+            let action;
+            action = 'CSRF_token';
+            // url
+            let url=document.pathToRoot+"api\/session";
+            //Request itself
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', url+'?'+action);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
+            //console.log('To url',url,' , send: ',action);
+            //-return;
+            xhr.send(null);
+            xhr.onreadystatechange = function () {
+                var DONE = 4; // readyState 4 means the request is done.
+                var OK = 200; // status 200 is a successful return.
+                if (xhr.readyState === DONE) {
+                    if (xhr.status === OK){
+                        let response = xhr.responseText;
+                        console.log(response);
+                        if(response){
+                            var sesInfo=JSON.parse(response);
+                            resolve(sesInfo['CSRF_token']);
+                        }
+                        else
+                            reject(false);
+                        return;
                     }
-                    resolve(true);
+                } else {
+                    if(xhr.status < 200 || xhr.status > 299 ){
+                        console.log('Error: ' + xhr.status); // An error occurred during the request.
+                        reject(false);
+                        return;
+                    }
                 }
-            } else {
-                if(xhr.status < 200 || xhr.status > 299 ){
-                    console.log('Error: ' + xhr.status); // An error occurred during the request.
-                    resolve(false);
-                }
-            }
-        };
+            };
+        }
     });
 }
 
@@ -239,4 +251,91 @@ function stringDecrumble(str,mode){
             break;
     }
     return res;
+}
+
+
+/* Loads an image from an upload "input" element to be the source of a target img element
+ *
+ * input - either a node, or a query that finds the node using document.querySelector
+ * img - either a node, or a query that finds the node using document.querySelector
+ *
+ * optional parameters:
+ *      'checkElements' - checks whether the elements are valid nodes (and assume they are queries if they aren't)
+ *
+ * Returns a promise that resolves true when the function is done, or resolves false if no file is uploaded
+ * (or one of the elements is invalid)
+ * */
+function displayImageFromInput(input,img, params = {}){
+
+    return new Promise(function(resolve, reject) {
+
+        if(params['checkElements'] === undefined)
+            params['checkElements'] = true;
+
+
+        //Return if we didn't find our elements, or they are invalid
+        if(params['checkElements']){
+            if(!isElement(input))
+                input = document.querySelector(input);
+
+            if(!isElement(img))
+                img = document.querySelector(img);
+
+            if(!isElement(input) || !isElement(img) || img.nodeName!== 'IMG' || input.nodeName!== 'INPUT' ){
+                console.log('Elements not found or invalid!');
+                resolve(false);
+                return;
+            }
+        }
+
+        //Read the uploaded file
+        let files = input.files;
+
+        //Return if no files are uploaded
+        if(files.length === 0){
+            console.log('No files uploaded, cannot generate preview!');
+            resolve(false);
+            return;
+        }
+
+        let file = files[0];
+
+        var imageType = file.type;
+        var blob = null;
+
+        file.arrayBuffer().then(function(resolve,reject){
+            blob = new Blob( [ resolve ], { type: imageType } );
+            let urlCreator = window.URL || window.webkitURL;
+            img.src = urlCreator.createObjectURL( blob );
+        });
+
+    });
+}
+
+/** A shortcut function to bind a specific file upload element to an image element for preview
+ * input - input node
+ * img - image node
+ * params - object of parameters, of form:
+ *      'callback' - potential callback to be executed after a click
+ *      'bindClick'- Binds the click on the image to the upload field (aka clicking on the image opens the upload)
+**/
+function bindImagePreview(input,img,params = {}){
+
+    //Optional callback after click
+    var callback = (params['callback']!==undefined)?
+        params['callback'] : function(){};
+
+    //Whether to make clicks on the image open the upload
+    var bindClick = (params['bindClick'])?
+        true : false;
+
+    if(bindClick)
+        img.onclick = function () {
+            input.click();
+        };
+
+    input.onchange = function(){
+        displayImageFromInput(input,img,{'checkElements':false});
+        callback();
+    }
 }

@@ -155,7 +155,7 @@ function updateSesInfo(pathToRoot, callbacks = {}){
                     if(response!="[]"){
                         var sesInfo=JSON.parse(response);
                         localStorage.setItem('maxInacTime',sesInfo['maxInacTime']);
-                        document['CSRF_token'] = sesInfo['CSRF_token'];
+                        localStorage.setItem('CSRF_token',sesInfo['CSRF_token']);
                         if(sesInfo['Email'] != undefined)
                             localStorage.setItem('myMail',sesInfo['Email']);
                     }
@@ -211,99 +211,113 @@ function autoLogin(pathToRoot, timeout = 0, callbacks = {}, test = false){
         const tokenToSend = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(localStorage.getItem('deviceID')),
             CryptoJS.enc.Hex.parse(keyToUse),
             {mode:CryptoJS.mode.ECB, padding:CryptoJS.pad.ZeroPadding});
-        dataToSend +='&sesKey='+tokenToSend.ciphertext.toString(CryptoJS.enc.Hex);
-        dataToSend += '&CSRF_token='+document.CSRF_token;
+        updateCSRFToken().then(
+            //Continue after getting the CSRF token
+            function(token){
+                dataToSend +='&sesKey='+tokenToSend.ciphertext.toString(CryptoJS.enc.Hex);
 
-        const url = pathToRoot+"api/users";
-        const header = 'application/x-www-form-urlencoded;charset=utf-8;';
-        //console.log('To url',url,' , send: ',dataToSend);
-        //return;
-        let xhr = new XMLHttpRequest();
-        xhr.open('POST', url+'?'+dataToSend);
-        xhr.setRequestHeader('Content-Type', header);
-        xhr.send(null);
-        xhr.onreadystatechange = function () {
-            var DONE = 4; // readyState 4 means the request is done.
-            var OK = 200; // status 200 is a successful return.
-            d = new Date();
-            if (xhr.readyState === DONE) {
-                if (xhr.status === OK){
-                    let response = xhr.responseText;
-                    //console.log('Got ',xhr.responseText);
-                    //-return;
-                    //Notify the console we got a response! React to each case accodingly.
-                    //console.log('Got response trying to auto log in! Response '+response);
-                    switch(response){
-                        case '-1':
-                            sessionStorage.setItem('autologDebug_'+d.getTime(),'User auto-login failed - incorrect input');
-                            break;
-                        case '1':
-                            sessionStorage.setItem('autologDebug_'+d.getTime(),'User auto-login failed - username and token combination is wrong!');
-                            //We don't need those if the server told us they are wrong...
-                            localStorage.removeItem("sesID");
-                            localStorage.removeItem("sesIV");
-                            break;
-                        case '2':
-                            sessionStorage.setItem('autologDebug_'+d.getTime(),'User auto-login failed - expired!');
-                            //If we cannot use temp login, what use are those parameters?
-                            localStorage.removeItem("sesID");
-                            localStorage.removeItem("sesIV");
-                            break;
-                        case '3':
-                            sessionStorage.setItem('autologDebug_'+d.getTime(),'User auto-login failed - tried one-time login when server does not allow it!');
-                            //If we cannot use temp login, what use are those parameters?
-                            localStorage.removeItem("sesID");
-                            localStorage.removeItem("sesIV");
-                            break;
-                        default:
-                            if( (response.length == 128 ) &&
-                                (response.match(/(\W)/g)==null) ){
-                                //We got a new sesID
-                                if(validateServer(response,keyToUse)){
-                                    if(callbacks['afterRelogSuccess']!==undefined)
-                                        callbacks['afterRelogSuccess']();
-                                    resolve(true);
-                                    return;
-                                }
-                                else sessionStorage.setItem('autologDebug_'+d.getTime(),'Could not perform auto-login: '+response);
-                                //Remember to udate session info0
+                dataToSend += '&CSRF_token='+token;
+                const url = pathToRoot+"api/users";
+                const header = 'application/x-www-form-urlencoded;charset=utf-8;';
+                //console.log('To url',url,' , send: ',dataToSend);
+                //return;
+                let xhr = new XMLHttpRequest();
+                xhr.open('POST', url+'?'+dataToSend);
+                xhr.setRequestHeader('Content-Type', header);
+                xhr.send(null);
+                xhr.onreadystatechange = function () {
+                    var DONE = 4; // readyState 4 means the request is done.
+                    var OK = 200; // status 200 is a successful return.
+                    d = new Date();
+                    if (xhr.readyState === DONE) {
+                        if (xhr.status === OK){
+                            let response = xhr.responseText;
+                            //console.log('Got ',xhr.responseText);
+                            //-return;
+                            //Notify the console we got a response! React to each case accodingly.
+                            //console.log('Got response trying to auto log in! Response '+response);
+                            switch(response){
+                                case 'INPUT_VALIDATION_FAILURE':
+                                    sessionStorage.setItem('autologDebug_'+d.getTime(),'User auto-login failed - incorrect input');
+                                    break;
+                                case 'AUTHENTICATION_FAILURE':
+                                    sessionStorage.setItem('autologDebug_'+d.getTime(),'User auto-login failed - authentication failure');
+                                    break;
+                                case 'WRONG_CSRF_TOKEN':
+                                    sessionStorage.setItem('autologDebug_'+d.getTime(),'User auto-login failed - CSRF token wrong (somehow)');
+                                    break;
+                                case '1':
+                                    sessionStorage.setItem('autologDebug_'+d.getTime(),'User auto-login failed - username and token combination is wrong!');
+                                    //We don't need those if the server told us they are wrong...
+                                    localStorage.removeItem("sesID");
+                                    localStorage.removeItem("sesIV");
+                                    break;
+                                case '2':
+                                    sessionStorage.setItem('autologDebug_'+d.getTime(),'User auto-login failed - expired!');
+                                    //If we cannot use temp login, what use are those parameters?
+                                    localStorage.removeItem("sesID");
+                                    localStorage.removeItem("sesIV");
+                                    break;
+                                case '3':
+                                    sessionStorage.setItem('autologDebug_'+d.getTime(),'User auto-login failed - tried one-time login when server does not allow it!');
+                                    //If we cannot use temp login, what use are those parameters?
+                                    localStorage.removeItem("sesID");
+                                    localStorage.removeItem("sesIV");
+                                    break;
+                                default:
+                                    if( (response.length == 128 ) &&
+                                        (response.match(/(\W)/g)==null) ){
+                                        //We got a new sesID
+                                        if(validateServer(response,keyToUse)){
+                                            if(callbacks['afterRelogSuccess']!==undefined)
+                                                callbacks['afterRelogSuccess']();
+                                            resolve(true);
+                                            return;
+                                        }
+                                        else sessionStorage.setItem('autologDebug_'+d.getTime(),'Could not perform auto-login: '+response);
+                                        //Remember to udate session info0
+                                    }
+                                    //Means this is something else...
+                                    else{
+                                        sessionStorage.setItem('autologDebug'+d.getTime(),'User auto-login failed - response '+response+' timeout '+timeout);
+                                        localStorage.removeItem("sesID");
+                                        localStorage.removeItem("sesIV");
+                                    }
                             }
-                            //Means this is something else...
+                            if(callbacks['afterRelogFailure']!==undefined)
+                                callbacks['afterRelogFailure']();
+                            resolve(false);
+                            return;
+                        }
+                    } else {
+                        if(xhr.status < 200 || xhr.status > 299 ){
+                            //If we have a timeout, recursively call this function after 1.5 sec and try again
+                            if((timeout > 0) && (timeout !==undefined) && !isNaN(timeout)){
+                                sessionStorage.setItem('autologDebug'+d.getTime(),'Error, logUser not reachable!' +
+                                    ' Timeout is '+timeout+', trying again..');
+                                setTimeout(function(){
+                                    autoLogin(pathToRoot,timeout-1,callbacks,test).then(function(res){
+                                        resolve(res);
+                                        return;
+                                    });
+                                }, 1500);
+                            }
+                            //If we have no timeout, report so and resolve with false.
                             else{
-                                sessionStorage.setItem('autologDebug'+d.getTime(),'User auto-login failed - response '+response+' timeout '+timeout);
-                                localStorage.removeItem("sesID");
-                                localStorage.removeItem("sesIV");
-                            }
-                    }
-                    if(callbacks['afterRelogFailure']!==undefined)
-                        callbacks['afterRelogFailure']();
-                    resolve(false);
-                    return;
-                }
-            } else {
-                if(xhr.status < 200 || xhr.status > 299 ){
-                    //If we have a timeout, recursively call this function after 1.5 sec and try again
-                    if((timeout > 0) && (timeout !==undefined) && !isNaN(timeout)){
-                        sessionStorage.setItem('autologDebug'+d.getTime(),'Error, logUser not reachable!' +
-                            ' Timeout is '+timeout+', trying again..');
-                        setTimeout(function(){
-                            autoLogin(pathToRoot,timeout-1,callbacks,test).then(function(res){
-                                resolve(res);
+                                sessionStorage.setItem('autologDebug'+d.getTime(),'Error, logUser not reachable!');
+                                if(callbacks['afterRelogFailure']!==undefined)
+                                    callbacks['afterRelogFailure']();
+                                resolve(false);
                                 return;
-                            });
-                        }, 1500);
+                            }
+                        }
                     }
-                    //If we have no timeout, report so and resolve with false.
-                    else{
-                        sessionStorage.setItem('autologDebug'+d.getTime(),'Error, logUser not reachable!');
-                        if(callbacks['afterRelogFailure']!==undefined)
-                            callbacks['afterRelogFailure']();
-                        resolve(false);
-                        return;
-                    }
-                }
+                };
+            },
+            function(reject){
+                alertLog('CSRF token expired. Please refresh the page, or login manually.','danger');
             }
-        };
+        );
     });
 
 }

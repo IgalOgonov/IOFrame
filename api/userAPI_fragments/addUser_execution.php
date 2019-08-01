@@ -1,17 +1,17 @@
 <?php
 
-if(!defined('userHandler'))
-    require __DIR__ . '/../../handlers\userHandler.php';
+if(!defined('UserHandler'))
+    require __DIR__ . '/../../IOFrame/Handlers/UserHandler.php';
 
 try {
 
-    if(!isset($userHandler))
-        $userHandler = new IOFrame\userHandler(
+    if(!isset($UserHandler))
+        $UserHandler = new IOFrame\Handlers\UserHandler(
             $settings,
             $defaultSettingsParams
         );
     //Hash the password
-    $result =  $userHandler->regUser($inputs,['test'=>$test]);
+    $result =  $UserHandler->regUser($inputs,['test'=>$test]);
 }
 catch(PDOException $e)
 {

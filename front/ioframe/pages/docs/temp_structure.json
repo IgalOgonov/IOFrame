@@ -1,0 +1,101 @@
+{
+  "general,General Information":
+  {
+	"overview,Framework Overview":[],
+	"requirements,Requirements":[],
+	"installation,Installation":[],
+	"standards, Code Standards":[]
+  },
+  "structure,Framework Structure":
+  {
+	"handlers_structure,Handlers":[],
+	"api_structure,APIs":[],
+	"utilities_structure,Utilities":[],
+	"others_structure,Others":{
+	  "settings_structure,Settings":[],
+	  "plugins_structure,Plugins":[],
+	  "backEnd_structure,(Default) Front End":[],
+	  "frontEnd_structure,(Default) Back End":[],
+	  "db_structure,Database Structure":[],
+	  "misc_structure,Misc":[]
+	}
+  },
+  "utilities,Utilities":{
+	"helperFunctions_utility,Helper Functions":[],
+	"PHPQueryBuilder_utility,PHP Query Builder":[],
+	"safeSTR_utility,Safe String":[],
+	"hArray_utility,hArray":[],
+	"XMLSerializer_utility,XML Serializer":[],
+	"validator_utility,validator":[],
+	"AltoRouter_utility,AltoRouter":[]
+  },
+  "handlers,Handlers":
+  {
+	"settings_handlers,Settings Handler":[],
+	"sql_handlers,SQL Handler":[],
+	"user_handlers,User Handler":[],
+	"auth_handlers,Authorization Handler":[],
+	"file_handlers,File Handler":[],
+	"lock_handlers,Lock Handler":[],
+	"mail_handlers,Mail Handler":[],
+	"plugin_handlers,Plugin Handler":[],
+	"security_handlers,Security Handler":[],
+	"session_handlers,Session Handler":[],
+	"tree_handlers,Tree Handler":[],
+	"object_handlers,Object Handler":[],
+	"order_handlers,Order Handler":[],
+	"route_handlers,Route Handler":[],
+	"IOFrame_handlers,IOFrame Log Handler (for Monolog)":[],
+	"IP_handlers,IP Handler (Unfinished)":[],
+	"abstract_handlers,Abstract Classes":[],
+	"ext_handlers,External Handlers":{
+	  "phpmailer_external,PHPMailer":[],
+	  "geoIP_external,GeoIP":[],
+	  "monolog_external,Monolog":[],
+	  "paresedown_external,Parsedown":[]
+	}
+  },
+  "api,APIs":
+  {
+	"settings_api,Settings API":[],
+	"users_api,User API":[],
+	"auth_api,Authorization API":[],
+	"session_api,Session API":[],
+	"trees_api,Tree API":[],
+	"plugin_api,Plugin API":[],
+	"objects_api,Object API":[],
+	"mail_api,Mail API (internal use)":[]
+  },
+  "frontEnd,(Default) Front End":
+  {
+	"frontEnd_interfaces, Interfaces ":{
+	  "frontEnd_admin,Admin Interface":[],
+	  "frontEnd_plugins,Plugins Interface":[],
+	  "frontEnd_objects,Objects Interface":[]
+	},
+	"frontEnd_js, General Javascript":{
+	  "frontEnd_utils_js,JS Utilities":[],
+	  "frontEnd_initPage_js,Page Initiation Script":[],
+	  "frontEnd_ezAlert_js,ezAlert":[],
+	  "frontEnd_ezPopup_js,ezPopup":[],
+	  "frontEnd_objects_js,Objects JS File":[],
+	  "frontEnd_external_plugins_js,External Plugins":[]
+	},
+	"frontEnd_modules, Modules & Templates":{
+	  "frontEnd_logOut_module,Logout module":[],
+	  "frontEnd_userLog_module,User Login module":[],
+	  "frontEnd_userReg_module,User Registration module":[],
+	  "frontEnd_plugins_module,Plugins module":[],
+	  "frontEnd_pluginList_module,Plugin List module":[],
+	  "frontEnd_objects_module,Objects module":[],
+	  "frontEnd_footers_template,Footers Template":[],
+	  "frontEnd_headers_template,Headers Template":[]
+	}
+  },
+  "backEnd,(Default) Back End":
+  {
+	"coreInit,System Initiation Procedure":[],
+	"install,Installation File":[],
+	"definitions,Definitions File":[]
+  }
+}

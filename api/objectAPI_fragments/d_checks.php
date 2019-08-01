@@ -4,7 +4,7 @@
 if(!isset($params['id'])){
     if($test)
         echo 'You must send an object id to delete an object!';
-    exit('-1');
+    exit(INPUT_VALIDATION_FAILURE);
 }
 foreach($params as $key=>$value){
     switch($key){
@@ -12,14 +12,14 @@ foreach($params as $key=>$value){
             if(strlen($value)<1 || !filter_var($value,FILTER_VALIDATE_INT)){
                 if($test)
                     echo 'You need a valid ID to delete!';
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
             break;
         case 'time':
             if(strlen($value)<1 || strlen($value)>14 || (gettype($value) == 'string' && preg_match_all('/\D/',$value)>0)){
                 if($test)
                     echo 'The time needs to be between 1 and 14 characters long, and only digits (UNIX TIMESTAMP)!';
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
             break;
         case 'after':
@@ -27,7 +27,7 @@ foreach($params as $key=>$value){
                 if(!($value==true || $value==false)){
                     if($test)
                         echo 'Illegal time constraint value!';
-                    exit('-1');
+                    exit(INPUT_VALIDATION_FAILURE);
                 }
             break;
     }

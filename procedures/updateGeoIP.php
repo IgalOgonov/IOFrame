@@ -1,6 +1,6 @@
 <?php
 if(!defined('helperFunctions'))
-    require __DIR__ . '/../util/helperFunctions.php';
+    require __DIR__ . '/../IOFrame/Util/helperFunctions.php';
 
 function updateGeoIP($rootDir){
     set_time_limit(0); // unlimited max execution time
@@ -27,6 +27,6 @@ function updateGeoIP($rootDir){
         file_get_contents($extractedFolderUrl.'/GeoLite2-Country.mmdb')
     );
 //Delete the folder we extracted
-    IOFrame\folder_delete($extractedFolderUrl);
+    IOFrame\Util\folder_delete($extractedFolderUrl);
     rmdir($rootDir.'localFiles/temp/geoIP');
 }

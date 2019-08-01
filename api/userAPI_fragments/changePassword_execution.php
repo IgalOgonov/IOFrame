@@ -1,21 +1,22 @@
 <?php
 
-if(!defined('userHandler'))
-    require __DIR__ . '/../../handlers/userHandler.php';
+if(!defined('UserHandler'))
+    require __DIR__ . '/../../IOFrame/Handlers/UserHandler.php';
 
 $id = $_SESSION['PWD_RESET_ID'];
-if(!isset($userHandler))
-    $userHandler = new IOFrame\userHandler(
+if(!isset($UserHandler))
+    $UserHandler = new IOFrame\Handlers\UserHandler(
         $settings,
         $defaultSettingsParams
     );
 
-$result = $userHandler->changePassword($id,$inputs['newPassword'],['test'=>$test]);
+$result = $UserHandler->changePassword($id,$inputs['newPassword'],['test'=>$test]);
 
-if(!$test){
-    unset($_SESSION['PWD_RESET_ID']);
-    unset($_SESSION['PWD_RESET_EXPIRES']);
+if($result === 0){
+    if(!$test){
+        unset($_SESSION['PWD_RESET_ID']);
+        unset($_SESSION['PWD_RESET_EXPIRES']);
+    }
+    else
+        echo 'Unsetting session variables!'.EOL;
 }
-else
-    echo 'Unsetting session variables!'.EOL;
-

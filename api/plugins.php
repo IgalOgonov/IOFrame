@@ -1,8 +1,7 @@
 <?php
 /* This API has the following uses:
-
- *      Always returns -1 on input validation failure
- *      Always returns -2 on auth failure.
+ *
+ *      See standard return values at defaultInputResults.php
  *_________________________________________________
  *      - Get available plugin (specified by name) or all plugins.
  *        Returns a json encoded string of the format:
@@ -134,11 +133,13 @@
 
 if(!defined('coreInit'))
     require __DIR__ . '/../main/coreInit.php';
-require __DIR__ . '/../util/validator.php';
+require __DIR__ . '/../IOFrame/Util/validator.php';
 
 //If it's a test call..
 require 'defaultInputChecks.php';
+require 'defaultInputResults.php';
 require 'CSRF.php';
+require 'pluginAPI_fragments/definitions.php';
 
 
 if($test){
@@ -149,7 +150,7 @@ if($test){
 
 
 //Input validation function
-function checkInput($settings,$sqlHandler,$sessionHandler,$logger ,$test = false){
+function checkInput($settings,$SQLHandler,$SessionHandler,$logger ,$test = false){
     //Make sure there is an action
     if(isset($_REQUEST['action']))
         $ac = $_REQUEST['action'];
@@ -158,148 +159,148 @@ function checkInput($settings,$sqlHandler,$sessionHandler,$logger ,$test = false
 
     //Make sure the action is valid, and has all relevant parameters set.
     //Also, make sure the user is authorized to perform the action.
-    $authHandler = new IOFrame\authHandler($settings,['sqlHandler'=>$sqlHandler,'logger'=>$logger]);
+    $AuthHandler = new IOFrame\Handlers\AuthHandler($settings,['SQLHandler'=>$SQLHandler,'logger'=>$logger]);
     switch($_REQUEST['action']){
         case 'getAvailable':
-            if(!($authHandler->isAuthorized(0) || $authHandler->hasAction('PLUGIN_GET_AVAILABLE_AUTH'))){
+            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_GET_AVAILABLE_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use getAvailable!'.EOL;
-                exit('-2');
+                exit(AUTHENTICATION_FAILURE);
             }
             break;
         case 'getInfo':
-            if(!($authHandler->isAuthorized(0) || $authHandler->hasAction('PLUGIN_GET_INFO_AUTH'))){
+            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_GET_INFO_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use getInfo!'.EOL;
-                exit('-2');
+                exit(AUTHENTICATION_FAILURE);
             }
             break;
         case 'getOrder':
-            if(!($authHandler->isAuthorized(0) || $authHandler->hasAction('PLUGIN_GET_ORDER_AUTH'))){
+            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_GET_ORDER_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use getOrder!'.EOL;
-                exit('-2');
+                exit(AUTHENTICATION_FAILURE);
             }
             break;
         case 'pushToOrder':
-            if(!($authHandler->isAuthorized(0) || $authHandler->hasAction('PLUGIN_PUSH_TO_ORDER_AUTH'))){
+            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_PUSH_TO_ORDER_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use pushToOrder!'.EOL;
-                exit('-2');
+                exit(AUTHENTICATION_FAILURE);
             }
             if(!isset($_REQUEST['name'])){
                 if($test)
                     echo 'Name must be specified with pushToOrder!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
-            if(!validateThenRefreshCSRFToken($sessionHandler))
-                die('-3');
+            if(!validateThenRefreshCSRFToken($SessionHandler))
+                exit(WRONG_CSRF_TOKEN);
             break;
         case 'removeFromOrder':
-            if(!($authHandler->isAuthorized(0) || $authHandler->hasAction('PLUGIN_REMOVE_FROM_ORDER_AUTH'))){
+            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_REMOVE_FROM_ORDER_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use removeFromOrder!'.EOL;
-                exit('-2');
+                exit(AUTHENTICATION_FAILURE);
             }
             if(!isset($_REQUEST['target'])){
                 if($test)
                     echo 'Target must be specified with removeFromOrder!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
             if(!isset($_REQUEST['type'])){
                 if($test)
                     echo 'Type must be specified with removeFromOrder!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
-            if(!validateThenRefreshCSRFToken($sessionHandler))
-                die('-3');
+            if(!validateThenRefreshCSRFToken($SessionHandler))
+                exit(WRONG_CSRF_TOKEN);
             break;
         case 'moveOrder':
-            if(!($authHandler->isAuthorized(0) || $authHandler->hasAction('PLUGIN_MOVE_ORDER_AUTH'))){
+            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_MOVE_ORDER_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use moveOrder!'.EOL;
-                exit('-2');
+                exit(AUTHENTICATION_FAILURE);
             }
             if(!isset($_REQUEST['from'])){
                 if($test)
                     echo 'from must be specified with moveOrder!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
             if(!isset($_REQUEST['to'])){
                 if($test)
                     echo 'to must be specified with moveOrder!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
-            if(!validateThenRefreshCSRFToken($sessionHandler))
-                die('-3');
+            if(!validateThenRefreshCSRFToken($SessionHandler))
+                exit(WRONG_CSRF_TOKEN);
             break;
         case 'swapOrder':
-            if(!($authHandler->isAuthorized(0) || $authHandler->hasAction('PLUGIN_SWAP_ORDER_AUTH'))){
+            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_SWAP_ORDER_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use swapOrder!'.EOL;
-                exit('-2');
+                exit(AUTHENTICATION_FAILURE);
             }
             if(!isset($_REQUEST['p1'])){
                 if($test)
                     echo 'p1 must be specified with swapOrder!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
             if(!isset($_REQUEST['p2'])){
                 if($test)
                     echo 'p2 must be specified with swapOrder!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
-            if(!validateThenRefreshCSRFToken($sessionHandler))
-                die('-3');
+            if(!validateThenRefreshCSRFToken($SessionHandler))
+                exit(WRONG_CSRF_TOKEN);
             break;
         case 'fullInstall':
         case 'install':
-            if(!($authHandler->isAuthorized(0) || $authHandler->hasAction('PLUGIN_INSTALL_AUTH'))){
+            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_INSTALL_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use install!'.EOL;
-                exit('-2');
+                exit(AUTHENTICATION_FAILURE);
             }
             if(!isset($_REQUEST['name'])){
                 if($test)
                     echo 'Name must be specified with install!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
-            if(!validateThenRefreshCSRFToken($sessionHandler))
-                die('-3');
+            if(!validateThenRefreshCSRFToken($SessionHandler))
+                exit(WRONG_CSRF_TOKEN);
             break;
         case 'fullUninstall':
         case 'uninstall':
-            if(!($authHandler->isAuthorized(0) || $authHandler->hasAction('PLUGIN_UNINSTALL_AUTH'))){
+            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_UNINSTALL_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use uninstall!'.EOL;
-                exit('-2');
+                exit(AUTHENTICATION_FAILURE);
             }
             if(!isset($_REQUEST['name'])){
                 if($test)
                     echo 'Name must be specified with uninstall!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
-            if(!validateThenRefreshCSRFToken($sessionHandler))
-                die('-3');
+            if(!validateThenRefreshCSRFToken($SessionHandler))
+                exit(WRONG_CSRF_TOKEN);
             break;
         default:
             if($test)
                 echo 'Specified action is not recognized'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
     }
 
     //You may only set Validate to false if your authorization is 0
     if(isset($_REQUEST['validate'])){
-        if( !( ($authHandler->isAuthorized(0) || $authHandler->hasAction('PLUGIN_IGNORE_VALIDATION')) ) && $_REQUEST['validate'] == false ){
+        if( !( ($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_IGNORE_VALIDATION)) ) && $_REQUEST['validate'] == false ){
             if($test)
                 echo 'Insufficient authorization to ignore plugin validation'.EOL;
-            exit('-2');
+            exit(AUTHENTICATION_FAILURE);
         }
     }
 
     //Validate name
     if(isset($_REQUEST['name'])){
-        if(!\IOFrame\validator::validateSQLTableName($_REQUEST['name'])){
+        if(!\IOFrame\Util\validator::validateSQLTableName($_REQUEST['name'])){
             if($test)
                 echo 'Illegal name!!'.EOL;
         }
@@ -309,7 +310,7 @@ function checkInput($settings,$sqlHandler,$sessionHandler,$logger ,$test = false
         if(!($_REQUEST['override'] == 'true' || $_REQUEST['override'] == 'false')){
             if($test)
                 echo 'override must be true or false!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
     }
     //Validate backup
@@ -317,7 +318,7 @@ function checkInput($settings,$sqlHandler,$sessionHandler,$logger ,$test = false
         if(!($_REQUEST['backup'] == 'true' || $_REQUEST['backup'] == 'false')){
             if($test)
                 echo 'backup must be true or false!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
     }
     //Validate toTop
@@ -325,7 +326,7 @@ function checkInput($settings,$sqlHandler,$sessionHandler,$logger ,$test = false
         if(!($_REQUEST['toTop'] == 'true' || $_REQUEST['toTop'] == 'false')){
             if($test)
                 echo 'toTop must be true or false!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
     }
     //Validate verify
@@ -333,7 +334,7 @@ function checkInput($settings,$sqlHandler,$sessionHandler,$logger ,$test = false
         if(!($_REQUEST['verify'] == 'true' || $_REQUEST['verify'] == 'false')){
             if($test)
                 echo 'verify must be true or false!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
     }
     //Validate "validate"
@@ -341,7 +342,7 @@ function checkInput($settings,$sqlHandler,$sessionHandler,$logger ,$test = false
         if(!($_REQUEST['validate'] == 'true' || $_REQUEST['validate'] == 'false')){
             if($test)
                 echo 'verify must be true or false!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
     }
     //Validate from && to
@@ -349,17 +350,17 @@ function checkInput($settings,$sqlHandler,$sessionHandler,$logger ,$test = false
         if(!(isset($_REQUEST['from'])&&isset($_REQUEST['to']))){
             if($test)
                 echo 'If from or to are set, both must be set!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
         if(preg_match('/\D/',$_REQUEST['from']) || preg_match('/\D/',$_REQUEST['to'])){
             if($test)
                 echo 'from and to must only contain digits! '.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
         if($_REQUEST['from']<0 || $_REQUEST['to']<0 || $_REQUEST['from'] == $_REQUEST['to']){
             if($test)
                 echo 'from and to must be non negative (and not equal)! '.$_REQUEST['from'].', '.$_REQUEST['to'].EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
     }
     //Validate p1 && p2
@@ -367,17 +368,17 @@ function checkInput($settings,$sqlHandler,$sessionHandler,$logger ,$test = false
         if(!(isset($_REQUEST['p1'])&&isset($_REQUEST['p2']))){
             if($test)
                 echo 'If p1 or p2 are set, both must be set!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
         if(preg_match('/\D/',$_REQUEST['p1']) || preg_match('/\D/',$_REQUEST['p2'])){
             if($test)
                 echo 'P1 and P2 must only contain digits! '.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
         if($_REQUEST['p1']<0 || $_REQUEST['p2']<0 || $_REQUEST['p1'] == $_REQUEST['p2']){
             if($test)
                 echo 'P1 and P2 must be non negative (and not equal)! '.$_REQUEST['p1'].', '.$_REQUEST['p2'].EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
     }
     //Validate index (from pushToOrder)
@@ -385,12 +386,12 @@ function checkInput($settings,$sqlHandler,$sessionHandler,$logger ,$test = false
         if(preg_match('/\D/',$_REQUEST['index'])){
             if($test)
                 echo 'index must only contain digits! '.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
         if($_REQUEST['index']<-1){
             if($test)
                 echo 'index must be -1 or larger. It cannot be smaller than -1 to avoid coder mistakes.'.$_REQUEST['index'].EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
     }
     //Validate target/type in case of removeFromOrder
@@ -398,23 +399,23 @@ function checkInput($settings,$sqlHandler,$sessionHandler,$logger ,$test = false
         if(!(isset($_REQUEST['target'])&&isset($_REQUEST['type']))){
             if($test)
                 echo 'If target or type are set, both must be set!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
         switch($_REQUEST['type']){
             case 'index':
                 if(preg_match('/\D/',$_REQUEST['target'])){
                     if($test)
                         echo 'target must only contain digits! '.EOL;
-                    exit('-1');
+                    exit(INPUT_VALIDATION_FAILURE);
                 }
                 if($_REQUEST['target']<0){
                     if($test)
                         echo 'target must be 0 or larger.'.$_REQUEST['index'].EOL;
-                    exit('-1');
+                    exit(INPUT_VALIDATION_FAILURE);
                 }
                 break;
             case 'name':
-                if(!\IOFrame\validator::validateSQLTableName($_REQUEST['target'])){
+                if(!\IOFrame\Util\validator::validateSQLTableName($_REQUEST['target'])){
                     if($test)
                         echo 'Illegal target name!!'.EOL;
                 }
@@ -422,21 +423,21 @@ function checkInput($settings,$sqlHandler,$sessionHandler,$logger ,$test = false
             default:
                 if($test)
                     echo 'Unrecognized type!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
         }
     }
     //Validate options for (un)install
     if(isset($_REQUEST['options'])){
-        if(!IOFrame\is_json($_REQUEST['options'])){
+        if(!IOFrame\Util\is_json($_REQUEST['options'])){
             if($test)
                 echo 'options must be valid JSON! '.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
     }
 }
 
 //Check input
-checkInput($settings,$sqlHandler,$sessionHandler,$logger,$test);
+checkInput($settings,$SQLHandler,$SessionHandler,$logger,$test);
 
 //Do what needs to be done
 switch($_REQUEST['action']){
@@ -447,23 +448,23 @@ switch($_REQUEST['action']){
     case 'getAvailable':
         isset($_REQUEST['name'])?
             $name = $_REQUEST['name'] : $name = '' ;
-        $res = $pluginHandler->getAvailable(['name'=>$name]);
+        $res = $PluginHandler->getAvailable(['name'=>$name]);
         foreach($res as $pName=>$status){
-            $pluginHandler->ensurePublicImage($pName);
+            $PluginHandler->ensurePublicImage($pName);
         }
         echo json_encode($res);
         break;
     case 'getInfo':
         isset($_REQUEST['name'])?
             $name = $_REQUEST['name'] : $name = '' ;
-        $res = $pluginHandler->getInfo(['name'=>$name,'test'=>$test]);
+        $res = $PluginHandler->getInfo(['name'=>$name,'test'=>$test]);
         foreach($res as $pluginInfo){
-            $pluginHandler->ensurePublicImage($pluginInfo['fileName']);
+            $PluginHandler->ensurePublicImage($pluginInfo['fileName']);
         }
         echo json_encode($res);
         break;
     case 'getOrder':
-        echo json_encode($pluginHandler->getOrder(['local'=>false,'test'=>$test]));
+        echo json_encode($PluginHandler->getOrder(['local'=>false,'test'=>$test]));
         break;
     case 'pushToOrder':
             $name = $_REQUEST['name'];
@@ -476,7 +477,7 @@ switch($_REQUEST['action']){
         isset($_REQUEST['backUp'])?
             $backUp = $_REQUEST['backUp'] : $backUp = true ;
         if(
-            $pluginHandler->pushToOrder(
+            $PluginHandler->pushToOrder(
                 $name,
                 [
                     'index'=> $index,
@@ -500,7 +501,7 @@ switch($_REQUEST['action']){
         if(isset($_REQUEST['validate']))
             if($_REQUEST['validate'] == false)
                 $validate = false;
-        echo $pluginHandler->removeFromOrder(
+        echo $PluginHandler->removeFromOrder(
             $target,
             $type,
             ['verify'=>$validate,'backUp'=>$backUp,'local'=>false,'test'=>$test]
@@ -515,7 +516,7 @@ switch($_REQUEST['action']){
         if(isset($_REQUEST['validate']))
             if($_REQUEST['validate'] == false)
                 $validate = false;
-        echo $pluginHandler->moveOrder(
+        echo $PluginHandler->moveOrder(
             $from,
             $to,
             ['verify'=>$validate,'backUp'=>$backUp,'local'=>false,'test'=>$test]
@@ -530,7 +531,7 @@ switch($_REQUEST['action']){
         if(isset($_REQUEST['validate']))
             if($_REQUEST['validate'] == false)
                 $validate = false;
-        echo $pluginHandler->swapOrder(
+        echo $PluginHandler->swapOrder(
             $num1,
             $num2,
             ['verify'=>$validate,'backUp'=>$backUp,'local'=>false,'test'=>$test]
@@ -542,7 +543,7 @@ switch($_REQUEST['action']){
             $options = json_decode($_REQUEST['options'],true) : $options = array() ;
         isset($_REQUEST['override'])?
             $override = $_REQUEST['override'] : $override = false;
-        echo htmlspecialchars($pluginHandler->install($name,$options,['override'=>$override,'test'=>$test]));
+        echo htmlspecialchars($PluginHandler->install($name,$options,['override'=>$override,'test'=>$test]));
         break;
     case 'fullInstall':
         $name = $_REQUEST['name'];
@@ -556,7 +557,7 @@ switch($_REQUEST['action']){
             $options = json_decode($_REQUEST['options'],true) : $options = array() ;
         isset($_REQUEST['override'])?
             $override = $_REQUEST['override'] : $override = true;
-        echo htmlspecialchars($pluginHandler->uninstall($name,$options,['override'=>$override,'test'=>$test]));
+        echo htmlspecialchars($PluginHandler->uninstall($name,$options,['override'=>$override,'test'=>$test]));
         break;
     case 'fullUninstall':
         $name = $_REQUEST['name'];

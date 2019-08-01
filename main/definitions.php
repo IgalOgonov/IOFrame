@@ -16,7 +16,6 @@ namespace IOFrame{
     const SEC_MODE_3 = 'high';    //TODO IMPLEMENT
     const DB_FIELD_SEPARATOR = '#&%#'; //For DB purposes
     const DB_LOCK_FILE =  __DIR__.'\..\localFiles\nodeDatabase.lock'; //locks database operations inside the node.
-    const TREE_MAX_CONTENT_LENGTH = 10000;
 ////--------------------Correct EOL - CLI vs Server--------------------
     if(!defined('EOL')){
         if (php_sapi_name() == "cli") {
@@ -32,10 +31,10 @@ namespace IOFrame{
     $dynamicDefinitionsFolder = __DIR__.'\..\localFiles\definitions';
     if(file_exists($dynamicDefinitions)){
         //Just in case somebody is installing a new plugin and adding new definitions, we need to be able to wait
-        if(!defined('lockHandler'))
-            require __DIR__ . '/../handlers/lockHandler.php';
+        if(!defined('LockHandler'))
+            require __DIR__ . '/../IOFrame/Handlers/LockHandler.php';
         //If new definitions are being installed, wait
-        $mutex = new lockHandler($dynamicDefinitionsFolder, 'mutex');
+        $mutex = new Handlers\LockHandler($dynamicDefinitionsFolder, 'mutex');
         if(!$mutex->waitForMutex())
             return false;
         //Read the definitions

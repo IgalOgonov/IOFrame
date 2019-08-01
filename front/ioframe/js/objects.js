@@ -189,31 +189,40 @@ function checkMappedObjects(requestedMaps = []){
         });
         let action;
         action = "action=ga&params="+JSON.stringify(params);
-        // url
-        let url=document.pathToRoot+"api\/objects";
-        //Request itself
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url+'?'+action);
-        //console.log(url+'?'+action);
-        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
-        xhr.send(null);
-        xhr.onreadystatechange = function () {
-            var DONE = 4; // readyState 4 means the request is done.
-            var OK = 200; // status 200 is a successful return.
-            if (xhr.readyState === DONE) {
-                if (xhr.status === OK){
-                    let response = xhr.responseText;
-                    resolve(response);
-                    //console.log(response);
-                    return 0;
-                }
-            } else {
-                if(xhr.status < 200 || xhr.status > 299 ){
-                    resolve(1);
-                    return 1;
-                }
+
+        updateCSRFToken().then(
+            function(token){
+                action += '&CSRF_token='+token;
+                // url
+                let url=document.pathToRoot+"api\/objects";
+                //Request itself
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', url+'?'+action);
+                //console.log(url+'?'+action);
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
+                xhr.send(null);
+                xhr.onreadystatechange = function () {
+                    var DONE = 4; // readyState 4 means the request is done.
+                    var OK = 200; // status 200 is a successful return.
+                    if (xhr.readyState === DONE) {
+                        if (xhr.status === OK){
+                            let response = xhr.responseText;
+                            resolve(response);
+                            //console.log(response);
+                            return 0;
+                        }
+                    } else {
+                        if(xhr.status < 200 || xhr.status > 299 ){
+                            resolve(1);
+                            return 1;
+                        }
+                    }
+                };
+            },
+            function(reject){
+                alertLog('CSRF token expired. Please refresh the page to submit the form.','danger');
             }
-        };
+        );
 
     });
 
@@ -323,108 +332,116 @@ function updateMappedObjects(maps,db){
             //Prepare to query the DB for the objects
             let action;
             action = "action=r&params="+objects;
-            // url
-            let url=document.pathToRoot+"api\/objects";
-            //Request itself
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', url+'?'+action);
-            //console.log(url+'?'+action);               //TODO DELETE
-            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
-            xhr.send(null);
-            xhr.onreadystatechange = function () {
-                var DONE = 4; // readyState 4 means the request is done.
-                var OK = 200; // status 200 is a successful return.
-                if (xhr.readyState === DONE) {
-                    if (xhr.status === OK){
-                        let response = xhr.responseText;
-                        let resp = {};
-                        //console.log(response);               //TODO DELETE
-                        if(IsJsonString(response))
-                            resp = JSON.parse(response);
-                        else
-                            console.log('Unexpected response:',response);
+            updateCSRFToken().then(
+                function(token){
+                    action += '&CSRF_token='+token;
+                    // url
+                    let url=document.pathToRoot+"api\/objects";
+                    //Request itself
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('GET', url+'?'+action);
+                    //console.log(url+'?'+action);               //TODO DELETE
+                    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
+                    xhr.send(null);
+                    xhr.onreadystatechange = function () {
+                        var DONE = 4; // readyState 4 means the request is done.
+                        var OK = 200; // status 200 is a successful return.
+                        if (xhr.readyState === DONE) {
+                            if (xhr.status === OK){
+                                let response = xhr.responseText;
+                                let resp = {};
+                                //console.log(response);               //TODO DELETE
+                                if(IsJsonString(response))
+                                    resp = JSON.parse(response);
+                                else
+                                    console.log('Unexpected response:',response);
 
-                        //console.log(resp);               //TODO DELETE
+                                //console.log(resp);               //TODO DELETE
 
-                        //Get the lists of errors and group map
-                        let errorList = resp['Errors'];
-                        let groupMap = resp['groupMap'];
-                        delete(resp['Errors']);
-                        delete(resp['groupMap']);
+                                //Get the lists of errors and group map
+                                let errorList = resp['Errors'];
+                                let groupMap = resp['groupMap'];
+                                delete(resp['Errors']);
+                                delete(resp['groupMap']);
 
-                        let objectList = {};                    //List of objects to update
-                        //Put every object and error in its place
-                        for (let key in resp) {
-                            if (resp.hasOwnProperty(key)) {
-                                objectList[key] = resp[key];
-                            }
-                        }
-                        //console.log(objectList);               //TODO DELETE
-                        //console.log(errorList);               //TODO DELETE
-                        //console.log(groupMap);               //TODO DELETE
-
-
-                        //Open DB transaction to delete outdated objects and add new ones
-                        var transaction2 = db.transaction(["objects"], "readwrite");
-
-                        //Delete outdated objects
-                        var objectStore1 = transaction2.objectStore("objects");
-                        //Go over the errors, delete every object whose error isn't "0"
-                        if(errorList !=[]){
-                            for (let key in errorList) {
-                                if (errorList.hasOwnProperty(key)) {
-                                    if (errorList[key] != '0')
-                                        var deleteOutdated = objectStore1.delete(key);
+                                let objectList = {};                    //List of objects to update
+                                //Put every object and error in its place
+                                for (let key in resp) {
+                                    if (resp.hasOwnProperty(key)) {
+                                        objectList[key] = resp[key];
+                                    }
                                 }
-                            }
-                            if(deleteOutdated !== undefined)
-                                deleteOutdated.onsuccess = function(event) {
-                                    //console.log('Deleted object from db! ');               //TODO DELETE ALL THIS
-                                    //console.log(event);               //TODO DELETE ALL THIS
+                                //console.log(objectList);               //TODO DELETE
+                                //console.log(errorList);               //TODO DELETE
+                                //console.log(groupMap);               //TODO DELETE
+
+
+                                //Open DB transaction to delete outdated objects and add new ones
+                                var transaction2 = db.transaction(["objects"], "readwrite");
+
+                                //Delete outdated objects
+                                var objectStore1 = transaction2.objectStore("objects");
+                                //Go over the errors, delete every object whose error isn't "0"
+                                if(errorList !=[]){
+                                    for (let key in errorList) {
+                                        if (errorList.hasOwnProperty(key)) {
+                                            if (errorList[key] != '0')
+                                                var deleteOutdated = objectStore1.delete(key);
+                                        }
+                                    }
+                                    if(deleteOutdated !== undefined)
+                                        deleteOutdated.onsuccess = function(event) {
+                                            //console.log('Deleted object from db! ');               //TODO DELETE ALL THIS
+                                            //console.log(event);               //TODO DELETE ALL THIS
+                                        };
+                                }
+
+                                //Add new objects
+                                var objectStore2 = transaction2.objectStore("objects");
+                                //console.log(objectList);                  //TODO DELETE
+                                for (let key in objectList) {
+                                    if (objectList.hasOwnProperty(key)) {
+                                        var objectStoreRequest = objectStore2.put({id:key, content:objectList[key], group:groupMap[key],
+                                            canModify:false, canView:true, lastUpdated:timenow});
+                                    }
+                                }
+
+                                transaction2.oncomplete = function(event){
+                                    //Send info on which objects were updated
+                                    let updates = {};
+                                    //console.log(objectList);               //TODO DELETE
+                                    //console.log(errorList);               //TODO DELETE
+                                    // console.log(groupMap);               //TODO DELETE
+
+                                    for (let key in errorList) {
+                                        if (errorList.hasOwnProperty(key)) {
+                                            if(errorList[key] !== 0)
+                                                updates[key] = errorList[key];
+                                        }
+                                    }
+
+                                    for (let key in objectList) {
+                                        if (objectList.hasOwnProperty(key)) {
+                                            updates[key] = 'new';
+                                        }
+                                    }
+                                    resolve( JSON.stringify(updates) );
+                                    return JSON.stringify(updates) ;
                                 };
-                        }
-
-                        //Add new objects
-                        var objectStore2 = transaction2.objectStore("objects");
-                        //console.log(objectList);                  //TODO DELETE
-                        for (let key in objectList) {
-                            if (objectList.hasOwnProperty(key)) {
-                                var objectStoreRequest = objectStore2.put({id:key, content:objectList[key], group:groupMap[key],
-                                    canModify:false, canView:true, lastUpdated:timenow});
+                            }
+                        } else {
+                            if(xhr.status < 200 || xhr.status > 299 ){
+                                console.log('Failed to get objects!',xhr);
+                                reject();
+                                return false;
                             }
                         }
-
-                        transaction2.oncomplete = function(event){
-                            //Send info on which objects were updated
-                            let updates = {};
-                            //console.log(objectList);               //TODO DELETE
-                            //console.log(errorList);               //TODO DELETE
-                            // console.log(groupMap);               //TODO DELETE
-
-                            for (let key in errorList) {
-                                if (errorList.hasOwnProperty(key)) {
-                                    if(errorList[key] !== 0)
-                                        updates[key] = errorList[key];
-                                }
-                            }
-
-                            for (let key in objectList) {
-                                if (objectList.hasOwnProperty(key)) {
-                                    updates[key] = 'new';
-                                }
-                            }
-                            resolve( JSON.stringify(updates) );
-                            return JSON.stringify(updates) ;
-                        };
-                    }
-                } else {
-                    if(xhr.status < 200 || xhr.status > 299 ){
-                        console.log('Failed to get objects!',xhr);
-                        reject();
-                        return false;
-                    }
+                    };
+                },
+                function(reject){
+                    alertLog('CSRF token expired. Please refresh the page to submit the form.','danger');
                 }
-            };
+            );
         };
 
     });

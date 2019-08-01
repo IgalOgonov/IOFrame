@@ -1,10 +1,10 @@
 <?php
 
 if(!defined('validator'))
-    require __DIR__ . '/../../util/validator.php';
+    require __DIR__ . '/../../IOFrame/Util/validator.php';
 
 foreach($params as $key=>$value){
-    if($key!='@' && !\IOFrame\validator::validateSQLKey($key)){
+    if($key!='@' && !\IOFrame\Util\validator::validateSQLKey($key)){
         if($test)
             echo 'Illegal group name!';
         die('-1');

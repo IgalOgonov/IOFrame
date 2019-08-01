@@ -4,10 +4,10 @@ function validateCSRFToken(){
     return isset($_REQUEST['CSRF_token']) && $_REQUEST['CSRF_token'] === $_SESSION['CSRF_token'];
 }
 
-function validateThenRefreshCSRFToken($sessionHandler){
+function validateThenRefreshCSRFToken($SessionHandler){
     $res = validateCSRFToken();
     if($res)
-        $sessionHandler->reset_CSRF_token();
+        $SessionHandler->reset_CSRF_token();
     return $res;
 }
 

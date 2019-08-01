@@ -1,0 +1,148 @@
+/*Css of Table of contents, and all possible sub-categories*/
+.toc-wrapper{
+    position: sticky;
+    width: 100%;
+    top: 0px;
+    box-shadow: 2px 2px 4px 0px rgba(0, 0, 0, 0.5);
+}
+
+#toc{
+    display: flex;
+    flex-direction: column;
+    font-weight: bold;
+    font-size: 1em;
+    list-style-type: none;
+    transition: 0.2s ease-in-out;
+    flex: 1.25;
+    padding: 5px 10px;
+    min-width: 250px;
+    max-width: 300px;
+}
+
+#toc button{
+    width: 100%;
+    min-height: 50px;
+    min-width: 50px;
+    border:none;
+    font-size: 1.25em;
+    z-index: 10;
+    text-align: left;
+    background: none;
+    margin: 0;
+    padding-right: 0;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+#toc .toc-menu-div.selected > .button-container > button{
+    font-weight: 600;
+    background-color: rgba(125,125,125,0.1);
+}
+
+#toc .button-container{
+    display: flex;
+    justify-content: space-between;
+}
+
+#toc .button-container > button:nth-of-type(1){
+    flex: 4;
+}
+#toc .button-container > button:nth-of-type(1):hover{
+    background-color: rgba(255,255,255,0.35);
+}
+#toc .button-container > button:nth-of-type(2){
+    text-align: center;
+    flex: 1;
+}
+#toc .button-container > button:nth-of-type(2):hover{
+    background-color: rgba(0,0,0,0.1);
+}
+#toc div > .button-container > button:nth-of-type(2)::after {
+    content: "";
+    border: solid black;
+    border-width: 0 3px 3px 0;
+    display: inline-block;
+    padding: 3px;
+    transform: rotate(45deg);
+    -webkit-transform: rotate(45deg);
+}
+
+#toc div.open > .button-container > button:nth-of-type(2)::after {
+    transform: rotate(-135deg);
+    -webkit-transform: rotate(-135deg);
+}
+
+#toc div{
+    margin: 0px 0px 0px 0px;
+}
+
+#toc h2{
+    border-radius: 0;
+    text-align: center;
+    width: 100%;
+    margin: 0px;
+    padding: 5px 2px 5px 2px;
+}
+
+
+/*Sub menu styling*/
+
+#toc .toc-wrapper > div{
+    background-color: rgba(217, 246, 255,0.5);
+}
+
+#toc .toc-wrapper > div > div > div{
+    padding-left: 10px;
+}
+
+#toc .toc-wrapper > div > div > div > div{
+    padding-left: 10px;
+}
+
+#toc .toc-wrapper > div > div.open{
+    background: rgba(255,255,255,0.3);
+}
+
+#toc .toc-wrapper > div.open{
+    border-top: 3px solid;
+    border-bottom: 3px solid;
+}
+
+#toc .toc-wrapper div.open > .button-container{
+    background: rgba(255,255,255,0.3);
+}
+
+/* Open sub menus*/
+#toc .toc-menu-div > *:not(.button-container),
+#toc .toc-menu-div > .toc-menu-div > *{
+    height: 0px;
+    min-height: 0px;
+    position: relative;
+    left: -25vw;
+    transition: 0.0s;
+}
+
+#toc .toc-wrapper > .toc-menu-div.open > *, #toc .toc-wrapper > .toc-menu-div.open > * > .button-container,
+#toc .toc-menu-div > .toc-menu-div.open > *, #toc .toc-menu-div > .toc-menu-div.open > * > .button-container {
+    height: auto;
+    min-height: 50px;
+    position: relative;
+    left: 0;
+    transition: 0.2s;
+}
+
+#toc .open > .button-container > button {
+
+    color: rgb(0, 35, 185);
+
+}
+
+/*Responsiveness*/
+@media screen and (max-width: 790px){
+    /*TOC*/
+    #toc{
+        position: fixed;
+        left: -300px;
+        border: 1px black solid;
+    }
+}

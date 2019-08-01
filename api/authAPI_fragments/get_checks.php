@@ -1,14 +1,14 @@
 <?php
 
 if(!defined('validator'))
-    require __DIR__ . '/../../util/validator.php';
+    require __DIR__ . '/../../IOFrame/Util/validator.php';
 
 //Input checks
 
 if($params == null){
     if($test)
         echo 'Params must be set!';
-    exit('-1');
+    exit('INPUT_VALIDATION_FAILURE');
 }
 
 $expectedParams = ['id','action','group','separator','includeActions','limit','offset','orderByExp'];
@@ -30,25 +30,25 @@ foreach($expectedParams as $expectedParam){
                         if(in_array($pair[0],$allowedExpressionsID) && $expectedParam!='id'){
                             if($test)
                                 echo 'Filter expression only valid for an id!'.EOL;
-                            exit('-1');
+                            exit(INPUT_VALIDATION_FAILURE);
                         }
                         if($expectedParam =='id'){
                             if(!filter_var($pair[1],FILTER_VALIDATE_INT)){
                                 if($test)
                                     echo 'id expressions must be numbers!'.EOL;
-                                exit('-1');
+                                exit(INPUT_VALIDATION_FAILURE);
                             }
                             if($pair[1]<=0){
                                 if($test)
                                     echo 'id must be larger than 0!'.EOL;
-                                exit('-1');
+                                exit(INPUT_VALIDATION_FAILURE);
                             }
                         }
                         else{
-                            if(!\IOFrame\validator::validateSQLKey($pair[1])){
+                            if(!\IOFrame\Util\validator::validateSQLKey($pair[1])){
                                 if($test)
                                     echo 'Action/Group names must be 1 to 256 characters!'.EOL;
-                                exit('-1');
+                                exit(INPUT_VALIDATION_FAILURE);
                             }
                         }
                     }
@@ -56,23 +56,23 @@ foreach($expectedParams as $expectedParam){
                         if(!is_array($pair[1])){
                             if($test)
                                 echo 'Filter expression expects an array of values!'.EOL;
-                            exit('-1');
+                            exit(INPUT_VALIDATION_FAILURE);
                         }
                         if($expectedParam =='id'){
                             foreach($pair[1] as $id){
                                 if(!filter_var($id,FILTER_VALIDATE_INT)){
                                     if($test)
                                         echo 'id expressions must be numbers!'.EOL;
-                                    exit('-1');
+                                    exit(INPUT_VALIDATION_FAILURE);
                                 }
                             }
                         }
                         else{
                             foreach($pair[1] as $target){
-                                if(!\IOFrame\validator::validateSQLKey($target)){
+                                if(!\IOFrame\Util\validator::validateSQLKey($target)){
                                     if($test)
                                         echo 'Action/Group names must a 1 to 256 characters string!'.EOL;
-                                    exit('-1');
+                                    exit(INPUT_VALIDATION_FAILURE);
                                 }
                             }
                         }
@@ -81,7 +81,7 @@ foreach($expectedParams as $expectedParam){
                     else{
                         if($test)
                             echo 'Filter expression not valid!'.EOL;
-                        exit('-1');
+                        exit(INPUT_VALIDATION_FAILURE);
                     }
                 }
                 break;
@@ -90,7 +90,7 @@ foreach($expectedParams as $expectedParam){
                 if(!in_array($params[$expectedParam] ,$allowedSeparators)){
                     if($test)
                         echo 'Allowed separators are '.json_encode($allowedSeparators).'!'.EOL;
-                    exit('-1');
+                    exit(INPUT_VALIDATION_FAILURE);
                 }
                 break;
             case 'includeActions':
@@ -103,7 +103,7 @@ foreach($expectedParams as $expectedParam){
                 if(!filter_var($params[$expectedParam],FILTER_VALIDATE_INT)){
                     if($test)
                         echo 'limit expression must be a number!'.EOL;
-                    exit('-1');
+                    exit(INPUT_VALIDATION_FAILURE);
                 }
                 break;
             case 'offset':
@@ -111,7 +111,7 @@ foreach($expectedParams as $expectedParam){
                 if(!filter_var($params[$expectedParam],FILTER_VALIDATE_INT) && $params[$expectedParam]!=0){
                     if($test)
                         echo 'offset expression must be a number!'.EOL;
-                    exit('-1');
+                    exit(INPUT_VALIDATION_FAILURE);
                 }
                 break;
             case 'orderByExp':
@@ -135,7 +135,7 @@ foreach($expectedParams as $expectedParam){
                 if(!in_array($params[$expectedParam],$allowedExpressions)){
                     if($test)
                         echo 'Currently, only allowed custom order expressions are '.json_encode($allowedExpressions).'!'.EOL;
-                    exit('-1');
+                    exit(INPUT_VALIDATION_FAILURE);
                 }
                 break;
         }
@@ -149,5 +149,5 @@ foreach($expectedParams as $expectedParam){
 if(!$auth->isAuthorized(0)){
     if($test)
         echo 'Authorization rank must be 0!';
-    exit('-2');
+    exit(AUTHENTICATION_FAILURE);
 }

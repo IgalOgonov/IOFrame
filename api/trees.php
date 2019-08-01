@@ -23,9 +23,7 @@
  *          ...
  *      }
  *
- *  Always returns -1 on input validation failure
- *  Always returns -2 on auth failure.make sure to call ensurePublicImages on each.
- *  Mostly returns -3 on CSRF token mismatch, unless stated otherwise
+ *      See standard return values at defaultInputResults.php
  *
  * Available operations include:
  *_________________________________________________
@@ -137,11 +135,13 @@
 
 if(!defined('coreInit'))
     require __DIR__ . '/../main/coreInit.php';
-require __DIR__ . '/../handlers/treeHandler.php';
-require __DIR__ . '/../util/validator.php';
+require __DIR__ . '/../IOFrame/Handlers/TreeHandler.php';
+require __DIR__ . '/../IOFrame/Util/validator.php';
 
 //If it's a test call..
 require 'defaultInputChecks.php';
+require 'defaultInputResults.php';
+require 'treeAPI_fragments/definitions.php';
 require 'CSRF.php';
 
 if($test){
@@ -163,7 +163,7 @@ function validateAssocArray($assocArray){
     foreach($assocArray as $content=>$children){
         if(!is_array($children))
             return false;
-        if(strlen($content) > IOFrame\TREE_MAX_CONTENT_LENGTH)
+        if(strlen($content) > TREE_MAX_CONTENT_LENGTH)
             return false;
         if($children !== [])
             $res = validateAssocArray($children);
@@ -185,7 +185,7 @@ function validateEulerArray($eulerArray){
         if(preg_match('/\D/',$triplet['smallestEdge']) || preg_match('/\D/',$triplet['largestEdge']))
             return false;
 
-        if(strlen($triplet['content']) > IOFrame\TREE_MAX_CONTENT_LENGTH)
+        if(strlen($triplet['content']) > TREE_MAX_CONTENT_LENGTH)
             return false;
     }
     return true;
@@ -197,20 +197,20 @@ switch($_REQUEST['action']){
     /*Auth, and ensure needed inputs are present*/
     case 'addTrees':
 
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
 
         //inputs array - existence and validation
         if(!isset($_REQUEST['inputs'])){
             if($test)
                 echo 'Inputs array must be specified with addTrees!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
-        if(!IOFrame\is_json($_REQUEST['inputs'])){
+        if(!IOFrame\Util\is_json($_REQUEST['inputs'])){
             if($test)
                 echo 'Inputs array must be a JSON array!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         $inputs = json_decode($_REQUEST['inputs'],true);
@@ -218,56 +218,56 @@ switch($_REQUEST['action']){
         if(!is_array($inputs)){
             if($test)
                 echo 'Inputs array must be an array!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         foreach($inputs as $treeName=>$params){
-            if(!\IOFrame\validator::validateSQLTableName($treeName)){
+            if(!\IOFrame\Util\validator::validateSQLTableName($treeName)){
                 if($test)
                     echo 'Illegal tree name!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
             if(!is_array($params)){
                 if($test)
                     echo 'Tree params must be an array!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
             if(!isset($params['content'])){
                 if($test)
                     echo 'Every new tree has to have content!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
             if(!validateAssocArray($params['content']) && !validateEulerArray($params['content'])){
                 if($test)
                     echo 'Content of each tree must be a valid Euler or Associated array!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
             if(isset($params['override'])){
                 if($params['override']!==0 && $params['override']!==1  && $params['override']!=='1'  && $params['override']!=='0' &&
                     $params['override']!==true && $params['override']!==false  && $params['override']!=='true'  && $params['override']!=='false' ){
                     if($test)
                         echo 'override for tree '.$treeName.' must be a boolean!'.EOL;
-                    exit('-1');
+                    exit(INPUT_VALIDATION_FAILURE);
                 }
             }
         }
 
         if( !(
             $auth->isAuthorized(0) ||
-            $auth->hasAction('TREE_MODIFY_ALL') ||
-            $auth->hasAction('TREE_C_AUTH')
+            $auth->hasAction(TREE_MODIFY_ALL) ||
+            $auth->hasAction(TREE_C_AUTH)
              )
         ){
             if($test)
                 echo 'Insufficient auth to add a new tree!'.EOL;
-            exit('-2');
+            exit(AUTHENTICATION_FAILURE);
         }
         break;
     //--------------------
     case 'removeTrees':
 
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
 
         //Will be used to check which trees we may remove
         $treesToRemoveAuth = [];
@@ -276,13 +276,13 @@ switch($_REQUEST['action']){
         if(!isset($_REQUEST['inputs'])){
             if($test)
                 echo 'Inputs array must be specified with removeTrees!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
-        if(!IOFrame\is_json($_REQUEST['inputs'])){
+        if(!IOFrame\Util\is_json($_REQUEST['inputs'])){
             if($test)
                 echo 'Inputs array must be a JSON array!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         $inputs = json_decode($_REQUEST['inputs'],true);
@@ -290,78 +290,78 @@ switch($_REQUEST['action']){
         if(!is_array($inputs)){
             if($test)
                 echo 'Inputs array must be an array!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         foreach($inputs as $treeName=>$params){
             //This marks the tree as one we need to check individual auth for
             array_push($treesToRemoveAuth,$treeName);
-            if(!\IOFrame\validator::validateSQLTableName($treeName)){
+            if(!\IOFrame\Util\validator::validateSQLTableName($treeName)){
                 if($test)
                     echo 'Illegal tree name!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
             if(!is_array($params)){
                 if($test)
                     echo 'Tree params must be an array!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
             if(isset($params['onlyEmpty'])){
                 if($params['onlyEmpty']!==0 && $params['onlyEmpty']!==1  && $params['onlyEmpty']!=='1'  && $params['onlyEmpty']!=='0' &&
                     $params['onlyEmpty']!==true && $params['onlyEmpty']!==false  && $params['onlyEmpty']!=='true'  && $params['onlyEmpty']!=='false' ){
                     if($test)
                         echo 'onlyEmpty for tree '.$treeName.' must be a boolean!'.EOL;
-                    exit('-1');
+                    exit(INPUT_VALIDATION_FAILURE);
                 }
             }
             //This removes the tree from the list of trees we are not individually authorized to remove
-            if($authHandler->hasAction('TREE_D_ACTION'.$treeName)){
-                unset($treesToRemoveAuth[count($treesToRemoveAuth)-1]);
-            }
+//            if($AuthHandler->hasAction(TREE_D_ACTION.$_REQUEST['treeName'])){
+//                unset($treesToRemoveAuth[count($treesToRemoveAuth)-1]);
+//            }
         }
 
         if( !(
             $auth->isAuthorized(0) ||
-            $auth->hasAction('TREE_MODIFY_ALL') ||
-            $auth->hasAction('TREE_D_AUTH')
+            $auth->hasAction(TREE_MODIFY_ALL) ||
+            $auth->hasAction(TREE_D_AUTH)
         )
         ){
             //Only relevant if there are trees we are not individually authorized to remove
             if($treesToRemoveAuth !== []){
                 if($test)
                     echo 'Insufficient auth to remove trees '.json_encode($treesToRemoveAuth).EOL;
-                exit('-2');
+                exit(AUTHENTICATION_FAILURE);
             }
         }
         break;
     //--------------------
     case 'updateNodes':
 
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
 
         if(!isset($_REQUEST['treeName'])){
             if($test)
                 echo 'Inputs array must be specified with updateNodes!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
-        if(!\IOFrame\validator::validateSQLTableName($_REQUEST['treeName'])){
+        if(!\IOFrame\Util\validator::validateSQLTableName($_REQUEST['treeName'])){
             if($test)
                 echo 'Illegal tree name!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         if(!isset($_REQUEST['content'])){
             if($test)
                 echo 'Need some content to update the nodes with!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
-        if(!IOFrame\is_json($_REQUEST['content'])){
+        if(!IOFrame\Util\is_json($_REQUEST['content'])){
             if($test)
                 echo 'Content must be JSON encoded!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         $contentArray = json_decode($_REQUEST['content'],true);
@@ -369,32 +369,32 @@ switch($_REQUEST['action']){
         if(!is_array($contentArray)){
             if($test)
                 echo 'Content must be an array!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         foreach($contentArray as $val){
             if(preg_match('/\D/',$val[0])){
                 if($test)
                     echo 'Content ID contains non-digits or is negative!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
-            if(strlen($val[1]) > IOFrame\TREE_MAX_CONTENT_LENGTH){
+            if(strlen($val[1]) > TREE_MAX_CONTENT_LENGTH){
                 if($test)
                     echo 'Content too long!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
         }
 
         if( !(
             $auth->isAuthorized(0) ||
-            $auth->hasAction('TREE_MODIFY_ALL') ||
-            $auth->hasAction('TREE_C_AUTH') ||
-            $auth->hasAction('TREE_D_ACTION'.$_REQUEST['treeName'])
+            $auth->hasAction(TREE_MODIFY_ALL) ||
+            $auth->hasAction(TREE_C_AUTH) /*||
+            $auth->hasAction(TREE_D_ACTION.$_REQUEST['treeName'])*/
         )
         ){
             if($test)
                 echo 'Insufficient auth update tree '.$_REQUEST['treeName'].'!'.EOL;
-            exit('-2');
+            exit(AUTHENTICATION_FAILURE);
         }
         break;
     //--------------------
@@ -402,32 +402,32 @@ switch($_REQUEST['action']){
         if(!isset($_REQUEST['treeName'])){
             if($test)
                 echo 'treeName must be specified with getSubtree!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
-        if(!\IOFrame\validator::validateSQLTableName($_REQUEST['treeName'])){
+        if(!\IOFrame\Util\validator::validateSQLTableName($_REQUEST['treeName'])){
             if($test)
                 echo 'Illegal tree name!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         if(!isset($_REQUEST['nodeID'])){
             if($test)
                 echo 'nodeID must be specified with getSubtree!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         if(preg_match('/\D/',$_REQUEST['nodeID'])){
             if($test)
                 echo 'Node ID contains non-digits or is negative!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         if(isset($_REQUEST['returnType'])){
             if($_REQUEST['returnType'] !== 'assoc' && $_REQUEST['returnType'] !== 'euler' && $_REQUEST['returnType'] !== 'numbered'){
                 if($test)
                     echo 'Invalid return type!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
         }
         else
@@ -437,7 +437,7 @@ switch($_REQUEST['action']){
             if(preg_match('/\D/',$_REQUEST['lastUpdated'])){
                 if($test)
                     echo 'lastUpdated contains non-digits or is negative!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
         }
         else
@@ -450,13 +450,13 @@ switch($_REQUEST['action']){
         if(!isset($_REQUEST['inputs'])){
             if($test)
                 echo 'Inputs array must be specified with getTrees!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
-        if(!IOFrame\is_json($_REQUEST['inputs'])){
+        if(!IOFrame\Util\is_json($_REQUEST['inputs'])){
             if($test)
                 echo 'Inputs must be a valid JSON!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         $inputs = json_decode($_REQUEST['inputs'],true);
@@ -464,32 +464,32 @@ switch($_REQUEST['action']){
         if(!is_array($inputs)){
             if($test)
                 echo 'Inputs must be an array!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         foreach( $inputs as $treeName=>$valArr){
             if(!isset($treeName)){
                 if($test)
                     echo 'Each tree in getTrees must have a valid name!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
 
-            if(!\IOFrame\validator::validateSQLTableName($treeName)){
+            if(!\IOFrame\Util\validator::validateSQLTableName($treeName)){
                 if($test)
                     echo 'Illegal tree name!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
 
             if($valArr['returnType'] !== 'assoc' && $valArr['returnType'] !== 'euler' && $valArr['returnType'] !== 'numbered'){
                 if($test)
                     echo 'Invalid return type for '.$treeName.'!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
 
             if(preg_match('/\D/',$valArr['lastUpdated'])){
                 if($test)
                     echo 'lastUpdated contains non-digits or is negative for '.$treeName.'!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
         }
 
@@ -498,47 +498,47 @@ switch($_REQUEST['action']){
     //--------------------
     case 'linkNodes':
 
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
 
         if(!isset($_REQUEST['treeName'])){
             if($test)
                 echo 'Missing a valid tree name!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
-        if(!\IOFrame\validator::validateSQLTableName($_REQUEST['treeName'])){
+        if(!\IOFrame\Util\validator::validateSQLTableName($_REQUEST['treeName'])){
             if($test)
                 echo 'Illegal tree name!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         if(!isset($_REQUEST['nodeID'])){
             if($test)
                 echo 'nodeID must be specified with linkNodes!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         if(preg_match('/\D/',$_REQUEST['nodeID'])){
             if($test)
                 echo 'Node ID contains non-digits or is negative!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         if(isset($_REQUEST['nodeChildNumber'])){
             if(preg_match('/\D/',$_REQUEST['nodeChildNumber'])){
                 if($test)
                     echo 'nodeChildNumber contains non-digits or is negative!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
         }
         else
             $_REQUEST['nodeChildNumber'] = 0;
 
-        if(!IOFrame\is_json($_REQUEST['newNodeArray'])){
+        if(!IOFrame\Util\is_json($_REQUEST['newNodeArray'])){
             if($test)
                 echo 'newNodeArray must be a json!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         $newNodeArray = json_decode($_REQUEST['newNodeArray'],true);
@@ -546,56 +546,56 @@ switch($_REQUEST['action']){
         if(!validateAssocArray($newNodeArray) && !validateEulerArray($newNodeArray)){
             if($test)
                 echo 'newNodeArray must be a valid Euler or Associated array!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         if( !(
             $auth->isAuthorized(0) ||
-            $auth->hasAction('TREE_MODIFY_ALL') ||
-            $auth->hasAction('TREE_U_AUTH') ||
-            $auth->hasAction('TREE_U_ACTION'.$_REQUEST['treeName'])
+            $auth->hasAction(TREE_MODIFY_ALL) ||
+            $auth->hasAction(TREE_U_AUTH) /*||
+            $auth->hasAction(TREE_U_ACTION.$_REQUEST['treeName'])*/
         )
         ){
             if($test)
                 echo 'Insufficient auth to link to a tree!'.EOL;
-            exit('-2');
+            exit(AUTHENTICATION_FAILURE);
         }
         break;
     //--------------------
     case 'cutNodes':
 
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
 
         if(!isset($_REQUEST['treeName'])){
             if($test)
                 echo 'Missing a valid tree name!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
-        if(!\IOFrame\validator::validateSQLTableName($_REQUEST['treeName'])){
+        if(!\IOFrame\Util\validator::validateSQLTableName($_REQUEST['treeName'])){
             if($test)
                 echo 'Illegal tree name!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         if(!isset($_REQUEST['nodeID'])){
             if($test)
                 echo 'nodeID must be specified with cutNodes!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         if(preg_match('/\D/',$_REQUEST['nodeID'])){
             if($test)
                 echo 'Node ID contains non-digits or is negative!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         if(isset($_REQUEST['returnType'])){
             if($_REQUEST['returnType'] !== 'assoc' && $_REQUEST['returnType'] !== 'euler'){
                 if($test)
                     echo 'Invalid return type!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
         }
         else
@@ -603,51 +603,51 @@ switch($_REQUEST['action']){
 
         if( !(
             $auth->isAuthorized(0) ||
-            $auth->hasAction('TREE_MODIFY_ALL') ||
-            $auth->hasAction('TREE_U_AUTH') ||
-            $auth->hasAction('TREE_U_ACTION'.$_REQUEST['treeName'])
+            $auth->hasAction(TREE_MODIFY_ALL) ||
+            $auth->hasAction(TREE_U_AUTH) /*||
+            $auth->hasAction('TREE_U_ACTION'.$_REQUEST['treeName'])*/
         )
         ){
             if($test)
                 echo 'Insufficient auth to cut from a tree!'.EOL;
-            exit('-2');
+            exit(AUTHENTICATION_FAILURE);
         }
         break;
     //--------------------
     case 'moveNodes':
 
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
 
         if(!isset($_REQUEST['treeName'])){
             if($test)
                 echo 'Missing a valid tree name!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
-        if(!\IOFrame\validator::validateSQLTableName($_REQUEST['treeName'])){
+        if(!\IOFrame\Util\validator::validateSQLTableName($_REQUEST['treeName'])){
             if($test)
                 echo 'Illegal tree name!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         if(!isset($_REQUEST['nodeID'])){
             if($test)
                 echo 'nodeID must be specified with moveNodes!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         if(preg_match('/\D/',$_REQUEST['nodeID'])){
             if($test)
                 echo 'Node ID contains non-digits or is negative!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         if(isset($_REQUEST['targetTreeName'])){
-            if(!\IOFrame\validator::validateSQLTableName($_REQUEST['targetTreeName'])){
+            if(!\IOFrame\Util\validator::validateSQLTableName($_REQUEST['targetTreeName'])){
                 if($test)
                     echo 'Illegal target tree name!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
         }
         else
@@ -657,7 +657,7 @@ switch($_REQUEST['action']){
             if(preg_match('/\D/',$_REQUEST['targetChildNumber'])){
                 if($test)
                     echo 'targetChildNumber contains non-digits or is negative!'.EOL;
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
         }
         else
@@ -666,26 +666,30 @@ switch($_REQUEST['action']){
         if(!isset($_REQUEST['targetNodeID'])){
             if($test)
                 echo 'targetNodeID must be specified with moveNodes!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
         if(preg_match('/\D/',$_REQUEST['targetNodeID'])){
             if($test)
                 echo 'Node ID contains non-digits or is negative!'.EOL;
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 
 
         if( !(
             $auth->isAuthorized(0) ||
-            $auth->hasAction('TREE_MODIFY_ALL') ||
-            $auth->hasAction('TREE_U_AUTH') ||
-            ( $auth->hasAction('TREE_U_ACTION'.$_REQUEST['treeName']) && $auth->hasAction('TREE_U_ACTION'.$_REQUEST['targetTreeName']) )
+            $auth->hasAction(TREE_MODIFY_ALL) ||
+            $auth->hasAction(TREE_U_AUTH)/* ||
+            (
+                $auth->hasAction('TREE_U_ACTION'.$_REQUEST['treeName'])
+                &&
+                $auth->hasAction('TREE_U_ACTION'.$_REQUEST['targetTreeName'])
+            )*/
         )
         ){
             if($test)
                 echo 'Insufficient auth to move nodes in a tree (or between trees)!'.EOL;
-            exit('-2');
+            exit(AUTHENTICATION_FAILURE);
         }
         break;
     //--------------------
@@ -695,12 +699,12 @@ switch($_REQUEST['action']){
     default:
         if($test)
             echo 'Specified action is not recognized'.EOL;
-        exit('-1');
+        exit(INPUT_VALIDATION_FAILURE);
 }
 
-//If the system has no redisHandler, we cannot use cache
-if(!isset($redisHandler))
-    $redisHandler = null;
+//If the system has no RedisHandler, we cannot use cache
+if(!isset($RedisHandler))
+    $RedisHandler = null;
 
 //Do what needs to be done
 switch($_REQUEST['action']){
@@ -709,10 +713,10 @@ switch($_REQUEST['action']){
 
     case 'addTrees':
 
-        $treeHandler = new \IOFrame\treeHandler(
+        $TreeHandler = new \IOFrame\Handlers\TreeHandler(
             []
             ,$settings,
-            ['sqlHandler'=>$sqlHandler,'logger'=>$logger,'redisHandler'=>$redisHandler]
+            ['SQLHandler'=>$SQLHandler,'logger'=>$logger,'RedisHandler'=>$RedisHandler]
         );
 
         $inputs = json_decode($_REQUEST['inputs'],true);
@@ -723,7 +727,7 @@ switch($_REQUEST['action']){
                 $inputs[$k]['override'] = false;
         }
 
-        $res = $treeHandler->addTrees($inputs,['test'=>$test]);
+        $res = $TreeHandler->addTrees($inputs,['test'=>$test]);
 
         if(gettype($res) == 'string')
             echo $res;
@@ -745,13 +749,13 @@ switch($_REQUEST['action']){
                 $inputs[$k]['onlyEmpty'] = false;
         }
 
-        $treeHandler = new \IOFrame\treeHandler(
+        $TreeHandler = new \IOFrame\Handlers\TreeHandler(
             $treeNames
             ,$settings,
-            ['sqlHandler'=>$sqlHandler,'logger'=>$logger,'redisHandler'=>$redisHandler]
+            ['SQLHandler'=>$SQLHandler,'logger'=>$logger,'RedisHandler'=>$RedisHandler]
         );
 
-        $res  = $treeHandler->removeTrees($inputs,['test'=>$test]);
+        $res  = $TreeHandler->removeTrees($inputs,['test'=>$test]);
 
         if(gettype($res) == 'string')
             echo $res;
@@ -764,36 +768,36 @@ switch($_REQUEST['action']){
 
         $contentArray = json_decode($_REQUEST['content'],true);
 
-        $treeHandler = new \IOFrame\treeHandler(
+        $TreeHandler = new \IOFrame\Handlers\TreeHandler(
             $_REQUEST['treeName']
             ,$settings,
-            ['sqlHandler'=>$sqlHandler,'logger'=>$logger,'redisHandler'=>$redisHandler]
+            ['SQLHandler'=>$SQLHandler,'logger'=>$logger,'RedisHandler'=>$RedisHandler]
         );
 
-        echo $treeHandler->updateNodes($contentArray,$_REQUEST['treeName'],['updateDB'=>true,'test'=>$test])? '1':0;
+        echo $TreeHandler->updateNodes($contentArray,$_REQUEST['treeName'],['updateDB'=>true,'test'=>$test])? '1':0;
 
         break;
 
     case 'getSubtree':
 
-        $treeHandler = new \IOFrame\treeHandler(
+        $TreeHandler = new \IOFrame\Handlers\TreeHandler(
             [$_REQUEST['treeName']=>$_REQUEST['lastUpdated']]
             ,$settings,
-            ['sqlHandler'=>$sqlHandler,'logger'=>$logger,'redisHandler'=>$redisHandler]
+            ['SQLHandler'=>$SQLHandler,'logger'=>$logger,'RedisHandler'=>$RedisHandler]
         );
 
         //Auth that wasn't checked in the earlier stage - if you are authorized, get even trees that are private
         if($auth->isLoggedIn())
             if( (
                 $auth->isAuthorized(0) ||
-                $auth->hasAction('TREE_R_AUTH')
+                $auth->hasAction(TREE_R_AUTH)
             )
             ){
-                $treeHandler->getFromDB([$_REQUEST['treeName']=>$_REQUEST['lastUpdated']],['ignorePrivate'=>false, 'test'=>$test]);
+                $TreeHandler->getFromDB([$_REQUEST['treeName']=>$_REQUEST['lastUpdated']],['ignorePrivate'=>false, 'test'=>$test]);
             }
 
         echo json_encode(
-            $treeHandler->getSubtreeByID(
+            $TreeHandler->getSubtreeByID(
                 $_REQUEST['treeName'],['returnType'=>$_REQUEST['returnType'],'nodeID'=>$_REQUEST['nodeID'],'test'=>$test]
             )
         );
@@ -821,10 +825,10 @@ switch($_REQUEST['action']){
             $combinedArray[$treeName] = $valArr['lastUpdated'];
         }
 
-        $treeHandler = new \IOFrame\treeHandler(
+        $TreeHandler = new \IOFrame\Handlers\TreeHandler(
             $combinedArray
             ,$settings,
-            ['sqlHandler'=>$sqlHandler,'logger'=>$logger,'redisHandler'=>$redisHandler]
+            ['SQLHandler'=>$SQLHandler,'logger'=>$logger,'RedisHandler'=>$RedisHandler]
         );
 
 
@@ -832,23 +836,22 @@ switch($_REQUEST['action']){
         if($auth->isLoggedIn())
             if( (
                 $auth->isAuthorized(0) ||
-                $auth->hasAction('TREE_READ_ALL') ||
-                $auth->hasAction('TREE_R_AUTH')
+                $auth->hasAction(TREE_R_AUTH)
             )
             ){
-                $treeHandler->getFromDB($combinedArray,['ignorePrivate'=>false, 'test'=>$test]);
+                $TreeHandler->getFromDB($combinedArray,['ignorePrivate'=>false, 'test'=>$test]);
             }
 
         foreach($eulerTreeNames as $eulerName){
-            $resArray[$eulerName] = $treeHandler->getTree($eulerName);
+            $resArray[$eulerName] = $TreeHandler->getTree($eulerName);
         }
 
         foreach($assocTreeNames as $assocName){
-            $resArray[$assocName] = $treeHandler->getAssocTree($assocName);
+            $resArray[$assocName] = $TreeHandler->getAssocTree($assocName);
         }
 
         foreach($numberedTreeNames as $numberedName){
-            $resArray[$numberedName] = $treeHandler->getNumberedTree($numberedName);
+            $resArray[$numberedName] = $TreeHandler->getNumberedTree($numberedName);
         }
 
         echo json_encode($resArray);
@@ -858,15 +861,15 @@ switch($_REQUEST['action']){
     case 'linkNodes':
 
 
-        $treeHandler = new \IOFrame\treeHandler(
+        $TreeHandler = new \IOFrame\Handlers\TreeHandler(
             $_REQUEST['treeName']
             ,$settings,
-            ['sqlHandler'=>$sqlHandler,'logger'=>$logger,'redisHandler'=>$redisHandler,'ignorePrivate'=>false]
+            ['SQLHandler'=>$SQLHandler,'logger'=>$logger,'RedisHandler'=>$RedisHandler,'ignorePrivate'=>false]
         );
 
         $newNodeArray = json_decode($_REQUEST['newNodeArray'],true);
 
-        echo $treeHandler->linkNodesToID(
+        echo $TreeHandler->linkNodesToID(
             $_REQUEST['treeName'],
             $newNodeArray,
             $_REQUEST['nodeID'],
@@ -877,14 +880,14 @@ switch($_REQUEST['action']){
 
     case 'cutNodes':
 
-        $treeHandler = new \IOFrame\treeHandler(
+        $TreeHandler = new \IOFrame\Handlers\TreeHandler(
             $_REQUEST['treeName']
             ,$settings,
-            ['sqlHandler'=>$sqlHandler,'logger'=>$logger,'redisHandler'=>$redisHandler,'ignorePrivate'=>false]
+            ['SQLHandler'=>$SQLHandler,'logger'=>$logger,'RedisHandler'=>$RedisHandler,'ignorePrivate'=>false]
         );
 
         echo json_encode(
-            $treeHandler->cutNodesByID(
+            $TreeHandler->cutNodesByID(
             $_REQUEST['treeName'],
             $_REQUEST['nodeID'],
             ['updateDB'=>true, 'returnType'=>$_REQUEST['returnType'],'test'=>$test]
@@ -898,13 +901,13 @@ switch($_REQUEST['action']){
         $treeNames = ($_REQUEST['targetTreeName'] == $_REQUEST['treeName']) ?
             $_REQUEST['treeName'] : [ $_REQUEST['targetTreeName'], $_REQUEST['treeName'] ] ;
 
-        $treeHandler = new \IOFrame\treeHandler(
+        $TreeHandler = new \IOFrame\Handlers\TreeHandler(
             $treeNames
             ,$settings,
-            ['sqlHandler'=>$sqlHandler,'logger'=>$logger,'redisHandler'=>$redisHandler,'ignorePrivate'=>false]
+            ['SQLHandler'=>$SQLHandler,'logger'=>$logger,'RedisHandler'=>$RedisHandler,'ignorePrivate'=>false]
         );
 
-        echo $treeHandler->cutNodesByID(
+        echo $TreeHandler->cutNodesByID(
             $_REQUEST['treeName'],
             $_REQUEST['nodeID'],
             [
@@ -921,12 +924,12 @@ switch($_REQUEST['action']){
         break;
 
     case 'getTreeMap':
-        $treeHandler = new \IOFrame\treeHandler(
+        $TreeHandler = new \IOFrame\Handlers\TreeHandler(
             []
             ,$settings,
-            ['sqlHandler'=>$sqlHandler,'logger'=>$logger,'redisHandler'=>$redisHandler]
+            ['SQLHandler'=>$SQLHandler,'logger'=>$logger,'RedisHandler'=>$RedisHandler]
         );
-        echo json_encode($treeHandler->getTreeMap());
+        echo json_encode($TreeHandler->getTreeMap());
         break;
 
     default:

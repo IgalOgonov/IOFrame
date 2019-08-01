@@ -1,0 +1,65 @@
+
+/*Css of docs*/
+#doc{
+    font-size: 1em;
+    list-style-type: none;
+    display: inline;
+    transition: 0.2s ease-in-out;
+    flex: 4;
+}
+
+#doc article{
+    padding-top: 5px;
+}
+
+#doc header{
+    box-shadow: 2px 2px 4px 0px rgba(0, 0, 0, 0.5);
+}
+
+#doc   header >*:first-child{
+    padding-top: 10px;
+}
+
+#doc h1, #doc h2, #doc h3, #doc h4, #doc h5, #doc h6{
+    padding: 5px;
+}
+
+#doc article > *{
+    margin-right: 10px;
+    margin-left: 10px;
+}
+
+#doc article > div {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+#doc pre {
+    max-width: calc(70vw - 20px);
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/*Buttons*/
+#doc button{
+    border: none;
+    background: none;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 1.5em;
+}
+
+#doc button:hover{
+    color: rgb(124, 124, 124);
+}
+#doc button.selected {
+    text-decoration-line: underline;
+}
+/*Responsiveness*/
+
+@media screen and (max-width: 790px){
+    /*TOC*/
+    #doc pre {
+        max-width: calc(100vw - 20px);
+    }
+}

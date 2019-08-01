@@ -1,21 +1,22 @@
 <?php
 
-if(!defined('userHandler'))
-    require __DIR__ . '/../../handlers/userHandler.php';
+if(!defined('UserHandler'))
+    require __DIR__ . '/../../IOFrame/Handlers/UserHandler.php';
 
 $id = $_SESSION['MAIL_CHANGE_ID'];
-if(!isset($userHandler))
-    $userHandler = new IOFrame\userHandler(
+if(!isset($UserHandler))
+    $UserHandler = new IOFrame\Handlers\UserHandler(
         $settings,
         $defaultSettingsParams
     );
 
-$result =  $userHandler->changeMail($id,$inputs['newMail'],['test'=>$test]);
+$result =  $UserHandler->changeMail($id,$inputs['newMail'],['test'=>$test]);
 
-if(!$test){
-    unset($_SESSION['MAIL_CHANGE_ID']);
-    unset($_SESSION['MAIL_CHANGE_EXPIRES']);
+if($result === 0) {
+    if (!$test) {
+        unset($_SESSION['MAIL_CHANGE_ID']);
+        unset($_SESSION['MAIL_CHANGE_EXPIRES']);
+    }
+    else
+        echo 'Unsetting session variables!' . EOL;
 }
-else
-    echo 'Unsetting session variables!'.EOL;
-

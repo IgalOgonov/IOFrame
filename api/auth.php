@@ -2,8 +2,7 @@
 
 /* This the the API that handles all the auth functions.
  *
- *      Always returns -1 on input validation failure
- *      Always returns -2 on auth failure (ironic).
+ *      See standard return values at defaultInputResults.php
  *
  * Parameters:
  * "action"     - Requested action - described bellow
@@ -165,6 +164,7 @@ if(!defined('coreInit'))
     require __DIR__ . '/../main/coreInit.php';
 
 require 'defaultInputChecks.php';
+require 'defaultInputResults.php';
 require 'CSRF.php';
 
 if($test)
@@ -193,8 +193,8 @@ switch($action){
         break;
 
     case 'modifyUserRank':
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
         require 'authAPI_fragments/modifyUserRank_checks.php';
         require 'authAPI_fragments/modifyUserRank_execution.php';
         echo ($result)? '1' : '0';
@@ -219,16 +219,16 @@ switch($action){
         break;
 
     case 'setActions':
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
         require 'authAPI_fragments/set_checks.php';
         require 'authAPI_fragments/setActions_execution.php';
         echo ($result)? '1' : '0';
         break;
 
     case 'deleteActions':
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
         require 'authAPI_fragments/delete_checks.php';
         require 'authAPI_fragments/deleteActions_execution.php';
         echo ($result)? '1' : '0';
@@ -250,8 +250,8 @@ switch($action){
 
 
     case 'setGroups':
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
         require 'authAPI_fragments/set_checks.php';
         require 'authAPI_fragments/setGroups_execution.php';
         echo ($result)? '1' : '0';
@@ -259,8 +259,8 @@ switch($action){
 
 
     case 'deleteGroups':
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
         require 'authAPI_fragments/delete_checks.php';
         require 'authAPI_fragments/deleteGroups_execution.php';
         echo ($result)? '1' : '0';
@@ -268,8 +268,8 @@ switch($action){
 
 
     case 'modifyUserActions':
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
         require 'authAPI_fragments/modify_checks.php';
         require 'authAPI_fragments/modifyUserActions_execution.php';
         echo ($result)? '1' : '0';
@@ -277,16 +277,16 @@ switch($action){
 
 
     case 'modifyUserGroups':
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
         require 'authAPI_fragments/modify_checks.php';
         require 'authAPI_fragments/modifyUserGroups_execution.php';
         echo ($result)? '1' : '0';
         break;
 
     case 'modifyGroupActions':
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
         require 'authAPI_fragments/modify_checks.php';
         require 'authAPI_fragments/modifyGroupActions_execution.php';
         echo ($result)? '1' : '0';

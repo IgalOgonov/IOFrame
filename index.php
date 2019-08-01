@@ -1,21 +1,20 @@
 <?php
 
-require 'util/AltoRouter.php';
-require 'handlers/routeHandler.php';
+require 'IOFrame/Util/ext/AltoRouter.php';
+require 'IOFrame/Handlers/RouteHandler.php';
 require 'main/coreInit.php';
 define('REQUEST_PASSED_THROUGH_ROUTER',true);
 
-$routeSettings = new IOFrame\settingsHandler(SETTINGS_DIR_FROM_ROOT.'/routeSettings/');
 $router = new AltoRouter();
 
 //Thankfully, we have the base path created by default at installation
 $router->setBasePath($settings->getSetting('pathToRoot'));
 
 //RouteHandler stuff
-$routeHandler = new IOFrame\routeHandler($settings,$defaultSettingsParams);
+$RouteHandler = new IOFrame\Handlers\RouteHandler($settings,$defaultSettingsParams);
 
 //Get routes
-$routes = $routeHandler->getActiveRoutes();
+$routes = $RouteHandler->getActiveRoutes();
 
 //Save the existing match names that we need to get from the cache/db
 $matchNames = [];
@@ -40,7 +39,7 @@ if( is_array($match)) {
 }
 
 //Get required matches from the db/cache
-$matches = $routeHandler->getMatches($matchNames);
+$matches = $RouteHandler->getMatches($matchNames);
 
 //If the correct match is found, proccess it
 if(isset($matches[$routeTarget]) && is_array($matches[$routeTarget])){
@@ -51,7 +50,7 @@ if(isset($matches[$routeTarget]) && is_array($matches[$routeTarget])){
     $extensions = ($matchArray['Extensions']!==null)? explode(',',$matchArray['Extensions']): ['php','html','htm','js','css'];
 
     //If the match is a string, enclose it in a JSON object
-    if(!\IOFrame\is_json($matchArray['URL']))
+    if(!\IOFrame\Util\is_json($matchArray['URL']))
         $matchArray['URL'] = [
             ['include' => $matchArray['URL'], 'exclude'=>[]]
         ];
@@ -101,9 +100,37 @@ if(isset($matches[$routeTarget]) && is_array($matches[$routeTarget])){
     }
 }
 
-//The default is to require a 404 page
-if(gettype($routeSettings->getSetting('404')) == 'string' && is_file(__DIR__.'/'.$routeSettings->getSetting('404')))
-    require __DIR__.'/'.$routeSettings->getSetting('404');
-else
+//If we are here, we have to get our page without the match rules
+$uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '/';
+$pageSettings = new IOFrame\Handlers\SettingsHandler(SETTINGS_DIR_FROM_ROOT.'/pageSettings/',$defaultSettingsParams);
+
+//If the homepage was requested, and is defined in the settings, try to require the homepage
+if( $uri == '/' || $uri == '' || $uri == $settings->getSetting('pathToRoot') || $uri == $settings->getSetting('pathToRoot').'/'
+&& (gettype($pageSettings->getSetting('homepage')) == 'string') ){
+    $extensions = ['php','html','htm'];
+    //The homepage resides at the address defined at 'homepage'
+    $url = __DIR__.'/'.$pageSettings->getSetting('homepage');
+    foreach($extensions as $extension){
+        if((file_exists($url.'.'.$extension))){
+            require $url.'.'.$extension;
+            die();
+        }
+    }
+}
+
+//The default is to require a 404 page - but we might have a dynamic one!
+if(gettype($pageSettings->getSetting('404')) == 'string' ){
+    $extensions = ['php','html','htm','png','jpg','gif'];
+    //The homepage resides at the address defined at 'homepage'
+    $url = __DIR__.'/'.$pageSettings->getSetting('404');
+    foreach($extensions as $extension){
+        if((file_exists($url.'.'.$extension))){
+            require $url.'.'.$extension;
+            die();
+        }
+    }
+}
+else{
     require '404.html';
-die();
+    die();
+}

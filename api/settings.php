@@ -1,5 +1,8 @@
 <?php
 /* This the the API that handles all the settings functions, like getting/setting settings.
+
+ *      See standard return values at defaultInputResults.php
+ *
  * Parameters:
  * "target"     - Name/URL of the setting file/table
  * "action"     - Requested action - described bellow
@@ -53,6 +56,7 @@ if(!defined('coreInit'))
 
 
 require 'defaultInputChecks.php';
+require 'defaultInputResults.php';
 require 'CSRF.php';
 
 if(!isset($_REQUEST["action"]))
@@ -91,8 +95,8 @@ switch($action){
         break;
 
     case 'setSetting':
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
         require 'settingsAPI_fragments/set_checks.php';
         require 'settingsAPI_fragments/setSetting_execution.php';
         echo $result === true ?
@@ -100,8 +104,8 @@ switch($action){
         break;
 
     case 'unsetSetting':
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
         require 'settingsAPI_fragments/unset_checks.php';
         require 'settingsAPI_fragments/unsetSetting_execution.php';
         echo ($result === false)?

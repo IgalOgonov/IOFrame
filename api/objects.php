@@ -5,6 +5,9 @@
  *              that parses the contents for each object.
  * Reminder :   Some input checking on here is redundant, yet is still present for security reasons.
  *              On the other hand, some authorization checks are done in ObjectHandler itself.
+ *
+ * See standard return values at defaultInputResults.php
+ *
  * Parameters:
  * "action"   -   The type of action needed. Create, Read (or Read Groups), Update, Delete, Assign, Get Assignments or Remove Assignment for (an) object/s.
  * "params" -   The target collection of objects/groups.
@@ -181,10 +184,11 @@
 
 if(!defined('coreInit'))
     require __DIR__ . '/../main/coreInit.php';
-require __DIR__ . '/../handlers/objectHandler.php';
+require __DIR__ . '/../IOFrame/Handlers/ObjectHandler.php';
 
 //Fix any values that are strings due to softly typed language bullshit
 require 'defaultInputChecks.php';
+require 'defaultInputResults.php';
 require 'CSRF.php';
 
 //Session Info
@@ -204,7 +208,7 @@ if(!isset($_REQUEST["params"])) {
 }
 
 //Parameters are always a JSON array - sometimes, even a 2D one
-if(!IOFrame\isJson($_REQUEST["params"])) {
+if(!IOFrame\Util\isJson($_REQUEST["params"])) {
     if($test)
         echo 'Parameters must be a JSON array!';
     die('-1');
@@ -227,10 +231,10 @@ foreach($params as $param)
     if($param == '')
         $param = null;
 
-$objHandler = new IOFrame\objectHandler($settings,$defaultSettingsParams);
+$objHandler = new IOFrame\Handlers\ObjectHandler($settings,$defaultSettingsParams);
 
 if(!isset($siteSettings))
-    $siteSettings = new IOFrame\settingsHandler($settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/siteSettings/');
+    $siteSettings = new IOFrame\Handlers\SettingsHandler($settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/siteSettings/');
 
 switch($action){
     case "r":
@@ -246,40 +250,40 @@ switch($action){
         echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS);
         break;
     case "c":
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
         require 'objectAPI_fragments/c_checks.php';
         require 'objectAPI_fragments/c_execution.php';
         echo ($result === 0)?
             '0' : $result;
         break;
     case "u":
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
         require 'objectAPI_fragments/u_checks.php';
         require 'objectAPI_fragments/u_execution.php';
         echo ($result === 0)?
             '0' : $result;
         break;
     case "d":
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
         require 'objectAPI_fragments/d_checks.php';
         require 'objectAPI_fragments/d_execution.php';
         echo ($result === 0)?
             '0' : $result;
         break;
     case "a":
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
         require 'objectAPI_fragments/a_checks.php';
         require 'objectAPI_fragments/a_execution.php';
         echo ($result === 0)?
             '0' : $result;
         break;
     case "ga":
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
         require 'objectAPI_fragments/ga_checks.php';
         require 'objectAPI_fragments/ga_execution.php';
         echo json_encode($result);

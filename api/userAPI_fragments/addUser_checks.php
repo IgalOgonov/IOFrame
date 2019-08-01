@@ -1,9 +1,9 @@
 <?php
 if(!defined('validator'))
-    require __DIR__ . '/../../util/validator.php';
+    require __DIR__ . '/../../IOFrame/Util/validator.php';
 
 if(!isset($userSettings))
-    $userSettings = new IOFrame\settingsHandler(
+    $userSettings = new IOFrame\Handlers\SettingsHandler(
         $settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/userSettings/',
         $defaultSettingsParams
     );
@@ -12,14 +12,14 @@ if(!isset($userSettings))
 if($userSettings->getSetting('allowRegularReg') != 1){
     if($test)
         echo('Registration through this API is not allowed!'.EOL);
-    die('-2');
+    exit(AUTHENTICATION_FAILURE);
 }
 
 //Make sure a username is specified if the settings require it.
 if( ($userSettings->getSetting('usernameChoice') == 0) && $inputs["u"] === null ){
     if($test)
         echo('Username must be specified as per usernameChoice'.EOL);
-    die('-1');
+    exit(INPUT_VALIDATION_FAILURE);
 }
 
 //If a username is specified despite the settings, lose it.
@@ -32,7 +32,7 @@ if( ($userSettings->getSetting('usernameChoice') == 2) && $inputs["u"] !== null 
 if($inputs["p"]==null||$inputs["m"]==null){
     if($test)
         echo 'Mail and password must be set!'.EOL;
-    die('-1');
+    exit(INPUT_VALIDATION_FAILURE);
 }
 else{
     $u= isset($inputs["u"]) ? $inputs["u"] : null;
@@ -40,25 +40,25 @@ else{
     $m=$inputs["m"];
     //Validate Username
     if($u != null)
-        if(strlen($u)>16||strlen($u)<6||preg_match_all('/\W/',$u)>0||preg_match_all('/undefined/',$u)==1){
+        if(!\IOFrame\Util\validator::validateUsername($u)){
             $res=false;
             if($test)
                 echo 'Username illegal!'.EOL;
-            die('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
         //Validate Password
-        else if(!IOFrame\validator::validatePassword($p)){
+        else if(!IOFrame\Util\validator::validatePassword($p)){
             $res=false;
             if($test)
                 echo 'Password illegal!'.EOL;
-            die('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
         //Validate Mail
         else if(!filter_var($m, FILTER_VALIDATE_EMAIL)){
             $res=false;
             if($test)
                 echo 'Email illegal!'.EOL;
-            die('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
 }
 
@@ -73,7 +73,7 @@ if (
 ){
     if($test)
         echo "User must be authorized to register new users".EOL;
-    die('-2');
+    exit(AUTHENTICATION_FAILURE);
 }
 
 

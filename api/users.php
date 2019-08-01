@@ -2,9 +2,7 @@
 /* This the the API that handles all the user related functions.
  * Many of the procedures here are timing safe, meaning they will return in constant times (well, constant intervals)
  *
- *      Always returns -1 on input validation failure
- *      Mostly returns -2 on auth failure, UNLESS specified otherwise.
- *      Mostly returns -3 on CSRF token mismatch, unless stated otherwise
+ *      See standard return values at defaultInputResults.php
  *_________________________________________________
  * addUser
  *      - Adds (registers) a user
@@ -19,7 +17,7 @@
  *
  *        Examples: action=addUser&u=test1&m=test@example.com&p=A5432524gf54
  *_________________________________________________
- * logUser [CSRF protected]
+ * logUser [CSRF protected] [Timing protected]
  *      - Logs in or out
  *        log: login type ('out','temp' or other) - default 'out'
  *        m: user mail  - required on any login
@@ -38,7 +36,7 @@
  *                  action=logUser&log=out
  *                  action=logUser&log=temp&m=test@example.com&sesKey=8836ac46fbdfa61a2a125991f987079d86903169a9e109557326fec1c71ff5ef&userID=abc6379af765afafa1bad51b084bad48&sesKey=A5432524gf54
  *_________________________________________________
- * pwdReset
+ * pwdReset [Timing protected]
  *      - Sends the user a password reset email, or confirms an existing reset code and user session as eligible
  *        to reset the password for a few minutes (depends on settings)
  *        id: ID of relevant user, used for reset confirmation
@@ -72,6 +70,9 @@
  * regConfirm
  *      - Sends a user a registration email, or confirms an existing registration code and user session as eligable
  *        to reset the password for a few minutes (depends on settings)
+ *        --- TO REQUEST A RESET CODE ---
+ *        mail: Email of the account
+ *        --- TO APPLY A RESET CODE ---
  *        id: ID of relevant user
  *        code: Confirmation code
  *        async: Used to specify you don't want to be redirected.
@@ -83,13 +84,14 @@
  *        Also, on confirmation, will actually redirect you to a specific page (set in pageSettings) unless "async" is set in the request.
  *
  *        Examples: action=regConfirm&id=4&code=GtIOsxkfbA92iGp0MsSt70GkfSDTFcUZlyd0I2MJMflz1h6kmI
- *
+ *                  action=regConfirm&mail=example@example.com
  *_________________________________________________
- * mailReset
+ * mailReset [Timing protected]
  *      - Sends a reset mail similar to pwdReset, but for the user mail
  *        All codes and inputs similar to pwdReset.
  *
  *        Examples: action=mailReset&id=4&code=GtIOsxkfbA92iGp0MsSt70GkfSDTFcUZlyd0I2MJMflz1h6kmI
+ *                  action=mailReset&mail=example@example.com
  *
  *_________________________________________________
  * changeMail [CSRF protected]
@@ -100,7 +102,7 @@
 *                  1 - User ID does not exist
 *                  2 - Time to change expired!
  *
- *        Examples: action=changeMail&newMail=Test012345
+ *        Examples: action=changeMail&newMail=example@example.com
  *
  *_________________________________________________
  * banUser [CSRF protected]
@@ -114,12 +116,16 @@
  *        Examples: action=banUser&id=1&minutes=60000
  *
  * */
+const BLACKLISTED_IP = 'BLACKLISTED_IP';
+
 if(!defined('coreInit'))
     require __DIR__ . '/../main/coreInit.php';
 
 require 'defaultInputChecks.php';
+require 'defaultInputResults.php';
+require 'userAPI_fragments/definitions.php';
 require 'CSRF.php';
-require __DIR__ . '/../util/timingManager.php';
+require __DIR__ . '/../IOFrame/Util/timingManager.php';
 
 if(!isset($_REQUEST["action"]))
     exit('Action not specified!');
@@ -132,7 +138,7 @@ if($test)
 $inputs = [];
 
 //Timing manager
-$timingManager = new IOFrame\timingManager();
+$timingManager = new IOFrame\Util\timingManager();
 //Most of the actions need to be timing safe
 $timingManager->start();
 
@@ -141,7 +147,7 @@ switch($action){
 
         $arrExpected =["u","m","p"];
 
-        require 'userAPI_fragments/setExpectedInputs.php';
+        require 'setExpectedInputs.php';
         require 'userAPI_fragments/addUser_checks.php';
         require 'userAPI_fragments/addUser_execution.php';
 
@@ -158,37 +164,45 @@ switch($action){
             $inputs["log"] = 'out';
 
         if($inputs['log']!='out')
-            if(!validateThenRefreshCSRFToken($sessionHandler))
-                die('-3');
+            if(!validateThenRefreshCSRFToken($SessionHandler))
+                exit(WRONG_CSRF_TOKEN);
 
         if($test)
             echo 'Log type: '.$inputs["log"].EOL;
 
         $arrExpected =["userID","m","p","sesKey"];
 
-        require 'userAPI_fragments/setExpectedInputs.php';
-
+        require 'setExpectedInputs.php';
         require 'userAPI_fragments/logUser_checks.php';
         require 'userAPI_fragments/logUser_execution.php';
 
         if($result === 1){
-            if(!isset($securityHandler))
-                $securityHandler = new IOFrame\securityHandler(
+            if(!isset($SecurityHandler))
+                $SecurityHandler = new IOFrame\Handlers\SecurityHandler(
                     $settings,
                     $defaultSettingsParams
                 );
             //Mark the IP as one who committed an incorrect login attempt
-            $securityHandler->commitEventIP(0,[]);
+            $SecurityHandler->commitEventIP(0,[]);
             //Mark the user who had a bad login attempt into
             if($inputs['userID']!== null)
                 $id = $inputs['userID'];
-            else
-                $id = $sqlHandler->selectFromTable($sqlHandler->getSQLPrefix().'USERS',['Email',$inputs['m'],'='],['ID'],[]);
-            $securityHandler->commitEventUser(0,$id);
+            else{
+                $id = $SQLHandler->selectFromTable($SQLHandler->getSQLPrefix().'USERS',['Email',$inputs['m'],'='],['ID'],[]);
+                if(count($id)>0)
+                    $id = $id[0]['ID'];
+                else
+                    $id = null;
+            }
+            if($id)
+                $SecurityHandler->commitEventUser(0,$id);
         }
 
         //This procedure can only return after N seconds exactly
         $timingManager->waitUntilIntervalElapsed(1);
+
+        if(is_array($result))
+            $result = json_encode($result);
 
         echo ($result === 0)?
             '0' : $result;
@@ -198,8 +212,7 @@ switch($action){
 
         $arrExpected =["id","code","mail","async"];
 
-        require 'userAPI_fragments/setExpectedInputs.php';
-
+        require 'setExpectedInputs.php';
         require 'userAPI_fragments/reset_checks.php';
         require 'userAPI_fragments/pwdReset_execution.php';
 
@@ -207,20 +220,19 @@ switch($action){
         //This procedure can only return after N seconds exactly
         $timingManager->waitUntilIntervalElapsed(1);
 
-        if($inputs['async'] !== null)
+        if($inputs['mail'] !== null || $inputs['async'] !== null || !$pageSettings->getSetting('pwdReset'))
             echo ($result === 0)?
                 '0' : $result;
 
         break;
 
     case 'changePassword':
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["newPassword"];
 
-        require 'userAPI_fragments/setExpectedInputs.php';
-
+        require 'setExpectedInputs.php';
         require 'userAPI_fragments/changePassword_checks.php';
         require 'userAPI_fragments/changePassword_execution.php';
 
@@ -232,8 +244,7 @@ switch($action){
 
         $arrExpected =["id","code","mail"];
 
-        require 'userAPI_fragments/setExpectedInputs.php';
-
+        require 'setExpectedInputs.php';
         require 'userAPI_fragments/regConfirm_checks.php';
         require 'userAPI_fragments/regConfirm_execution.php';
 
@@ -245,27 +256,25 @@ switch($action){
 
         $arrExpected =["id","code","mail","async"];
 
-        require 'userAPI_fragments/setExpectedInputs.php';
-
+        require 'setExpectedInputs.php';
         require 'userAPI_fragments/reset_checks.php';
         require 'userAPI_fragments/mailReset_execution.php';
 
         //This procedure can only return after N seconds exactly
         $timingManager->waitUntilIntervalElapsed(1);
 
-        if($inputs['async'] !== null)
+        if($inputs['mail'] !== null || $inputs['async'] !== null || !$pageSettings->getSetting('mailReset'))
             echo ($result === 0)?
                 '0' : $result;
         break;
 
     case 'changeMail':
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["newMail"];
 
-        require 'userAPI_fragments/setExpectedInputs.php';
-
+        require 'setExpectedInputs.php';
         require 'userAPI_fragments/changeMail_checks.php';
         require 'userAPI_fragments/changeMail_execution.php';
 
@@ -274,13 +283,12 @@ switch($action){
         break;
 
     case 'banUser':
-        if(!validateThenRefreshCSRFToken($sessionHandler))
-            die('-3');
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["minutes","id"];
 
-        require 'userAPI_fragments/setExpectedInputs.php';
-
+        require 'setExpectedInputs.php';
         require 'userAPI_fragments/banUser_checks.php';
         require 'userAPI_fragments/banUser_execution.php';
         echo ($result === 0)?

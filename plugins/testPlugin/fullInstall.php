@@ -1,10 +1,10 @@
 <?php
 
-/* You'll notice a lot of this is copy-pasted from install in pluginHandler.
+/* You'll notice a lot of this is copy-pasted from install in PluginHandler.
  * It is because quickInstall already handles a lot of the work for you, while if you are using
  * fullInstall, you need to do ALL of the work yourself. It is very easy to forget something, miss something,
  * create new attack vectors/vulnerabilities, and more.
- * Please, DO NOT write a fullInstall unless you are experienced, and understand pluginHandler->install() fully.
+ * Please, DO NOT write a fullInstall unless you are experienced, and understand PluginHandler->install() fully.
  * */
 
 if(!$test){
@@ -12,7 +12,7 @@ if(!$test){
         $stage = $_REQUEST['stage'];
     else
         $stage = 0;
-    $sqlHandler = new IOFrame\sqlHandler($settings);
+    $SQLHandler = new IOFrame\Handlers\SQLHandler($settings);
     switch($stage){
         case 0:
             echo '<form method="post" action="">
@@ -26,10 +26,10 @@ if(!$test){
             break;
         case 1:
             $url = $settings->getSetting('absPathToRoot').'plugins/'.$name.'/';   //Plugin folder
-            $lockHandler = new IOFrame\lockHandler($url);
-            $fileHandler = new IOFrame\fileHandler();
-            $plugList = new IOFrame\settingsHandler($sqlHandler->getSQLPrefix().'localFiles/plugins/');
-            $plugName = $pluginHandler->getInfo(['name'=>$name])[0];
+            $LockHandler = new IOFrame\Handlers\LockHandler($url);
+            $FileHandler = new IOFrame\Handlers\FileHandler();
+            $plugList = new IOFrame\Handlers\SettingsHandler($SQLHandler->getSQLPrefix().'localFiles/plugins/');
+            $plugName = $PluginHandler->getInfo(['name'=>$name])[0];
             //-------Check if the plugin is installed
             if($plugList->getSetting($name) == 'installed' || $plugList->getSetting($name) == 'zombie' || $plugList->getSetting($name) == 'installing'){
                 echo 'Plugin '.$name.' is either installed, installing or zombie!'.EOL;
@@ -56,7 +56,7 @@ if(!$test){
 
             foreach($dependencies as $dep => $versions){
                 //Remember - $versions[0] is min version, [1] max version.
-                $dep = $pluginHandler->getInfo(['name'=>$dep])[0];
+                $dep = $PluginHandler->getInfo(['name'=>$dep])[0];
                 ( $dep['status']=='active' && isset($dep['version']) && filter_var((int)$dep['version'],FILTER_VALIDATE_INT) )?
                     $ver = (int)$dep['version']:
                     $ver = -1;
@@ -71,7 +71,7 @@ if(!$test){
 
             //-------Time to validate (then update) definitions if the exist
             if(file_exists($url.'definitions.json')){
-                if(!$pluginHandler->validatePluginFile($url,'definitions',['isFile'=>false,'test'=>$test])){
+                if(!$PluginHandler->validatePluginFile($url,'definitions',['isFile'=>false,'test'=>$test])){
                     echo 'Definitions for '.$name.' are not valid!'.EOL;
                     return 5;
                 }
@@ -79,16 +79,16 @@ if(!$test){
                 try{
                     $gDefUrl = $settings->getSetting('absPathToRoot').'localFiles/definitions/';
                     //Read definition files - and merge them
-                    $defFile = $fileHandler->readFileWaitMutex($url,'definitions.json',['lockHandler' => $lockHandler]);
+                    $defFile = $FileHandler->readFileWaitMutex($url,'definitions.json',['LockHandler' => $LockHandler]);
                     if($defFile != null){       //If the file is empty, don't bother doing work
                         $defArr = json_decode($defFile,true);
-                        $gDefFile = $fileHandler->readFileWaitMutex($gDefUrl,'definitions.json',['lockHandler' => $lockHandler]);
+                        $gDefFile = $FileHandler->readFileWaitMutex($gDefUrl,'definitions.json',['LockHandler' => $LockHandler]);
                         $gDefArr = json_decode($gDefFile,true);
                         $newDef = array_merge($defArr,$gDefArr);
                         //Write to global definition file after backing it up
-                        $defLock = new IOFrame\lockHandler($gDefUrl);
+                        $defLock = new IOFrame\Handlers\LockHandler($gDefUrl);
                         $defLock->makeMutex();
-                        $fileHandler->backupFile($gDefUrl,'definitions.json');
+                        $FileHandler->backupFile($gDefUrl,'definitions.json');
                         $gDefFile = fopen($gDefUrl.'definitions.json', "w+") or die("Unable to open definitions file!");
                         fwrite($gDefFile,json_encode($newDef));
                         fclose($gDefFile);
@@ -118,14 +118,14 @@ if(!$test){
                 echo $_REQUEST['testOption'].' is illegal!'.EOL;
 
             //Create a PDO connection
-            $sqlSettings = new IOFrame\settingsHandler($settings->getSetting('absPathToRoot').SETTINGS_DIR_FROM_ROOT.'/sqlSettings/');
-            $conn = IOFrame\prepareCon($sqlSettings);
+            $sqlSettings = new IOFrame\Handlers\SettingsHandler($settings->getSetting('absPathToRoot').SETTINGS_DIR_FROM_ROOT.'/sqlSettings/');
+            $conn = IOFrame\Util\prepareCon($sqlSettings);
             // set the PDO error mode to exception
             $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
             // INITIALIZE CORE VALUES TABLE
             /* Literally just the pivot time for now. */
-            $makeTB = $conn->prepare("CREATE TABLE ".$sqlHandler->getSQLPrefix()."TEST_TABLE(
+            $makeTB = $conn->prepare("CREATE TABLE ".$SQLHandler->getSQLPrefix()."TEST_TABLE(
                                                               tableKey varchar(255) NOT NULL,
                                                               tableValue varchar(255) NOT NULL
                                                               ) ENGINE=InnoDB DEFAULT CHARSET = utf8;");
@@ -138,12 +138,12 @@ if(!$test){
             }
 
             //-------Populate dependency map
-            $pluginHandler->populateDependencies($name,$dependencies,['test'=>$test]);
+            $PluginHandler->populateDependencies($name,$dependencies,['test'=>$test]);
             if(!$test){
                 //-------Change plugin to "installed"
                 $plugList->setSetting($name,'installed',['createNew'=>true]);
                 //-------Add to order list
-                $pluginHandler->pushToOrder($name);
+                $PluginHandler->pushToOrder($name);
             }
 
             echo '<span><a href="../cp/plugins">back to plugins</a></span>';

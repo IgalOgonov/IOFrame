@@ -22,7 +22,7 @@ function checkObjectInput($obj = null ,$group = '' ,$minViewRank = null ,$minMod
 
     //Next, check that the group name contains only numbers and letters - and first character isn't a number
     if($group != '')
-        if(!\IOFrame\validator::validateSQLKey($group)){
+        if(!\IOFrame\Util\validator::validateSQLKey($group)){
             if($test)
                 echo 'Illegal group name. ';
             return false;

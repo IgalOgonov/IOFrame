@@ -1,59 +1,52 @@
 <?php
 
-if(!defined('userHandler'))
-    require __DIR__ . '/../../handlers/userHandler.php';
+if(!defined('UserHandler'))
+    require __DIR__ . '/../../IOFrame/Handlers/UserHandler.php';
 
-if(!isset($userHandler))
-    $userHandler = new IOFrame\userHandler(
+if(!isset($UserHandler))
+    $UserHandler = new IOFrame\Handlers\UserHandler(
         $settings,
         $defaultSettingsParams
     );
 
 //Attempts to send a mail to the user requiring password reset.
-if($inputs['mail'] !== null){
-    $result = $userHandler->pwdResetSend($inputs['mail'],['test'=>$test]);
+if(isset($inputs['mail'])){
+    $result = $UserHandler->pwdResetSend($inputs['mail'],['test'=>$test]);
 }
 
 //Checks if the info provided by the user was correct, if so authorizes the Session to reset the password for a few minutes.
 else if($inputs['id'] !== null and $inputs['code'] !== null ){
 
-    $result = $userHandler->pwdResetConfirm($inputs['id'], $inputs['code'],['test'=>$test]);
+    $result = $UserHandler->pwdResetConfirm($inputs['id'], $inputs['code'],['test'=>$test]);
+    if(!isset($userSettings))
+        $userSettings = new IOFrame\Handlers\SettingsHandler(
+            $settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/userSettings/',
+            $defaultSettingsParams
+        );
 
-    if($result){
-        if(!isset($userSettings))
-            $userSettings = new IOFrame\settingsHandler(
-                $settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/userSettings/',
-                $defaultSettingsParams
-            );
+    if(!isset($pageSettings))
+        $pageSettings = new IOFrame\Handlers\SettingsHandler(
+            $settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/pageSettings/',
+            $defaultSettingsParams
+        );
 
-        if(!isset($pageSettings))
-            $pageSettings = new IOFrame\settingsHandler(
-                $settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/pageSettings/',
-                $defaultSettingsParams
-            );
-
+    if($result === 0){
         if(!$test){
             $_SESSION['PWD_RESET_EXPIRES']=time()+$userSettings->getSetting('passwordResetTime')*60;
             $_SESSION['PWD_RESET_ID']=$inputs['id'];
-            if($inputs['async']===null)
-                header('Location: http://'.$_SERVER['SERVER_NAME'].'/'.$pageSettings->getSetting('pwdReset').'?mes=You%20%have%20%'.$userSettings->getSetting('passwordResetTime').'minutes%20%to%20%reset%20%your%20%password');
         }
         else{
             echo 'Changing PWD_RESET_EXPIRES to '.(time()+$userSettings->getSetting('passwordResetTime')*60).EOL;
             echo 'Changing PWD_RESET_ID to '.$inputs['id'].EOL;
-            if($inputs['async']===null)
-                echo 'Changing header location to http://'.$_SERVER['SERVER_NAME'].'/'.$pageSettings->getSetting('pwdReset').'?mes=You%20%have%20%'.$userSettings->getSetting('passwordResetTime').'minutes%20%to%20%reset%20%your%20%password'.EOL;
         }
     }
-    else{
-        if(!$test){
-            if($inputs['async']===null)
-                header('Location: http://'.$_SERVER['SERVER_NAME'].'?mes='.$result);
-        }
-        else{
-            if($inputs['async']===null)
-                echo 'Changing header location to  http://'.$_SERVER['SERVER_NAME'].'?mes='.$result.EOL;
-        }
+
+    if(!isset($inputs['async'])  && $pageSettings->getSetting('pwdReset')){
+        if(!$test)
+            header('Location: http://'.$_SERVER['SERVER_NAME'].'/'.$pageSettings->getSetting('pwdReset').'?res='.$result);
+
+        else
+            echo 'Changing header location to http://'.$_SERVER['SERVER_NAME'].'/'.$pageSettings->getSetting('pwdReset').'?res='.$result.EOL;
     }
 }
 

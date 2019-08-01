@@ -1,12 +1,12 @@
 <?php
 
 if(!defined('validator'))
-    require __DIR__ . '/../../util/validator.php';
+    require __DIR__ . '/../../IOFrame/Util/validator.php';
 
 if($params == null){
     if($test)
         echo 'Params must be set!';
-    exit('-1');
+    exit(INPUT_VALIDATION_FAILURE);
 }
 if($action == 'deleteActions')
     $expectedParam = 'actions';
@@ -16,15 +16,15 @@ else
 if(!is_array($params[$expectedParam])){
     if($test)
         echo $expectedParam.' must be an associative array!'.EOL;
-    exit('-1');
+    exit(INPUT_VALIDATION_FAILURE);
 }
 
 foreach($params[$expectedParam] as $name){
 
-    if(!\IOFrame\validator::validateSQLKey($name)){
+    if(!\IOFrame\Util\validator::validateSQLKey($name)){
         if($test)
             echo 'Each member of '.$expectedParam.' must be a string of 1 to 256 characters!'.EOL;
-        exit('-1');
+        exit(INPUT_VALIDATION_FAILURE);
     }
 }
 
@@ -34,6 +34,6 @@ foreach($params[$expectedParam] as $name){
 if(!$auth->isAuthorized(0)){
     if($test)
         echo 'Authorization rank must be 0!';
-    exit('-2');
+    exit(AUTHENTICATION_FAILURE);
 }
 

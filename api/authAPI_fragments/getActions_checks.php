@@ -10,7 +10,7 @@ foreach($expectedParams as $expectedParam){
                 if(!filter_var($params[$expectedParam],FILTER_VALIDATE_INT)){
                     if($test)
                         echo 'limit expression must be a number!'.EOL;
-                    exit('-1');
+                    exit(INPUT_VALIDATION_FAILURE);
                 }
                 break;
             case 'offset':
@@ -18,7 +18,7 @@ foreach($expectedParams as $expectedParam){
                 if(!filter_var($params[$expectedParam],FILTER_VALIDATE_INT) && $params[$expectedParam]!=0){
                     if($test)
                         echo 'offset expression must be a number!'.EOL;
-                    exit('-1');
+                    exit(INPUT_VALIDATION_FAILURE);
                 }
                 break;
         }
@@ -28,7 +28,7 @@ foreach($expectedParams as $expectedParam){
 if(!$auth->isAuthorized(0)){
     if($test)
         echo 'Authorization rank must be 0!';
-    exit('-2');
+    exit(AUTHENTICATION_FAILURE);
 }
 
 

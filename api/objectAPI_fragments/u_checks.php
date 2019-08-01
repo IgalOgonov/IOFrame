@@ -1,7 +1,7 @@
 <?php
 
 if(!defined('validator'))
-    require __DIR__ . '/../../util/validator.php';
+    require __DIR__ . '/../../IOFrame/Util/validator.php';
 
 //Check that at least 'id' and one other real parameter to update are set
 if( !isset($params['id']) ||
@@ -22,7 +22,7 @@ if( !isset($params['id']) ||
 ){
     if($test)
         echo 'You must set an object ID, and at least 1 parameter to update!!';
-    exit('-1');
+    exit(INPUT_VALIDATION_FAILURE);
 }
 
 foreach($params as $key=>$value){
@@ -31,7 +31,7 @@ foreach($params as $key=>$value){
             if(preg_match_all('/[0-9]/',$value)<strlen($value)){
                 if($test)
                     echo 'Object IDs must be numbers!';
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
             break;
 
@@ -40,7 +40,7 @@ foreach($params as $key=>$value){
                 if((gettype($value) == 'string' && preg_match_all('/\D|\-/',$value)>0) || $value<-1){
                     if($test)
                         echo 'newVRank has to be a number larger than -1!';
-                    exit('-1');
+                    exit(INPUT_VALIDATION_FAILURE);
                 }
             break;
 
@@ -49,16 +49,16 @@ foreach($params as $key=>$value){
                 if((gettype($value) == 'string' && preg_match_all('/\D/',$value)>0) || $value<0){
                     if($test)
                         echo 'newMRank has to be a number larger than 0!';
-                    exit('-1');
+                    exit(INPUT_VALIDATION_FAILURE);
                 }
             break;
 
         case 'group':
             if($value != '')
-                if(!\IOFrame\validator::validateSQLKey($value)){
+                if(!\IOFrame\Util\validator::validateSQLKey($value)){
                     if($test)
                         echo 'Illegal group name for the object!';
-                    exit('-1');
+                    exit(INPUT_VALIDATION_FAILURE);
                 }
             break;
 
@@ -67,7 +67,7 @@ foreach($params as $key=>$value){
                 if((gettype($value) == 'string' && preg_match_all('/\D/',$value)>0) || $value<0){
                     if($test)
                         echo 'mainOwner has to be a number larger than 0!';
-                    exit('-1');
+                    exit(INPUT_VALIDATION_FAILURE);
                 }
             break;
 
@@ -76,19 +76,19 @@ foreach($params as $key=>$value){
             if(!is_array($value)){
                 if($test)
                     echo 'Contents of '.$key.' must be in an array!';
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
             if($value != []){
                 foreach($value as $innerKey => $innerVal){
                     if((gettype($innerKey) == 'string' && preg_match_all('/[0-9]/',$innerKey)<strlen($innerKey)) || preg_match_all('/[0-9]/',$innerVal)<strlen($innerVal) ){
                         if($test)
                             echo 'Owner IDs must be numbers!';
-                        exit('-1');
+                        exit(INPUT_VALIDATION_FAILURE);
                     }
                     if($innerKey < 0 || $innerVal < 0){
                         if($test)
                             echo 'Owner IDs must be positive integers!';
-                        exit('-1');
+                        exit(INPUT_VALIDATION_FAILURE);
                     }
                 }
             }
@@ -129,4 +129,4 @@ if(
     $test
 )
 )
-    exit('1');
+    exit(AUTHENTICATION_FAILURE);

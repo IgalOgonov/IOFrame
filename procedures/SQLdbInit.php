@@ -2,31 +2,31 @@
 
 namespace IOFrame{
 
-    if(!defined('settingsHandler'))
-        require __DIR__ . '/../handlers/settingsHandler.php';
+    if(!defined('SettingsHandler'))
+        require __DIR__ . '/../IOFrame/Handlers/SettingsHandler.php';
     if(!defined('helperFunctions'))
-        require __DIR__ . '/../util/helperFunctions.php';
+        require __DIR__ . '/../IOFrame/Util/helperFunctions.php';
     if(!defined('safeSTR'))
-        require __DIR__ . '/../util/safeSTR.php';
+        require __DIR__ . '/../IOFrame/Util/safeSTR.php';
 
 
     /*Database initiation function. Does require the user to already have a MySQL database up, as well as a user with enough
      * privileges.
-     * @param settingsHandler $localSettings
+     * @param SettingsHandler $localSettings
      * @returns bool true only if everything succeeded.
      * */
 
-    function initDB(settingsHandler $localSettings){
-        $userSettings = new settingsHandler(getAbsPath().'/localFiles/userSettings/');
-        $siteSettings = new settingsHandler(getAbsPath().'/localFiles/siteSettings/');
-        $sqlSettings = new settingsHandler($localSettings->getSetting('absPathToRoot').SETTINGS_DIR_FROM_ROOT.'/sqlSettings/');
+    function initDB(Handlers\SettingsHandler $localSettings){
+        $userSettings = new Handlers\SettingsHandler(Util\getAbsPath().'/localFiles/userSettings/');
+        $siteSettings = new Handlers\SettingsHandler(Util\getAbsPath().'/localFiles/siteSettings/');
+        $sqlSettings = new Handlers\SettingsHandler($localSettings->getSetting('absPathToRoot').SETTINGS_DIR_FROM_ROOT.'/sqlSettings/');
 
         $prefix = $sqlSettings->getSetting('sql_table_prefix');
 
         $res = true;
         try {
             //Create a PDO connection
-            $conn = prepareCon($sqlSettings);
+            $conn = Util\prepareCon($sqlSettings);
             // set the PDO error mode to exception
             $conn->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
             echo "Connected successfully".EOL;
@@ -80,17 +80,17 @@ namespace IOFrame{
             $updateTB1 = $conn->prepare("INSERT INTO ".$prefix."MAIL_TEMPLATES (Title, Content)
                                       VALUES( 'Account Activation Default Template', :Content)");
             $content = "Hello!<br> To activate your account on ".$siteSettings->getSetting('siteName').", click <a href=\"http://".$_SERVER['HTTP_HOST'].$localSettings->getSetting('pathToRoot')."api/users?action=regConfirm&id=%%uId%%&code=%%Code%%\">this link</a><br> The link will expire in ".$userSettings->getSetting('mailConfirmExpires')." hours";
-            $updateTB1->bindValue(':Content', str2SafeStr($content));
+            $updateTB1->bindValue(':Content', Util\str2SafeStr($content));
 
             $updateTB2 = $conn->prepare("INSERT INTO ".$prefix."MAIL_TEMPLATES (Title, Content)
                                       VALUES( 'Password Reset Default Template', :Content)");
             $content = "Hello!<br> You have requested to reset the password associated with this account. To do so, click <a href=\"http://".$_SERVER['HTTP_HOST'].$localSettings->getSetting('pathToRoot')."api/users?action=pwdReset&id=%%uId%%&code=%%Code%%\"> this link</a><br> The link will expire in ".$userSettings->getSetting('pwdResetExpires')." hours";
-            $updateTB2->bindValue(':Content', str2SafeStr($content));
+            $updateTB2->bindValue(':Content', Util\str2SafeStr($content));
 
             $updateTB3 = $conn->prepare("INSERT INTO ".$prefix."MAIL_TEMPLATES (Title, Content)
                                       VALUES( 'Mail Reset Default Template', :Content)");
             $content = "Hello!<br> To change your mail on ".$siteSettings->getSetting('siteName').", click <a href=\"http://".$_SERVER['HTTP_HOST'].$localSettings->getSetting('pathToRoot'). "api/users?action=mailReset&id=%%uId%%&code=%%Code%%\">this link</a><br> The link will expire in ".$userSettings->getSetting('mailConfirmExpires')." hours";
-            $updateTB3->bindValue(':Content', str2SafeStr($content));
+            $updateTB3->bindValue(':Content', Util\str2SafeStr($content));
 
             try{
                 $makeTB->execute();
@@ -174,19 +174,11 @@ namespace IOFrame{
             /*THIS IS AN EXTRA TABLE - the site core modules should work fine without it.
              * ID - foreign key - tied to USERS table
              * Created_on - Date the user was created on, yyyymmddhhmmss format
-             * MailConfirm - Password reset key.
-             * MailConfirm_Expires - Date after which PWReset expires.
-             * PWReset - Password reset key.
-             * PWReset_Expires - Date after which PWReset expires.
              * Banned_Until - Date until which user is banned.
              */
             $makeTB = $conn->prepare("CREATE TABLE IF NOT EXISTS ".$prefix."USERS_EXTRA (
                                                               ID int PRIMARY KEY,
                                                               Created_On varchar(14) NOT NULL,
-                                                              MailConfirm varchar(50),
-                                                              MailConfirm_Expires varchar(14),
-                                                              PWDReset varchar(50),
-                                                              PWDReset_Expires varchar(14),
                                                               Banned_Until varchar(14),
                                                               Suspicious_Until varchar(14),
                                                                 FOREIGN KEY (ID)
@@ -411,7 +403,7 @@ namespace IOFrame{
              * IP_Type - Boolean, where FALSE = Blacklisted, TRUE = Whitelisted
              * Prefix - Varchar(11), the prefix for the banned/allowed range. It is at most "xxx.xxx.xxx", which is 11 chars.
              * IP_From/IP_To - Range of affected IPs with the matching prefix. Tinyints, unsigned.
-             * expires - the date until the effect should last. Stored in Unix timestamp, usually.
+             * Expires - the date until the effect should last. Stored in Unix timestamp, usually.
              */
             $makeTB = $conn->prepare("CREATE TABLE IF NOT EXISTS ".$prefix."IPV4_RANGE (
                                                               IP_Type BOOLEAN NOT NULL,
@@ -575,7 +567,7 @@ namespace IOFrame{
             }
 
             // INITIALIZE DB_BACKUP_META
-            /* This table stores meta information about table backups, the ones performed by sqlHandler.
+            /* This table stores meta information about table backups, the ones performed by SQLHandler.
              * ID - Integer, increases automatically.
              * Backup_Date - unix timestamp (in seconds) of when the backup occurred
              * Table_Name - name of the table that was backed up
@@ -773,7 +765,7 @@ namespace IOFrame{
              * -- ADVANCED URL ROUTING (Multiple Possible Matches)--
              * The URL may also be an array of strings, or of inclusion/exclusion objects.
              * It may also contain a mix between the two.
-             * What then happens is that the router will match to the first valid match out of the posible ones.
+             * What then happens is that the router will match to the first valid match out of the possible ones.
              * If multiple ones are possible, the chronologically first one will be matched.
              * This is useful for setting up multiple backup matches (for example, if your front end modules / api may
              * sit in two potential locations, you may try to match the first one, then the 2nd).
@@ -803,6 +795,192 @@ namespace IOFrame{
             }
             catch(\Exception $e){
                 echo "Routing Match table couldn't be created, error is: ".$e->getMessage().EOL;
+                $res = false;
+            }
+
+
+
+            // INITIALIZE IOFRAME_TOKENS Table
+            /* This table is meant to be the default table for tokens in IOFrame.
+             * Tokens are used for a variaty of things, such as account activation, password resets, and more.
+             *
+             * Token        -   Varchar(256), primary identifier. Is the token.
+             * Token_Action -   Varchar(1024), The action of the token. Should describe the purpose of the token, for example
+             *                  ACCOUNT_ACTIVATION_5 (account activation of user with ID 5), but could be anything - like a link
+             *                  to a resource. The function that requests the token can decide what to do with it on match.
+             * Uses_Left    -   int, Number of uses left for the token.
+             *                  For a single use token may be 1, but not all tokens are single use...
+             * Expires      -   Varchar(14), UNIX timestamp of when the token expires. Every token has to expire, by nature.
+             * Session_Lock -   Varchar(256), Since operations with tokens are meant to be atomic, there has to be a
+             *                  way to prevent 2 sessions querying a token at the same time from "consuming" it twice
+             *                  (or returning info about it while it's being "consumed").
+             *                  With this field, a session first sets a lock for the token, then queries again to see
+             *                  if it "got" the token. Once a "winning" session is done with the token,
+             *                  it sets the lock to NULL. The timing is managed by the DB.
+             * Locked_At     -  Varchar(14), UNIX timestamp. Meant meant signify when a lock was created, so locks that
+             *                  are too old may be removed (as it's probably due to a crash).
+             */
+            $query = "CREATE TABLE IF NOT EXISTS ".$prefix."IOFRAME_TOKENS (
+                                                              Token varchar(256) PRIMARY KEY NOT NULL,
+                                                              Token_Action varchar(1024) NOT NULL,
+                                                              Uses_Left int NOT NULL,
+                                                              Expires varchar(14) NOT NULL,
+                                                              Session_Lock varchar(256) DEFAULT NULL,
+                                                              Locked_At varchar(14) DEFAULT NULL
+                                                              ) ENGINE=InnoDB DEFAULT CHARSET = utf8;";
+            $makeTB = $conn->prepare($query);
+            $query = "ALTER TABLE ".$prefix."IOFRAME_TOKENS ADD INDEX (Expires);";
+            $indexTB1 = $conn->prepare($query);
+            $query = "ALTER TABLE ".$prefix."IOFRAME_TOKENS ADD INDEX (Token_Action);";
+            $indexTB2 = $conn->prepare($query);
+
+            try{
+                $makeTB->execute();
+                echo "Default Token table created.".EOL;
+            }
+            catch(\Exception $e){
+                echo "Default Token table couldn't be created, error is: ".$e->getMessage().EOL;
+                $res = false;
+            }
+
+            try{
+                $indexTB1->execute();
+                $indexTB2->execute();
+                echo "Default Token table indexes created.".EOL;
+            }
+            catch(\Exception $e){
+                echo "Default Token table indexes couldn't be created, error is: ".$e->getMessage().EOL;
+                $res = false;
+            }
+
+
+            // INITIALIZE RESOURCES Table
+            /* This table stores resource information.
+             *
+             * Address      -   Varchar(512), Address of the resource - from relevant folder root if local, or full URI if
+             *                  not local. By default it should include file extension for local files.
+             * Resource_Type-   Varchar(64), should be 'image', 'js', 'css', 'text' or 'blob' currently.
+             * Resource_Local -   Boolean, default true - whether the resource should be treated as a local one.
+             * Minified_Version - Boolean, default false - Whether you can get a minified version of the resource.
+             *                    Rules of how to handle it are defined by the handler.
+             * Version      -   int, default 1. meant for versioning purposes. Is incremented by the user.
+             * Created      -   Varchar(14), UNIX timestamp of when the resource was added.
+             * Last_Changed -   Varchar(14), UNIX timestamp of when the resource was last changed (just in the DB).
+             * Text_Content -   Space for general text content.
+             * Blob_Content -   Space for general blob content.
+             */
+            $query = "CREATE TABLE IF NOT EXISTS ".$prefix."RESOURCES (
+                                                              Resource_Type varchar(64),
+                                                              Address varchar(512),
+                                                              Resource_Local BOOLEAN NOT NULL,
+                                                              Minified_Version BOOLEAN NOT NULL,
+                                                              Version int DEFAULT 1 NOT NULL,
+                                                              Created varchar(14) NOT NULL,
+                                                              Last_Changed varchar(14) NOT NULL,
+                                                              Text_Content TEXT,
+                                                              Blob_Content BLOB,
+                                                               PRIMARY KEY(Resource_Type, Address)
+                                                              ) ENGINE=InnoDB DEFAULT CHARSET = utf8;";
+            $makeTB = $conn->prepare($query);
+            $query = "ALTER TABLE ".$prefix."RESOURCES ADD INDEX (Resource_Local);";
+            $indexTB1 = $conn->prepare($query);
+            $query = "ALTER TABLE ".$prefix."RESOURCES ADD INDEX (Created);";
+            $indexTB2 = $conn->prepare($query);
+            $query = "ALTER TABLE ".$prefix."RESOURCES ADD INDEX (Last_Changed);";
+            $indexTB3 = $conn->prepare($query);
+
+            try{
+                $makeTB->execute();
+                echo "Resource table created.".EOL;
+            }
+            catch(\Exception $e){
+                echo "Resource table couldn't be created, error is: ".$e->getMessage().EOL;
+                $res = false;
+            }
+
+            try{
+                $indexTB1->execute();
+                $indexTB2->execute();
+                $indexTB3->execute();
+                echo "Resource table indexes created.".EOL;
+            }
+            catch(\Exception $e){
+                echo "Resource table indexes couldn't be created, error is: ".$e->getMessage().EOL;
+                $res = false;
+            }
+
+
+
+            // INITIALIZE RESOURCE_COLLECTIONS Table
+            /* This table stores resource collections.
+             *
+             * Collection_Name -   Varchar(128), Name of the collection
+             * Collection_Order-   TEXT, Reserved for order a collection might have.
+             * Resource_Type-   Varchar(64), should be 'image', 'js', 'css', 'text' or 'blob' currently.
+             * Created      -   Varchar(14), UNIX timestamp of when the collection was added.
+             * Last_Changed -   Varchar(14), UNIX timestamp of when the collection (or any of its memebers was last changed.
+             */
+            $query = "CREATE TABLE IF NOT EXISTS ".$prefix."RESOURCE_COLLECTIONS (
+                                                              Resource_Type varchar(64),
+                                                              Collection_Name varchar(128),
+                                                              Collection_Order TEXT DEFAULT NULL,
+                                                              Created varchar(14) NOT NULL,
+                                                              Last_Changed varchar(14) NOT NULL,
+                                                              Meta TEXT,
+                                                               PRIMARY KEY(Resource_Type, Collection_Name)
+                                                              ) ENGINE=InnoDB DEFAULT CHARSET = utf8;";
+            $makeTB = $conn->prepare($query);
+            $query = "ALTER TABLE ".$prefix."RESOURCE_COLLECTIONS ADD INDEX (Created);";
+            $indexTB1 = $conn->prepare($query);
+            $query = "ALTER TABLE ".$prefix."RESOURCE_COLLECTIONS ADD INDEX (Last_Changed);";
+            $indexTB2 = $conn->prepare($query);
+
+            try{
+                $makeTB->execute();
+                echo "Resource collection table created.".EOL;
+            }
+            catch(\Exception $e){
+                echo "Resource collection table couldn't be created, error is: ".$e->getMessage().EOL;
+                $res = false;
+            }
+
+            try{
+                $indexTB1->execute();
+                $indexTB2->execute();
+                echo "Resource collection table indexes created.".EOL;
+            }
+            catch(\Exception $e){
+                echo "Resource collection table indexes couldn't be created, error is: ".$e->getMessage().EOL;
+                $res = false;
+            }
+
+
+            // INITIALIZE RESOURCE_COLLECTIONS_MEMBERS Table
+            /* Many to many table of resource collections to resources.
+             *
+             * Resource_Type-   Varchar(64), should be 'image', 'js', 'css', 'text' or 'blob' currently.
+             * Collection_Name -   Varchar(128), Name of the collection
+             * Address      -   Varchar(512), Address of the resource.
+             */
+            $query = "CREATE TABLE IF NOT EXISTS ".$prefix."RESOURCE_COLLECTIONS_MEMBERS (
+                                                              Resource_Type varchar(64) NOT NULL,
+                                                              Collection_Name varchar(128) NOT NULL,
+                                                              Address varchar(512) NOT NULL,
+                                                              FOREIGN KEY (Resource_Type, Collection_Name)
+                                                              REFERENCES ".$prefix."RESOURCE_COLLECTIONS(Resource_Type, Collection_Name)
+                                                              ON DELETE CASCADE,
+                                                              FOREIGN KEY (Resource_Type, Address)
+                                                              REFERENCES ".$prefix."RESOURCES(Resource_Type, Address)
+                                                              ON DELETE CASCADE,
+                                                              PRIMARY KEY (Resource_Type, Collection_Name, Address)
+                                                              ) ENGINE=InnoDB DEFAULT CHARSET = utf8;";
+            $makeTB = $conn->prepare($query);
+            try{
+                $makeTB->execute();
+                echo "Resource collection members table created.".EOL;
+            }
+            catch(\Exception $e){
+                echo "Resource collection members table couldn't be created, error is: ".$e->getMessage().EOL;
                 $res = false;
             }
 

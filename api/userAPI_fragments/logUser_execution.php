@@ -1,16 +1,16 @@
 <?php
 
-if(!isset($userHandler))
-    $userHandler = new IOFrame\userHandler(
+if(!isset($UserHandler))
+    $UserHandler = new IOFrame\Handlers\UserHandler(
         $settings,
         $defaultSettingsParams
     );
 
 switch($inputs["log"]) {
     case 'out':
-        $userHandler->logOut(['test'=>$test]);
+        $UserHandler->logOut(['test'=>$test]);
         $result = 0;
         break;
     default:
-        $result =  $userHandler->logIn($inputs,['test'=>$test]);
+        $result =  $UserHandler->logIn($inputs,['test'=>$test]);
 }

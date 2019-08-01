@@ -5,21 +5,21 @@ if(!defined("IOFRAME_VERSION"))
     define("IOFRAME_VERSION",1.0);
 
 require 'main/definitions.php';
-if(!defined('settingsHandler'))
-    require 'handlers/settingsHandler.php';
+if(!defined('SettingsHandler'))
+    require 'IOFrame/Handlers/SettingsHandler.php';
 if(!defined('helperFunctions'))
-    require 'util/helperFunctions.php';
+    require 'IOFrame/Util/helperFunctions.php';
 if(!defined('abstractDB'))
-    require 'handlers/abstractDB.php';
-if(!defined('userHandler'))
-    require 'handlers/userHandler.php';
-if(!defined('pluginHandler'))
-    require 'handlers/pluginHandler.php';
+    require 'IOFrame/Handlers/abstractDB.php';
+if(!defined('UserHandler'))
+    require 'IOFrame/Handlers/UserHandler.php';
+if(!defined('PluginHandler'))
+    require 'IOFrame/Handlers/PluginHandler.php';
 
 require 'procedures/updateGeoIP.php';
 
 //--------------------Initialize Current DIR--------------------
-$baseUrl = IOFrame\replaceInString('\\','/',__DIR__).'/';
+$baseUrl = IOFrame\Util\replaceInString('\\','/',__DIR__).'/';
 
 //--------------------Initialize EOL --------------------
 if(!defined("EOL"))
@@ -113,9 +113,9 @@ if(!is_dir('localFiles/redisSettings')){
     fclose(fopen('localFiles/redisSettings/settings','w'));
 }
 
-$redisSettings = new IOFrame\settingsHandler($baseUrl.'/localFiles/redisSettings/',['useCache'=>false]);
-$sqlSettings = new IOFrame\settingsHandler($baseUrl.'/localFiles/sqlSettings/');
-$localSettings = new IOFrame\settingsHandler($baseUrl.'/localFiles/localSettings/');
+$redisSettings = new IOFrame\Handlers\SettingsHandler($baseUrl.'/localFiles/redisSettings/',['useCache'=>false]);
+$sqlSettings = new IOFrame\Handlers\SettingsHandler($baseUrl.'/localFiles/sqlSettings/');
+$localSettings = new IOFrame\Handlers\SettingsHandler($baseUrl.'/localFiles/localSettings/');
 
 //--------------------From this point on, if we are in CLI mode, the installation is different--------------------
 if(php_sapi_name() == "cli"){
@@ -157,16 +157,23 @@ if(!is_dir('localFiles/mailSettings')){
     fclose(fopen('localFiles/mailSettings/settings','w'));
 }
 
-$userSettings = new IOFrame\settingsHandler($baseUrl.'/localFiles/userSettings/');
-$pageSettings = new IOFrame\settingsHandler($baseUrl.'/localFiles/pageSettings/');
-$mailSettings = new IOFrame\settingsHandler($baseUrl.'/localFiles/mailSettings/');
-$siteSettings = new IOFrame\settingsHandler($baseUrl.'/localFiles/siteSettings/');
+if(!is_dir('localFiles/resourceSettings')){
+    if(!mkdir('localFiles/resourceSettings'))
+        die('Cannot create settings directory for some reason - most likely insufficient user privileges, or it already exists');
+    fclose(fopen('localFiles/resourceSettings/settings','w'));
+}
+
+$userSettings = new IOFrame\Handlers\SettingsHandler($baseUrl.'/localFiles/userSettings/');
+$pageSettings = new IOFrame\Handlers\SettingsHandler($baseUrl.'/localFiles/pageSettings/');
+$mailSettings = new IOFrame\Handlers\SettingsHandler($baseUrl.'/localFiles/mailSettings/');
+$siteSettings = new IOFrame\Handlers\SettingsHandler($baseUrl.'/localFiles/siteSettings/');
+$resourceSettings = new IOFrame\Handlers\SettingsHandler($baseUrl.'/localFiles/resourceSettings/');
 
 //--------------------
 if(!file_exists('localFiles/_installSes') && isset($_SERVER['REMOTE_ADDR'])){
     $myFile = fopen('localFiles/_installSes', 'w+');
     fwrite($myFile,$_SERVER['REMOTE_ADDR']);
-    install($userSettings,$pageSettings,$mailSettings,$localSettings,$siteSettings,$sqlSettings,$redisSettings,0,$baseUrl);
+    install($userSettings,$pageSettings,$mailSettings,$localSettings,$siteSettings,$sqlSettings,$redisSettings,$resourceSettings,0,$baseUrl);
 }
 else{
     $myFile = fopen('localFiles/_installSes', 'r+');
@@ -181,14 +188,15 @@ else{
         $installStage = 0;
         if(isset($_REQUEST['stage']))
             $installStage = $_REQUEST['stage'];
-        install($userSettings,$pageSettings,$mailSettings,$localSettings,$siteSettings,$sqlSettings,$redisSettings,$installStage,$baseUrl);
+        install($userSettings,$pageSettings,$mailSettings,$localSettings,$siteSettings,$sqlSettings,$redisSettings,$resourceSettings,$installStage,$baseUrl);
     }
 }
 
-function install(IOFrame\settingsHandler $userSettings,
-                 IOFrame\settingsHandler $pageSettings, IOFrame\settingsHandler $mailSettings,
-                 IOFrame\settingsHandler $localSettings, IOFrame\settingsHandler $siteSettings,
-                 IOFrame\settingsHandler $sqlSettings, IOFrame\settingsHandler $redisSettings,
+function install(IOFrame\Handlers\SettingsHandler $userSettings,
+                 IOFrame\Handlers\SettingsHandler $pageSettings, IOFrame\Handlers\SettingsHandler $mailSettings,
+                 IOFrame\Handlers\SettingsHandler $localSettings, IOFrame\Handlers\SettingsHandler $siteSettings,
+                 IOFrame\Handlers\SettingsHandler $sqlSettings, IOFrame\Handlers\SettingsHandler $redisSettings,
+                 IOFrame\Handlers\SettingsHandler $resourceSettings,
                  $stage='0',$baseUrl){
     //Echo the return button
     if($stage!=0)
@@ -199,16 +207,18 @@ function install(IOFrame\settingsHandler $userSettings,
 
     if($stage>=6){
         $defaultSettingsParams = [];
-        $redisHandler = new IOFrame\redisHandler($redisSettings);
-        $defaultSettingsParams['redisHandler'] = $redisHandler;
-        if($redisHandler->isInit){
+        $RedisHandler = new IOFrame\Handlers\RedisHandler($redisSettings);
+        $defaultSettingsParams['RedisHandler'] = $RedisHandler;
+        $defaultSettingsParams['siteSettings'] = $siteSettings;
+        $defaultSettingsParams['resourceSettings'] = $resourceSettings;
+        if($RedisHandler->isInit){
             $defaultSettingsParams['useCache'] = true;
         }
-        $sqlHandler = new IOFrame\sqlHandler(
+        $SQLHandler = new IOFrame\Handlers\SQLHandler(
             $localSettings,
             $defaultSettingsParams
         );
-        $defaultSettingsParams['sqlHandler'] = $sqlHandler;
+        $defaultSettingsParams['SQLHandler'] = $SQLHandler;
         $defaultSettingsParams['opMode'] = 'mixed';
     }
 
@@ -545,7 +555,7 @@ function install(IOFrame\settingsHandler $userSettings,
 
             if($res){
                 try{
-                    $conn = IOFrame\prepareCon($sqlSettings);
+                    $conn = IOFrame\Util\prepareCon($sqlSettings);
                     echo 'All is well.'.EOL.'</div>';
                 }
                 catch(\Exception $e){
@@ -583,11 +593,12 @@ function install(IOFrame\settingsHandler $userSettings,
             break;
         //-------------7th installation stage
         case 6:
-            require_once 'util/safeSTR.php';
-            require_once 'handlers/routeHandler.php';
+            require_once 'IOFrame/Util/safeSTR.php';
+            require_once 'IOFrame/Handlers/RouteHandler.php';
             echo 'Install stage 7:<div id="notice"> ';
-            $sqlHandler = new IOFrame\sqlHandler($localSettings);
+            $SQLHandler = new IOFrame\Handlers\SQLHandler($localSettings);
 
+            //Insert security events
             $columns = ['Event_Category','Event_Type','Sequence_Number','Blacklist_For','Add_TTL'];
             $assignments = [
                 [0,0,0,0,8640],
@@ -607,7 +618,7 @@ function install(IOFrame\settingsHandler $userSettings,
                 [1,0,100,2678400,31557600],
             ];
 
-            $res = $sqlHandler->insertIntoTable($sqlHandler->getSQLPrefix().'EVENTS_RULEBOOK',$columns,$assignments,['test'=>false]);
+            $res = $SQLHandler->insertIntoTable($SQLHandler->getSQLPrefix().'EVENTS_RULEBOOK',$columns,$assignments,['test'=>false]);
 
             if($res) {
                 echo EOL.'Events Rulebook initiated!' . EOL;
@@ -617,31 +628,46 @@ function install(IOFrame\settingsHandler $userSettings,
                 die();
             }
 
+            //Insert auth actions
             $columns = ['Auth_Action','Description'];
             $assignments = [
-                ['REGISTER_USER_AUTH',\IOFrame\str2SafeStr('Required to register a user when self-registration is not allowed')],
-                ['ADMIN_ACCESS_AUTH',\IOFrame\str2SafeStr('Required to access administrator pages')],
-                ['PLUGIN_GET_AVAILABLE_AUTH',\IOFrame\str2SafeStr('Required to get available plugins')],
-                ['PLUGIN_GET_INFO_AUTH',\IOFrame\str2SafeStr('Required to get plugin info')],
-                ['PLUGIN_GET_ORDER_AUTH',\IOFrame\str2SafeStr('Required to get plugin order')],
-                ['PLUGIN_PUSH_TO_ORDER_AUTH',\IOFrame\str2SafeStr('Required to push to plugin order')],
-                ['PLUGIN_REMOVE_FROM_ORDER_AUTH',\IOFrame\str2SafeStr('Required to remove from plugin order')],
-                ['PLUGIN_MOVE_ORDER_AUTH',\IOFrame\str2SafeStr('Required to move plugin order')],
-                ['PLUGIN_SWAP_ORDER_AUTH',\IOFrame\str2SafeStr('Required to swap plugin order')],
-                ['PLUGIN_INSTALL_AUTH',\IOFrame\str2SafeStr('Required to install a plugin')],
-                ['PLUGIN_UNINSTALL_AUTH',\IOFrame\str2SafeStr('Required to uninstall a plugin')],
-                ['PLUGIN_IGNORE_VALIDATION',\IOFrame\str2SafeStr('Required to ignore plugin validation during installation')],
-                ['TREE_C_AUTH',\IOFrame\str2SafeStr('Required to create all trees')],
-                ['TREE_R_AUTH',\IOFrame\str2SafeStr('Required to read all trees')],
-                ['TREE_U_AUTH',\IOFrame\str2SafeStr('Required to update all trees')],
-                ['TREE_D_AUTH',\IOFrame\str2SafeStr('Required to delete all trees')],
-                ['TREE_MODIFY_ALL',\IOFrame\str2SafeStr('Required to modify all trees')],
-                ['BAN_USERS_AUTH',\IOFrame\str2SafeStr('Required to ban users')],
-                ['MODIFY_USER_ACTIONS_AUTH',\IOFrame\str2SafeStr('Required to modify user actions')],
-                ['MODIFY_AUTH',\IOFrame\str2SafeStr('Required to modify all user auth')],
-                ['MODIFY_USER_RANK_AUTH',\IOFrame\str2SafeStr('Required to modify user ranks')],
-                ['MODIFY_GROUP_AUTH',\IOFrame\str2SafeStr('Required to modify auth groups')],
-                ['ASSIGN_OBJECT_AUTH',\IOFrame\str2SafeStr('Action required to assign objects in the object map')]
+                ['REGISTER_USER_AUTH',\IOFrame\Util\str2SafeStr('Required to register a user when self-registration is not allowed')],
+                ['ADMIN_ACCESS_AUTH',\IOFrame\Util\str2SafeStr('Required to access administrator pages')],
+                ['PLUGIN_GET_AVAILABLE_AUTH',\IOFrame\Util\str2SafeStr('Required to get available plugins')],
+                ['PLUGIN_GET_INFO_AUTH',\IOFrame\Util\str2SafeStr('Required to get plugin info')],
+                ['PLUGIN_GET_ORDER_AUTH',\IOFrame\Util\str2SafeStr('Required to get plugin order')],
+                ['PLUGIN_PUSH_TO_ORDER_AUTH',\IOFrame\Util\str2SafeStr('Required to push to plugin order')],
+                ['PLUGIN_REMOVE_FROM_ORDER_AUTH',\IOFrame\Util\str2SafeStr('Required to remove from plugin order')],
+                ['PLUGIN_MOVE_ORDER_AUTH',\IOFrame\Util\str2SafeStr('Required to move plugin order')],
+                ['PLUGIN_SWAP_ORDER_AUTH',\IOFrame\Util\str2SafeStr('Required to swap plugin order')],
+                ['PLUGIN_INSTALL_AUTH',\IOFrame\Util\str2SafeStr('Required to install a plugin')],
+                ['PLUGIN_UNINSTALL_AUTH',\IOFrame\Util\str2SafeStr('Required to uninstall a plugin')],
+                ['PLUGIN_IGNORE_VALIDATION',\IOFrame\Util\str2SafeStr('Required to ignore plugin validation during installation')],
+                ['TREE_C_AUTH',\IOFrame\Util\str2SafeStr('Required to create all trees')],
+                ['TREE_R_AUTH',\IOFrame\Util\str2SafeStr('Required to read all trees')],
+                ['TREE_U_AUTH',\IOFrame\Util\str2SafeStr('Required to update all trees')],
+                ['TREE_D_AUTH',\IOFrame\Util\str2SafeStr('Required to delete all trees')],
+                ['TREE_MODIFY_ALL',\IOFrame\Util\str2SafeStr('Required to modify all trees')],
+                ['BAN_USERS_AUTH',\IOFrame\Util\str2SafeStr('Required to ban users')],
+                ['MODIFY_USER_ACTIONS_AUTH',\IOFrame\Util\str2SafeStr('Required to modify user actions')],
+                ['MODIFY_AUTH',\IOFrame\Util\str2SafeStr('Required to modify all user auth')],
+                ['MODIFY_USER_RANK_AUTH',\IOFrame\Util\str2SafeStr('Required to modify user ranks')],
+                ['MODIFY_GROUP_AUTH',\IOFrame\Util\str2SafeStr('Required to modify auth groups')],
+                ['ASSIGN_OBJECT_AUTH',\IOFrame\Util\str2SafeStr('Action required to assign objects in the object map')],
+                ['IMAGE_UPLOAD_AUTH',\IOFrame\Util\str2SafeStr('Allow image upload')],
+                ['IMAGE_FILENAME_AUTH',\IOFrame\Util\str2SafeStr('Allow choosing image filename on upload')],
+                ['IMAGE_OVERWRITE_AUTH',\IOFrame\Util\str2SafeStr('Allow overwriting existing images')],
+                ['IMAGE_GET_ALL_AUTH',\IOFrame\Util\str2SafeStr('Allows getting all images (and each individual one)')],
+                ['IMAGE_UPDATE_AUTH',\IOFrame\Util\str2SafeStr('Allow unlimited image updating (both alt tag and name)')],
+                ['IMAGE_ALT_AUTH',\IOFrame\Util\str2SafeStr('Allow unlimited image alt tag changing')],
+                ['IMAGE_NAME_AUTH',\IOFrame\Util\str2SafeStr('Allow unlimited image name changing')],
+                ['IMAGE_MOVE_AUTH',\IOFrame\Util\str2SafeStr('Allow unlimited image moving')],
+                ['IMAGE_DELETE_AUTH',\IOFrame\Util\str2SafeStr('Allow unlimited image deletion')],
+                ['IMAGE_INCREMENT_AUTH',\IOFrame\Util\str2SafeStr('Allow unlimited image version incrementation')],
+                ['GALLERY_GET_ALL_AUTH',\IOFrame\Util\str2SafeStr('Allows getting all galleries (and each individual one)')],
+                ['GALLERY_CREATE_AUTH',\IOFrame\Util\str2SafeStr('Allow unlimited gallery creation')],
+                ['GALLERY_UPDATE_AUTH',\IOFrame\Util\str2SafeStr('Allow unlimited gallery updating - includes adding/removing media to/from gallery')],
+                ['GALLERY_DELETE_AUTH',\IOFrame\Util\str2SafeStr('Allow unlimited gallery deletion')]
             ];
 
             foreach($assignments as $k=>$v){
@@ -649,7 +675,7 @@ function install(IOFrame\settingsHandler $userSettings,
                 $assignments[$k][1] = [$v[1],'STRING'];
             }
 
-            $res = $sqlHandler->insertIntoTable($sqlHandler->getSQLPrefix().'ACTIONS_AUTH',$columns,$assignments,['test'=>false]);
+            $res = $SQLHandler->insertIntoTable($SQLHandler->getSQLPrefix().'ACTIONS_AUTH',$columns,$assignments,['test'=>false]);
 
             if($res) {
                 echo EOL.'Default Actions initiated!' . EOL;
@@ -659,13 +685,13 @@ function install(IOFrame\settingsHandler $userSettings,
                 die();
             }
 
-            $routeHandler = new IOFrame\routeHandler($localSettings,$defaultSettingsParams);
+            //Insert routing rules
+            $RouteHandler = new IOFrame\Handlers\RouteHandler($localSettings,$defaultSettingsParams);
 
-            $routesAdded = $routeHandler->addRoutes(
+            $routesAdded = $RouteHandler->addRoutes(
                 [
                     ['GET|POST','api/[*:trailing]','api',null],
-                    ['GET|POST','[*:trailing]','front',null],
-                    ['GET|POST','*','404']
+                    ['GET|POST','[*:trailing]','front',null]
                 ]
             );
 
@@ -678,21 +704,64 @@ function install(IOFrame\settingsHandler $userSettings,
             }
 
 
-            $matches = $routeHandler->setMatches(
+            $matches = $RouteHandler->setMatches(
                 [
-                    'front'=>['front/[trailing]','php,html,htm'],
-                    'api'=>['api/[trailing]','php'],
-                    '404'=>['404','html']
+                    'front'=>['front/ioframe/pages/[trailing]', 'php,html,htm'],
+                    'api'=>['api/[trailing]','php']
                 ]
             );
 
-            if($matches['front']===0 && $matches['api']===0 && $matches['404']===0 ){
+            if($matches['front']===0 && $matches['api']===0 ){
                 echo EOL.'Default Matches initiated!' . EOL;
             }
             else{
                 echo EOL.'Default Matches NOT initiated properly!'.EOL;
                 die();
             }
+
+            //Insert default resources
+            require 'IOFrame/Handlers/FrontEndResourceHandler.php';
+            $FrontEndResourceHandler = new IOFrame\Handlers\FrontEndResourceHandler($localSettings,$defaultSettingsParams);
+            $resourceCreation = $FrontEndResourceHandler->setResources(
+                [
+                    ['sec/aes.js'],
+                    ['sec/mode-ecb.js'],
+                    ['sec/mode-ctr.js'],
+                    ['sec/pad-ansix923-min.js'],
+                    ['sec/pad-zeropadding.js'],
+                    ['utils.js'],
+                    ['initPage.js'],
+                    ['objects.js'],
+                    ['fp.js'],
+                    ['ezAlert.js']
+                ],
+                'js'
+            );
+            foreach($resourceCreation as $res)
+                if($res === -1){
+                    echo EOL.'Resource creation failed, could not connect to db!'.EOL;
+                    die();
+                }
+
+            $collectionCreation = $FrontEndResourceHandler->setJSCollection('IOFrameCoreJS',null);
+            if($collectionCreation === -1){
+                echo EOL.'Resource collection creation failed, could not connect to db!'.EOL;
+                die();
+            }
+
+            $collectionInit = $FrontEndResourceHandler->addJSFilesToCollection(
+                ['sec/aes.js','sec/mode-ecb.js','sec/mode-ctr.js','sec/pad-ansix923-min.js','sec/pad-zeropadding.js',
+                    'utils.js','initPage.js','objects.js','fp.js','ezAlert.js'],
+                'IOFrameCoreJS'
+            );
+            foreach($collectionInit as $res)
+                if($res === -1){
+                    echo EOL.'Resource collection population failed, could not connect to db!'.EOL;
+                    die();
+                }
+
+
+            echo EOL.'Resources created!'.EOL;
 
             echo ' </div>';
 
@@ -750,26 +819,31 @@ function install(IOFrame\settingsHandler $userSettings,
 
             //Initiate all settings handlers that need to by synced
 
-            $userSettings = new IOFrame\settingsHandler(
-                IOFrame\getAbsPath().'/'.SETTINGS_DIR_FROM_ROOT.'/userSettings/',
+            $userSettings = new IOFrame\Handlers\SettingsHandler(
+                IOFrame\Util\getAbsPath().'/'.SETTINGS_DIR_FROM_ROOT.'/userSettings/',
                 $defaultSettingsParams
             );;
             $userSettings->initDB();
-            $pageSettings = new IOFrame\settingsHandler(
-                IOFrame\getAbsPath().'/'.SETTINGS_DIR_FROM_ROOT.'/pageSettings/',
+            $pageSettings = new IOFrame\Handlers\SettingsHandler(
+                IOFrame\Util\getAbsPath().'/'.SETTINGS_DIR_FROM_ROOT.'/pageSettings/',
                 $defaultSettingsParams
             );
             $pageSettings->initDB();
-            $mailSettings = new IOFrame\settingsHandler(
-                IOFrame\getAbsPath().'/'.SETTINGS_DIR_FROM_ROOT.'/mailSettings/',
+            $mailSettings = new IOFrame\Handlers\SettingsHandler(
+                IOFrame\Util\getAbsPath().'/'.SETTINGS_DIR_FROM_ROOT.'/mailSettings/',
                 $defaultSettingsParams
             );
             $mailSettings->initDB();
-            $siteSettings = new IOFrame\settingsHandler(
-                IOFrame\getAbsPath().'/'.SETTINGS_DIR_FROM_ROOT.'/siteSettings/',
+            $siteSettings = new IOFrame\Handlers\SettingsHandler(
+                IOFrame\Util\getAbsPath().'/'.SETTINGS_DIR_FROM_ROOT.'/siteSettings/',
                 $defaultSettingsParams
             );
             $siteSettings->initDB();
+            $resourceSettings = new IOFrame\Handlers\SettingsHandler(
+                IOFrame\Util\getAbsPath().'/'.SETTINGS_DIR_FROM_ROOT.'/resourceSettings/',
+                $defaultSettingsParams
+            );
+            $resourceSettings->initDB();
 
             echo 'All settings synced to database!'.EOL;
             echo '</div>';
@@ -791,7 +865,7 @@ function install(IOFrame\settingsHandler $userSettings,
         //-------------9th installation stage
         case 8:
             echo 'Install stage 9:'.EOL;
-            $userHandler = new IOFrame\userHandler($localSettings);
+            $UserHandler = new IOFrame\Handlers\UserHandler($localSettings);
 
             function checkInput($inputs,$test = false){
 
@@ -840,7 +914,7 @@ function install(IOFrame\settingsHandler $userSettings,
                         $inputs[$expected] = $_REQUEST[$expected];
                 }
 
-                $userHandler->regUser($inputs);
+                $UserHandler->regUser($inputs);
             }
             catch(PDOException $e)
             {
@@ -883,11 +957,16 @@ function install(IOFrame\settingsHandler $userSettings,
 
             ];
 
+            $resourceArgs = [
+
+            ];
+
             array_push($localArgs,["absPathToRoot",$baseUrl]);
             array_push($localArgs,["pathToRoot",
                 substr($_SERVER['SCRIPT_NAME'], 0, strlen($_SERVER['SCRIPT_NAME'])- strlen('/install.php'))]);
-            array_push($localArgs,["opMode",IOFrame\SETTINGS_OP_MODE_MIXED]);
+            array_push($localArgs,["opMode",IOFrame\Handlers\SETTINGS_OP_MODE_MIXED]);
             array_push($localArgs,["dieOnPluginMismatch",true]);
+
             array_push($siteArgs,["siteName",'My Website']);
             array_push($siteArgs,["maxInacTime",3600]);
             array_push($siteArgs,["privateKey",'0000000000000000000000000000000000000000000000000000000000000000']);
@@ -895,12 +974,17 @@ function install(IOFrame\settingsHandler $userSettings,
             array_push($siteArgs,["logStatus",IOFrame\LOG_MODE_1]);
             array_push($siteArgs,["sslOn",1]);
             array_push($siteArgs,["maxObjectSize",4000000]);
+            array_push($siteArgs,["maxUploadSize",4000000]);
+            array_push($siteArgs,["tokenTTL",3600]);
 
             array_push($userArgs,["pwdResetExpires",72]);
             array_push($userArgs,["mailConfirmExpires",72]);
             array_push($userArgs,["regConfirmTemplate",1]);
+            array_push($userArgs,["regConfirmTitle",'Registration Confirmation Mail']);
             array_push($userArgs,["pwdResetTemplate",2]);
+            array_push($userArgs,["pwdResetTitle",'Password Reset Confirmation Mail']);
             array_push($userArgs,["emailChangeTemplate",3]);
+            array_push($userArgs,["emailChangeTitle",'Email Change Confirmation Mail']);
             array_push($userArgs,["passwordResetTime",5]);
             array_push($userArgs,["rememberMe",1]);
             array_push($userArgs,["userTokenExpiresIn",0]);
@@ -911,7 +995,17 @@ function install(IOFrame\settingsHandler $userSettings,
 
             array_push($pageArgs,["loginPage",'']);
             array_push($pageArgs,["pwdReset",'']);
-            array_push($pageArgs,["mailConfirmedPage",'']);
+            array_push($pageArgs,["mailReset",'']);
+            array_push($pageArgs,["regConfirm",'']);
+            array_push($pageArgs,["homepage",'front/ioframe/pages/welcome']);
+
+            array_push($resourceArgs,["imagePathLocal",'front/ioframe/img/']);
+            array_push($resourceArgs,["jsPathLocal",'front/ioframe/js/']);
+            array_push($resourceArgs,["cssPathLocal",'front/ioframe/css/']);
+            array_push($resourceArgs,["autoMinifyJS",1]);
+            array_push($resourceArgs,["autoMinifyCSS",1]);
+            array_push($resourceArgs,["imageQualityPercentage",100]);
+
 
             $res = true;
 
@@ -949,6 +1043,15 @@ function install(IOFrame\settingsHandler $userSettings,
                     echo 'Page setting '.$val[0].' set to '.$val[1].EOL;
                 else{
                     echo 'Failed to set page setting '.$val[0].' to '.$val[1].EOL;
+                    $res = false;
+                }
+            }
+
+            foreach($resourceArgs as $key=>$val){
+                if($resourceSettings->setSetting($val[0],$val[1],['createNew'=>true]))
+                    echo 'Resource setting '.$val[0].' set to '.$val[1].EOL;
+                else{
+                    echo 'Failed to set resource setting '.$val[0].' to '.$val[1].EOL;
                     $res = false;
                 }
             }

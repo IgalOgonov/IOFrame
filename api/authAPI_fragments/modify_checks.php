@@ -1,12 +1,12 @@
 <?php
 
 if(!defined('validator'))
-    require __DIR__ . '/../../util/validator.php';
+    require __DIR__ . '/../../IOFrame/Util/validator.php';
 
 if($params == null){
     if($test)
         echo 'Params must be set!';
-    exit('-1');
+    exit(INPUT_VALIDATION_FAILURE);
 }
 
 
@@ -18,21 +18,21 @@ else
 if(!isset($params[$expectedTarget])){
     if($test)
         echo $expectedTarget.' must be an set!'.EOL;
-    exit('-1');
+    exit(INPUT_VALIDATION_FAILURE);
 }
 
 if($expectedTarget == 'id'){
     if(!filter_var($params[$expectedTarget],FILTER_VALIDATE_INT)){
         if($test)
             echo 'ID must be a number!'.EOL;
-        exit('-1');
+        exit(INPUT_VALIDATION_FAILURE);
     }
 }
 else{
-    if(!\IOFrame\validator::validateSQLKey($params[$expectedTarget])){
+    if(!\IOFrame\Util\validator::validateSQLKey($params[$expectedTarget])){
         if($test)
             echo 'Group must be a string of 1 to 256 characters!'.EOL;
-        exit('-1');
+        exit(INPUT_VALIDATION_FAILURE);
     }
 }
 
@@ -45,7 +45,7 @@ else
 if(!isset($params[$expectedParam]) || !is_array($params[$expectedParam])){
     if($test)
         echo $expectedParam.' must be an associative array!'.EOL;
-    exit('-1');
+    exit(INPUT_VALIDATION_FAILURE);
 }
 
 foreach($params[$expectedParam] as $name => $assignment){
@@ -53,10 +53,10 @@ foreach($params[$expectedParam] as $name => $assignment){
     if($assignment == '0' || strtolower($assignment) == 'false')
         $params[$expectedParam][$name] = false;
 
-    if(!\IOFrame\validator::validateSQLKey($name)){
+    if(!\IOFrame\Util\validator::validateSQLKey($name)){
         if($test)
             echo 'Each member of '.$expectedParam.' must be a string of 1 to 256 characters!'.EOL;
-        exit('-1');
+        exit(INPUT_VALIDATION_FAILURE);
     }
 }
 
@@ -66,7 +66,7 @@ foreach($params[$expectedParam] as $name => $assignment){
 if(!$auth->isAuthorized(0)){
     if($test)
         echo 'Authorization rank must be 0!';
-    exit('-2');
+    exit(AUTHENTICATION_FAILURE);
 }
 
 

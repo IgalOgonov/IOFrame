@@ -72,6 +72,12 @@ The framework allows you to control your session lifetime. However, the PHP sett
 
 to be your desired value in seconds.  
 
+Also, if you want your maximum file size be controlled by IOFrame, change 
+	
+	upload_max_filesize = <some very big number>
+	AND 
+	post_max_size = <some very big number>
+
 Restart Apache.
 
 Again, if your value in the IOFrame settings is HIGHER than this, it will get discarded by PHP first.

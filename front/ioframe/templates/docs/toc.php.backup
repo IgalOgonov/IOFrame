@@ -1,0 +1,29 @@
+
+<span id="toc">
+
+    <div class="toc-wrapper">
+        <h2><a name="ToC"></a>{{tocTitle}}</h2>
+
+        <div v-for="(value, key) in menu" :id="getID(key)" class="toc-menu-div">
+            <div class="button-container">
+                <button @click="displaySection(key)">{{getTitle(key)}}</button>
+                <button v-if="value.length!=0"
+                        @click="toggleMenu(key)"></button>
+            </div>
+            <div v-for="(value2, key2) in value" :id="getID(key2)" class="toc-menu-div">
+                <div class="button-container">
+                    <button @click="displaySection(key2)">{{getTitle(key2)}}</button>
+                    <button v-if="value2.length!=0"
+                            @click="toggleMenu(key2)"></button>
+                </div>
+                <div v-for="(value3, key3) in value2"  :id="getID(key3)" class="toc-menu-div">
+                    <div class="button-container">
+                        <button @click="displaySection(key3)">{{getTitle(key3)}}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</span>

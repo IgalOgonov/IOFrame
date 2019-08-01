@@ -5,9 +5,10 @@
 */
 if(!defined('coreInit'))
     require __DIR__ . '/../main/coreInit.php';
-require __DIR__ . '/../handlers/mailHandler.php';
+require __DIR__ . '/../IOFrame/Handlers/MailHandler.php';
 
 require 'defaultInputChecks.php';
+require 'defaultInputResults.php';
 
 if($test){
     echo 'Testing mode!'.EOL;
@@ -72,7 +73,7 @@ function checkInput(){
 
 checkInput();
 
-$mailHandler = new IOFrame\mailHandler(
+$MailHandler = new IOFrame\Handlers\MailHandler(
     $settings,
     $defaultSettingsParams
 );
@@ -84,7 +85,7 @@ switch($_REQUEST['action']){
         if(!isset($_REQUEST['secToken']))
             exit('No security token provided, action not authorized.');
         else{
-            $res = $mailHandler->verfySecToken($_REQUEST['secToken'],$_REQUEST['mail']);
+            $res = $MailHandler->verfySecToken($_REQUEST['secToken'],$_REQUEST['mail']);
             if($res !=0)
                 exit('Security token does not allow this action, error '.$res);
             else{
@@ -106,9 +107,9 @@ switch($_REQUEST['action']){
 
                 if($type == 'normal'){
                     try{
-                        $mailHandler->sendMail( [[$_REQUEST['mail']]], $_REQUEST['subj'], $_REQUEST['mBody'], [$mName1,$mName2]);
+                        $MailHandler->sendMail( [[$_REQUEST['mail']]], $_REQUEST['subj'], $_REQUEST['mBody'], [$mName1,$mName2]);
                         if(!isset($_REQUEST['keepAuth']))
-                            $mailHandler->removeSecToken($_REQUEST['mail']);
+                            $MailHandler->removeSecToken($_REQUEST['mail']);
                         echo 0;
                     }
                     catch(Exception $e){
@@ -119,13 +120,13 @@ switch($_REQUEST['action']){
                     if(!isset($_REQUEST['varArray']))
                         $varArray = '';
                     else
-                        IOFrame\is_json($_REQUEST['varArray']) ? $varArray =$_REQUEST['varArray'] : $varArray = '';
+                        IOFrame\Util\is_json($_REQUEST['varArray']) ? $varArray =$_REQUEST['varArray'] : $varArray = '';
                     try{
-                        $mailHandler->setTemplate($_REQUEST['templateNum']);
-                        $mailHandler->sendMailTemplate([[$_REQUEST['mail']]],$_REQUEST['subj'],'',$varArray,
+                        $MailHandler->setTemplate($_REQUEST['templateNum']);
+                        $MailHandler->sendMailTemplate([[$_REQUEST['mail']]],$_REQUEST['subj'],'',$varArray,
                             [$mName1,$mName2]);
                         if(!isset($_REQUEST['keepAuth']))
-                            $mailHandler->removeSecToken($_REQUEST['mail']);
+                            $MailHandler->removeSecToken($_REQUEST['mail']);
                         echo 0;
                     }
                     catch(Exception $e){

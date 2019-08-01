@@ -31,7 +31,7 @@ echo EOL.'---------Install IOFrame in CLI mode!--------'.EOL;
 if(!defined('INSTALL_CLI'))
     exit('Must be included from _install.php to run!');
 
-require_once 'handlers/fileHandler.php';
+require_once 'IOFrame/Handlers/FileHandler.php';
 
 //This should only be true if we are installing on a system that is inside a VM, and this environment variable is set in
 //the Dockerfile / Vagrantfile / etc, OR if we are running with a flag -f.
@@ -41,8 +41,8 @@ if($installFromFile){
     if(!file_exists($baseUrl.'/localFiles/installOptionFile.json'))
         exit('Install Options file does not exist!');
     //If the file exists, read it
-    $fileHandler = new IOFrame\fileHandler();
-    $installOptions = json_decode($fileHandler->readFileWaitMutex($baseUrl.'/localFiles/','installOptionFile.json',[]),true);
+    $FileHandler = new IOFrame\Handlers\FileHandler();
+    $installOptions = json_decode($FileHandler->readFileWaitMutex($baseUrl.'/localFiles/','installOptionFile.json',[]),true);
 
     //Check required options
     if(isset($installOptions['redis']) && !isset($installOptions['redis']['redis_addr']))
@@ -82,7 +82,7 @@ $localArgs = [
 ];
 
 array_push($localArgs,["absPathToRoot",$baseUrl]);
-array_push($localArgs,["opMode",IOFrame\SETTINGS_OP_MODE_DB]);
+array_push($localArgs,["opMode",IOFrame\Handlers\SETTINGS_OP_MODE_DB]);
 //The node should sit at the server root, but if it does not it must be specified!
 if(!$installFromFile){
     echo "If this node is not sitting at server root, type its relative location".EOL.
@@ -353,7 +353,7 @@ else{
 
 try {
     //Create a PDO connection
-    $conn = IOFrame\prepareCon($sqlSettings);
+    $conn = IOFrame\Util\prepareCon($sqlSettings);
     echo 'Database connection established!'.EOL.EOL;
 }
 catch(Exception $e){

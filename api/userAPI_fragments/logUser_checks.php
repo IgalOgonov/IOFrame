@@ -1,31 +1,27 @@
 <?php
 
 if(!defined('validator'))
-    require __DIR__ . '/../../util/validator.php';
-if(!defined('userHandler'))
-    require __DIR__ . '/../../handlers/userHandler.php';
+    require __DIR__ . '/../../IOFrame/Util/validator.php';
+if(!defined('UserHandler'))
+    require __DIR__ . '/../../IOFrame/Handlers/UserHandler.php';
 if(!defined('IPHandler'))
-    require __DIR__ . '/../../handlers/IPHandler.php';
-if(!defined('securityHandler'))
-    require __DIR__ . '/../../handlers/securityHandler.php';
+    require __DIR__ . '/../../IOFrame/Handlers/IPHandler.php';
+if(!defined('SecurityHandler'))
+    require __DIR__ . '/../../IOFrame/Handlers/SecurityHandler.php';
 
-//No need to do extra work
-if(!$auth->isLoggedIn())
-    if($inputs["log"] == 'out')
-        exit(0);
 
 //We need to check whether the current IP is blacklisted
-$IPHandler = new \IOFrame\IPHandler(
+$IPHandler = new \IOFrame\Handlers\IPHandler(
     $settings,
     array_merge($defaultSettingsParams,['siteSettings'=>$siteSettings])
 );
 
 //IP check
 if($IPHandler->checkIP(['test'=>$test]))
-    exit('-3');
+    exit(SECURITY_FAILURE);
 
 if(!isset($userSettings))
-    $userSettings = new IOFrame\settingsHandler(
+    $userSettings = new IOFrame\Handlers\SettingsHandler(
         $settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/userSettings/',
         $defaultSettingsParams
     );
@@ -35,14 +31,14 @@ if(!isset($userSettings))
 if($userSettings->getSetting('allowRegularLogin') != 1){
     if($test)
         echo 'Logging through this API is not allowed!'.EOL;
-    exit('-2');
+    exit(AUTHENTICATION_FAILURE);
 }
 
 
 if( $inputs["userID"]!=null && $userSettings->getSetting('rememberMe') < 1){
     if($test)
         echo 'Cannot log in automatically when rememberMe server setting is less then 1! Don\'t post userID!'.EOL;
-    exit('-2');
+    exit(AUTHENTICATION_FAILURE);
 }
 
 //If this is a log out request no input is required
@@ -55,7 +51,7 @@ if(!$inputs["log"]=='out'){
     ){
         if($test)
             echo 'Missing input parameters.';
-        exit('-1');
+        exit(INPUT_VALIDATION_FAILURE);
     }
     else{
         $m=$inputs["m"];
@@ -65,13 +61,13 @@ if(!$inputs["log"]=='out'){
             $res=false;
             if($test)
                 echo 'Email illegal.';
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
         //Validate Password
-        else if( $inputs["log"]!= 'temp' && !IOFrame\validator::validatePassword($p)){
+        else if( $inputs["log"]!= 'temp' && !IOFrame\Util\validator::validatePassword($p)){
             if($test)
                 echo 'Password illegal.';
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
         //If this is a temp login, check if sesKey is valid
         else if( ($inputs["log"]== 'temp')
@@ -81,7 +77,7 @@ if(!$inputs["log"]=='out'){
         ){
             if($test)
                 echo 'Session key illegal.';
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
         //If this is a temp login, check if user idenfication key is correct
         else if(
@@ -93,22 +89,21 @@ if(!$inputs["log"]=='out'){
         ){
             if($test)
                 echo 'UserID illegal.';
-            exit('-1');
+            exit(INPUT_VALIDATION_FAILURE);
         }
     }
 }
 
-if(!isset($userHandler))
-    $userHandler = new IOFrame\userHandler(
+if(!isset($UserHandler))
+    $UserHandler = new IOFrame\Handlers\UserHandler(
         $settings,
         $defaultSettingsParams
     );
 
 //Check if the user is eligible to log in
 if($inputs["log"]!='out')
-    if ($userHandler->checkUserLogin($inputs["m"],['allowWhitelistedIP' => $IPHandler->directIP],false) == 1){
+    if ($UserHandler->checkUserLogin($inputs["m"],['allowWhitelistedIP' => $IPHandler->directIP,'test'=>$test]) === 1){
         if($test)
-            if($test)
-                echo 'Suspicious user activity - cannot login without 2FA or whitelisting the IP!'.EOL;
-        exit('-4');
+            echo 'Suspicious user activity - cannot login without 2FA or whitelisting the IP!'.EOL;
+        exit(SECURITY_FAILURE);
     }

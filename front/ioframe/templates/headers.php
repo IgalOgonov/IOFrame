@@ -1,23 +1,22 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><?php
-$dirToRoot = IOFrame\htmlDirDist($_SERVER['REQUEST_URI'],$settings->getSetting('pathToRoot'));
+$dirToRoot = IOFrame\Util\htmlDirDist($_SERVER['REQUEST_URI'],$settings->getSetting('pathToRoot'));
 $currentPage = substr($_SERVER['PHP_SELF'],strlen($settings->getSetting('pathToRoot')));
 $currentPageURI = substr($_SERVER['REQUEST_URI'],strlen($settings->getSetting('pathToRoot')));
 $rootURI = $settings->getSetting('pathToRoot');
-/* ----- Generally I would not include aesthetic JS into the main file, but it is needed for utils.js*/
-echo '<script src="'.$dirToRoot.'front/ioframe/js/ezAlert.js"></script>';
-/* ----- All the /sec files can be removed if you rewrite utils and initPage */
-echo '<script src="'.$dirToRoot.'front/ioframe/js/sec/aes.js"></script>';
-echo '<script src="'.$dirToRoot.'front/ioframe/js/sec/mode-ecb.js"></script>';
-echo '<script src="'.$dirToRoot.'front/ioframe/js/sec/mode-ctr.js"></script>';
-echo '<script src="'.$dirToRoot.'front/ioframe/js/sec/pad-ansix923-min.js"></script>';
-echo '<script src="'.$dirToRoot.'front/ioframe/js/sec/pad-zeropadding.js"></script>';
-echo '<script src="'.$dirToRoot.'front/ioframe/js/utils.js"></script>';
-echo '<script src="'.$dirToRoot.'front/ioframe/js/initPage.js"></script>';
-/* ----- fp.js is only used as a way to separate different browser/device logins - hense, it identifies unique devices*/
-echo '<script src="'.$dirToRoot.'front/ioframe/js/fp.js"></script>';
-//echo '<script src="'.$dirToRoot.'js/objectDB.js"></script>';
+
+/* -- Initiate resource handler and get core JS files and the CSS file--*/
+$IOFrameJSRoot = 'front/ioframe/js/';
+$IOFrameCSSRoot = 'front/ioframe/css/';
+$FrontEndResourceHandler = new IOFrame\Handlers\FrontEndResourceHandler($settings,$defaultSettingsParams);
+$coreJS = $FrontEndResourceHandler->getJSCollection( 'IOFrameCoreJS',['rootFolder'=>$IOFrameJSRoot]);
+//$coreJS['relativeAddress'] = 'min/IOFrameCoreJS.js';
+echo '<script src="'.$dirToRoot.'front/ioframe/js/'.$coreJS['relativeAddress'].'"></script>';
+$ezAlertCSS = $FrontEndResourceHandler->getCSS(['ezAlert.css'],['rootFolder'=>$IOFrameCSSRoot])['ezAlert.css'];
+//$ezAlertCSS['relativeAddress'] = '';
+echo '<link rel="stylesheet" href="'.$dirToRoot.'front/ioframe/css/'.$ezAlertCSS['relativeAddress'].'"">';
+
 $jsIncludes = $orderedPlugins;
 if(is_dir($settings->getSetting('absPathToRoot').'front/ioframe/js/plugins')){
     $dirArray = scandir($settings->getSetting('absPathToRoot').'front/ioframe/js/plugins');
@@ -49,7 +48,7 @@ if(is_dir($settings->getSetting('absPathToRoot').'front/ioframe/js/plugins')){
     //Difference between local time and server time - in seconds!
     document.serverTimeDelta = Math.floor( Math.floor(Date.now()/1000 - <?php echo time();?>) / 10) * 10;
     //CSRF Token
-    document.CSRF_token = '<?php echo $_SESSION['CSRF_token'];?>';
+    localStorage.setItem('CSRF_token','<?php echo $_SESSION['CSRF_token'];?>');
 
     document.addEventListener('DOMContentLoaded', function(e) {
         //console.log('Doc loaded',Date.now());

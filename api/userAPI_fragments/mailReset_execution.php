@@ -1,49 +1,48 @@
 <?php
 
-if(!defined('userHandler'))
-    require __DIR__ . '/../../handlers/userHandler.php';
+if(!defined('UserHandler'))
+    require __DIR__ . '/../../IOFrame/Handlers/UserHandler.php';
 
-if(!isset($userHandler))
-    $userHandler = new IOFrame\userHandler($settings,['sqlHandler'=>$sqlHandler,'logger'=>$logger,'redisHandler'=>$redisHandler]);
+if(!isset($UserHandler))
+    $UserHandler = new IOFrame\Handlers\UserHandler(
+        $settings,
+        $defaultSettingsParams
+    );
 
 //Attempts to send a mail to the user requiring password reset.
 if(isset($inputs['mail'])){
-    $result = $userHandler->mailChangeSend($inputs['mail'],['test'=>$test]);
+    $result = $UserHandler->mailChangeSend($inputs['mail'],['test'=>$test]);
 }
 
 //Checks if the info provided by the user was correct, if so authorizes the Session to reset the mail for a few minutes.
 //For now, depends on password reset time - due to it making sense (both are sensitive information with similar weight)
 else if(isset($inputs['id']) and isset($inputs['code']) ){
-    $result = $userHandler->mailChangeConfirm($inputs['id'], $inputs['code'],['test'=>$test]);
-
-    if( $result ){
-        $pageSettings = new IOFrame\settingsHandler(
+    $result = $UserHandler->mailChangeConfirm($inputs['id'], $inputs['code'],['test'=>$test]);
+    if(!isset($pageSettings))
+        $pageSettings = new IOFrame\Handlers\SettingsHandler(
             $settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/pageSettings/',
             $defaultSettingsParams
         );
+
+    if( $result === 0 ){
         if(!$test){
-            $_SESSION['MAIL_CHANGE_EXPIRES']=time()+$userHandler->userSettings->getSetting('passwordResetTime')*60;
+            $_SESSION['MAIL_CHANGE_EXPIRES']=time()+$UserHandler->userSettings->getSetting('passwordResetTime')*60;
             $_SESSION['MAIL_CHANGE_ID']=$inputs['id'];
-            if(!isset($inputs['async']))
-                header('Location: http://'.$_SERVER['SERVER_NAME'].'/'.$pageSettings->getSetting('mailChange').'?mes=You%20%have%20%'.$userHandler->userSettings->getSetting('passwordResetTime').'minutes%20%to%20%reset%20%your%20%mail');
         }
         else{
-            echo 'Changing MAIL_CHANGE_EXPIRES to '.(time()+$userHandler->userSettings->getSetting('passwordResetTime')*60).EOL;
+            echo 'Changing MAIL_CHANGE_EXPIRES to '.(time()+$UserHandler->userSettings->getSetting('passwordResetTime')*60).EOL;
             echo 'Changing MAIL_CHANGE_ID to '.$inputs['id'].EOL;
-            if(!isset($inputs['async']))
-                echo 'Changing header location to http://'.$_SERVER['SERVER_NAME'].'/'.$pageSettings->getSetting('mailChange').'?mes=You%20%have%20%'.$userHandler->userSettings->getSetting('passwordResetTime').'minutes%20%to%20%reset%20%your%20%mail'.EOL;
         }
     }
-    else{
-        if(!$test){
-            if(!isset($inputs['async']))
-                header('Location: http://'.$_SERVER['SERVER_NAME'].'?mes='.$result);
-        }
-        else{
-            if(!isset($inputs['async']))
-                echo 'Changing header location to  http://'.$_SERVER['SERVER_NAME'].'?mes='.$result.EOL;
-        }
+
+    if(!isset($inputs['async'])  && $pageSettings->getSetting('mailReset')){
+        if(!$test)
+            header('Location: http://'.$_SERVER['SERVER_NAME'].'/'.$pageSettings->getSetting('mailReset').'?res='.$result);
+
+        else
+            echo 'Changing header location to http://'.$_SERVER['SERVER_NAME'].'/'.$pageSettings->getSetting('mailReset').'?res='.$result.EOL;
     }
+
 }
 else{
     if($test)

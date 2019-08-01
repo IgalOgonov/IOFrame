@@ -18,12 +18,12 @@ function checkObjectMapAuth($sesInfo, $auth){
 if(!isset($params['id'])){
     if($test)
         echo 'You must send an object id to assign it to a map!';
-    exit('-1');
+    exit(INPUT_VALIDATION_FAILURE);
 }
 if(!isset($params['map'])){
     if($test)
         echo 'You must specify a map!';
-    exit('-1');
+    exit(INPUT_VALIDATION_FAILURE);
 }
 foreach($params as $key=>$value){
     switch($key){
@@ -31,19 +31,19 @@ foreach($params as $key=>$value){
             if(strlen($value)<1){
                 if($test)
                     echo 'You need a non empty object if you want to create it!';
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
             break;
         case 'map':
             if(filter_var($value,FILTER_VALIDATE_URL)){
                 if($test)
                     echo 'Illegal map name!';
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
             if(strlen($value)<1){
                 if($test)
                     echo 'You need a non empty map address if you want to create it!';
-                exit('-1');
+                exit(INPUT_VALIDATION_FAILURE);
             }
             break;
     }
@@ -55,13 +55,13 @@ $id = $params['id'];
 //Get page path
 $map = $params['map'];
 //Create/Remove assignment
-//Prepare a new authHandler to check all objecTMap auth
+//Prepare a new AuthHandler to check all objecTMap auth
 if(!isset($auth))
-    $auth = new IOFrame\authHandler($settings, $defaultSettingsParams);
+    $auth = new IOFrame\Handlers\AuthHandler($settings, $defaultSettingsParams);
 //Check if the user is autorized to modify map/object assignments in general
 if(!checkObjectMapAuth($sesInfo, $auth)){
     if($test)
         echo 'User is not authorized to modify  map/object assignments! ';
-    exit('3');
+    exit(AUTHENTICATION_FAILURE);
 }
 

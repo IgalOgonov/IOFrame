@@ -14,15 +14,15 @@ if(php_sapi_name() != "cli"){
 }
 
 require __DIR__ . '/../main/definitions.php';
-if(!defined('settingsHandler'))
-    require __DIR__ . '/../handlers/settingsHandler.php';
+if(!defined('SettingsHandler'))
+    require __DIR__ . '/../IOFrame/Handlers/SettingsHandler.php';
 if(!defined('helperFunctions'))
-    require __DIR__ . '/../util/helperFunctions.php';
-if(!defined('pluginHandler'))
-    require __DIR__ . '/../handlers/pluginHandler.php';
+    require __DIR__ . '/../IOFrame/Util/helperFunctions.php';
+if(!defined('PluginHandler'))
+    require __DIR__ . '/../IOFrame/Handlers/PluginHandler.php';
 
 //--------------------Initialize Root DIR--------------------
-$baseUrl = IOFrame\replaceInString('\\','/',substr(__DIR__,0,-8));
+$baseUrl = IOFrame\Util\replaceInString('\\','/',substr(__DIR__,0,-8));
 
 //--------------------Initialize EOL --------------------
 if(!defined("EOL"))
@@ -65,22 +65,22 @@ if($useOptionsFile){
     if(!file_exists($baseUrl.$useOptionsFile))
         exit('Install Options file does not exist!');
     //If the file exists, read it
-    $fileHandler = new IOFrame\fileHandler();
-    $optionFile = $fileHandler->readFileWaitMutex($baseUrl,$useOptionsFile,[]);
+    $FileHandler = new IOFrame\Handlers\FileHandler();
+    $optionFile = $FileHandler->readFileWaitMutex($baseUrl,$useOptionsFile,[]);
     $options = json_decode($optionFile,true);
 }
 
 //------------------------ Create settings --------------------------
 
-$localSettings = new IOFrame\settingsHandler($baseUrl.'/localFiles/localSettings/');
+$localSettings = new IOFrame\Handlers\SettingsHandler($baseUrl.'/localFiles/localSettings/');
 
-$pluginHandler = new IOFrame\pluginHandler($localSettings);
+$PluginHandler = new IOFrame\Handlers\PluginHandler($localSettings);
 
 switch($flags['a']){
     case 'install':
         if($test)
             echo 'Installing plugin '.$flags['n'].EOL;
-        $res = $pluginHandler->install($flags['n'],$options,['local'=>true,'override'=>true,'test'=>$test]);
+        $res = $PluginHandler->install($flags['n'],$options,['local'=>true,'override'=>true,'test'=>$test]);
         if($res == 0)
             echo 'Plugin installation successful!'.EOL;
         else
@@ -89,7 +89,7 @@ switch($flags['a']){
     case 'uninstall':
         if($test)
             echo 'Uninstalling plugin '.$flags['n'].EOL;
-        $res = $pluginHandler->uninstall($flags['n'],$options,['local'=>true,'override'=>true,'test'=>$test]);
+        $res = $PluginHandler->uninstall($flags['n'],$options,['local'=>true,'override'=>true,'test'=>$test]);
         if($res == 0)
             echo 'Plugin uninstall successful!'.EOL;
         else

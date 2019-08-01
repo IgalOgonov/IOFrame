@@ -12,7 +12,13 @@ foreach($_REQUEST as $key => $value){
         $resArr[$key]=$siteSettings->getSetting('maxInacTime');
     }
     else if($key=='CSRF_token'){
-        $resArr[$key]=$_SESSION['CSRF_token'];
+        //Clean referrer of protocol prefix
+        if(strpos($_SERVER['HTTP_REFERER'],'//')!==-1){
+            $_SERVER['HTTP_REFERER'] = explode('//',$_SERVER['HTTP_REFERER'])[1];
+        }
+        //Only return this if the request was made from this site! Remember - a legitimate client will send legitimate headers.
+        if(preg_match('/^'.str_replace('.','\.',$_SERVER['HTTP_HOST']).'/',$_SERVER['HTTP_REFERER']))
+            $resArr[$key]=$_SESSION['CSRF_token'];
     }
 
     if(isset($_SESSION['logged_in'])){
@@ -36,5 +42,6 @@ foreach($_REQUEST as $key => $value){
 
 }
 
-echo json_encode($resArr);
+if($resArr!==[])
+    echo json_encode($resArr);
 ?>

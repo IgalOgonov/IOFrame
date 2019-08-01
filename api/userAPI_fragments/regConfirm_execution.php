@@ -1,27 +1,27 @@
 <?php
 
-if(!defined('userHandler'))
-    require __DIR__ . '/../../handlers/userHandler.php';
+if(!defined('UserHandler'))
+    require __DIR__ . '/../../IOFrame/Handlers/UserHandler.php';
 
 //Attempts to activate the user, if the REQUEST contains both the ID and the code
 if(isset($inputs['id']) and isset($inputs['code']) ){
 
-    if(!isset($userHandler))
-        $userHandler = new IOFrame\userHandler(
+    if(!isset($UserHandler))
+        $UserHandler = new IOFrame\Handlers\UserHandler(
             $settings,
             $defaultSettingsParams
         );
 
     if(!isset($pageSettings))
-        $pageSettings = new IOFrame\settingsHandler(
+        $pageSettings = new IOFrame\Handlers\SettingsHandler(
             $settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/pageSettings/',
             $defaultSettingsParams
         );
 
-    $result = $userHandler->confirmRegistration($inputs['id'], $inputs['code'],['test'=>$test]);
+    $result = $UserHandler->confirmRegistration($inputs['id'], $inputs['code'],['test'=>$test]);
 
-    if($pageSettings->getSetting('mailConfirmedPage')!='' and !isset($inputs['async']))
-        header('Location: http://'.$_SERVER['SERVER_NAME'].'/'.$pageSettings->getSetting('mailConfirmedPage').'?res='.$res);
+    if($pageSettings->getSetting('regConfirm') and !isset($inputs['async']))
+        header('Location: http://'.$_SERVER['SERVER_NAME'].'/'.$pageSettings->getSetting('regConfirm').'?res='.$res);
 }
 else{
     if($test)
