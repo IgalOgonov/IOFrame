@@ -19,7 +19,7 @@ namespace IOFrame\Handlers{
      * @author Igal Ogonov <igal1333@hotmail.com>
      * @license LGPL
      * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
-    */
+     */
     class SQLHandler extends IOFrame\abstractLogger
     {
 
@@ -28,7 +28,7 @@ namespace IOFrame\Handlers{
         private $conn = null;
 
         /** @var IOFrame\Util\PHPQueryBuilder we use this to build our queries dynamically
-        */
+         */
         public $queryBuilder;
 
         /**
@@ -129,7 +129,7 @@ namespace IOFrame\Handlers{
 
             //As a rule of thumb, a query with fetchAll will not disrupt the ROW_COUNT() and LAST_INSERT_ID() functions.
             $lockMode = ( ($this->sqlSettings->getSetting('dbLockOnAction') == true) && !$fetchAll )?
-                    true : false;
+                true : false;
             if($lockMode){
                 $globalLock = fopen(DB_LOCK_FILE,'r');
                 flock($globalLock, LOCK_EX);
@@ -181,7 +181,7 @@ namespace IOFrame\Handlers{
          *      -2 server error
          *      -1 on illegal input
          *      An associative array of the form $obj['ColName'] = <Col Value> otherwise.
-        */
+         */
 
         function selectFromTable(string $tableName, array $cond = [], array $columns = [], array $params = []){
 
@@ -701,7 +701,7 @@ namespace IOFrame\Handlers{
                 }catch(\Exception $e){
                     if($verbose)
                         echo 'Failed to get secure_file_priv, error:'.$e.EOL;
-                        $this->logger->critical('Failed to get secure_file_priv, error: '.$e);
+                    $this->logger->critical('Failed to get secure_file_priv, error: '.$e);
                     return 5;
                 }
                 $backUpFolder = $sfp->fetchAll()[0]['tableValue'];

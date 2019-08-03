@@ -29,5 +29,7 @@ foreach($result as $relativeAddress => $infoArray){
             $result[$relativeAddress]['name'] = $meta['name'];
         if(isset($meta['alt']))
             $result[$relativeAddress]['alt'] = $meta['alt'];
+        if(isset($meta['caption']))
+            $result[$relativeAddress]['caption'] = $meta['caption'];
     }
 }

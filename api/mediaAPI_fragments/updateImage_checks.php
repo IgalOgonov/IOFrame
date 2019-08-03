@@ -22,9 +22,9 @@ else{
 //Alt and Name
 $meta = [];
 
-if($inputs['alt'] === null && $inputs['name'] === null){
+if($inputs['alt'] === null && $inputs['name'] === null && $inputs['caption'] === null ){
     if($test)
-        echo 'Either alt or name have to be set!'.EOL;
+        echo 'Either alt, caption or name have to be set!'.EOL;
     exit(INPUT_VALIDATION_FAILURE);
 }
 
@@ -60,6 +60,24 @@ if($inputs['name'] !== null){
     }
 
     $meta['name'] = $inputs['name'];
+}
+
+
+if($inputs['caption'] !== null){
+
+    if( !( $auth->hasAction(IMAGE_UPDATE_AUTH) ||  $auth->hasAction(IMAGE_CAPTION_AUTH) || $auth->isAuthorized(0) ) ){
+        if($test)
+            echo 'Cannot change image caption!'.EOL;
+        exit(AUTHENTICATION_FAILURE);
+    }
+
+    if(strlen($inputs['caption'])>IMAGE_CAPTION_MAX_LENGTH){
+        if($test)
+            echo 'Maximum caption length: '.IMAGE_CAPTION_MAX_LENGTH.EOL;
+        exit(INPUT_VALIDATION_FAILURE);
+    }
+
+    $meta['caption'] = $inputs['caption'];
 }
 
 

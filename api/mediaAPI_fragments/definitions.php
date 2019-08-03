@@ -15,6 +15,8 @@ CONST IMAGE_UPDATE_AUTH = 'IMAGE_UPDATE_AUTH';
 CONST IMAGE_ALT_AUTH = 'IMAGE_ALT_AUTH';
 //Allow unlimited image name changing
 CONST IMAGE_NAME_AUTH = 'IMAGE_NAME_AUTH';
+//Allow unlimited image name changing
+CONST IMAGE_CAPTION_AUTH = 'IMAGE_CAPTION_AUTH';
 //Allow unlimited image moving (local for now)
 CONST IMAGE_MOVE_AUTH = 'IMAGE_MOVE_AUTH';
 //Allow unlimited image deletion
@@ -41,6 +43,8 @@ CONST UPLOAD_FILENAME_REGEX = '^[\w| ]{1,128}$';
 CONST IMAGE_ALT_MAX_LENGTH = 128;
 //RMaximum length for image name
 CONST IMAGE_NAME_MAX_LENGTH = 128;
+//RMaximum length for image name
+CONST IMAGE_CAPTION_MAX_LENGTH = 1024;
 //RMaximum length for gallery name
 CONST GALLERY_NAME_MAX_LENGTH = 128;
 //Regex to validate upload name

@@ -13,6 +13,7 @@
  *                                       otherwise with a random one.
  *                              'alt' : string, default '' - alt tag for the image (meta information)
  *                              'name' : string, default '' - "pretty" image name(meta information)
+ *                              'caption' : string, default '' - image caption
  *                              ],
  *              <upload name 2>: ...,
  *              ...
@@ -66,6 +67,7 @@
  *                                              'lastChanged' => int, unix timestamp of the local file
  *                                              [OPTIONAL]'alt' : string, default '' - alt tag for the image (meta information)
  *                                              [OPTIONAL]'name' : string, default '' - "pretty" image name NOT FILENAME
+ *                                              [OPTIONAL]'caption' : string, default '' - image caption
  *                        ],
  *      ...
  *      ]
@@ -81,7 +83,7 @@
  *        address:  string, image address
  *        name:  string, default '' - new name for the image
  *        alt:  string, default '' - alt tag for the image
- *
+ *        caption : string, default '' - image caption
  *        Examples: action=updateImage&address=docs/installScreenshots/1.png&name=Amazing Image&alt=A great picture
  *                  action=updateImage&address=docs/installScreenshots/1.png&name=Less Amazing Image
  *                  action=updateImage&address=docs/installScreenshots/1.png&alt=Google, Index this

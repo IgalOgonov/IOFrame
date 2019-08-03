@@ -902,10 +902,11 @@ namespace IOFrame\Handlers{
                 if($verbose)
                     echo 'Verifying that plugin '.$name.' is active!'.EOL;
                 $info = $this->getAvailable(['name'=>$name]);
-                if( ($info[$name] != 'active') && !$test){
+                if( ($info[$name] != 'active')){
                     if($verbose)
                         echo 'Cannot push a plugin into order that is not active!'.EOL;
-                    return 4;
+                    if(!$test)
+                        return 4;
                 }
             }
 

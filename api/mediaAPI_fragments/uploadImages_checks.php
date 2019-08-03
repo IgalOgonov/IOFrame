@@ -74,6 +74,22 @@ foreach($inputs['items'] as $uploadName => $itemArray){
         }
 
     }
+
+    if(isset($itemArray['caption'])){
+
+        if(strlen($itemArray['caption'])>IMAGE_CAPTION_MAX_LENGTH){
+            if($test)
+                echo 'Invalid image caption for '.$uploadName.EOL;
+            exit(INPUT_VALIDATION_FAILURE);
+        }
+
+        if( !( $auth->hasAction(IMAGE_CAPTION_AUTH) || $auth->hasAction(IMAGE_UPDATE_AUTH) || $auth->isAuthorized(0) ) ){
+            if($test)
+                echo 'Cannot upload images with specific captions!'.EOL;
+            exit(AUTHENTICATION_FAILURE);
+        }
+
+    }
 }
 
 //Address

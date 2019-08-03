@@ -55,15 +55,19 @@ foreach($result as $uploadName => $res){
         //Push local files to delete if we fail the DB update or if we're testing
         if(!$fakeFile)
             $deleteLocalFiles[$uploadName] = $rootFolder.$res;
-        //Alt and name
+        //Meta information
         $alt  = isset($inputs['items'][$uploadName]['alt'])? $inputs['items'][$uploadName]['alt'] : null;
         $name  = isset($inputs['items'][$uploadName]['name'])? $inputs['items'][$uploadName]['name'] : null;
-        if($alt || $name){
+        $caption  = isset($inputs['items'][$uploadName]['caption'])? $inputs['items'][$uploadName]['caption'] : null;
+        if($alt || $name || $caption){
             $meta = [];
             if($alt)
                 $meta['alt'] = $alt;
             if($name)
                 $meta['name'] = $name;
+            if($caption)
+                $meta['caption'] = $caption;
+            $meta = [json_encode($meta),'STRING'];
         }
             else
                 $meta = null;
@@ -74,7 +78,7 @@ foreach($result as $uploadName => $res){
                 $DBName,
                 true,
                 false,
-                json_encode($meta)
+                $meta
             ]
         );
     }
