@@ -361,9 +361,13 @@ namespace IOFrame\Handlers{
          *          'updateDBIfExists'  - bool, default true - Whether to update the db when a local file exists that isn't
          *                                in the DB.
          *          'local'             - bool, default false - only does the operation locally, ignoring the db
+         *          'copy'             - bool, default false - copies the file instead of moving it
+         *          'existingAddresses' - Array, potential existing addresses if we already got them earlier.
          * @returns int Code of the form:
          *         -1 - Could not connect to db
          *          0 - All good
+         *          1 target address already exists
+         *          2 source address does not exist
          */
         function moveFrontendResourceFiles(array $inputs, string $type,  array $params = []){
             $test = isset($params['test'])? $params['test'] : false;
@@ -371,6 +375,8 @@ namespace IOFrame\Handlers{
                 $params['verbose'] : $test ? true : false;
             $updateDBIfExists = isset($params['updateDBIfExists'])? $params['updateDBIfExists'] : true;
             $local = isset($params['local'])? $params['local'] : false;
+            $copy = isset($params['copy'])? $params['copy'] : false;
+
             if($type === 'js')
                 $rootFolder = $this->settings->getSetting('absPathToRoot').$this->resourceSettings->getSetting('jsPathLocal');
             elseif($type === 'css')
@@ -395,6 +401,17 @@ namespace IOFrame\Handlers{
             foreach($inputs as $inputArray){
                 $src = $inputArray[0];
                 $dest = $inputArray[1];
+                //Check destination not existing
+                if(is_file($rootFolder.$dest) || is_dir($rootFolder.$dest)){
+                    return 1;
+                }
+
+                //Check origin existing
+                if(!is_file($rootFolder.$src) && !is_dir($rootFolder.$src)){
+                    return 2;
+                }
+
+                //Add to DB if requested
                 if(is_file($rootFolder.$src) || is_dir($rootFolder.$src)){
                     if($updateDBIfExists && !is_array($existing[$src]) ){
                         array_push($needToAdd,[$src]);
@@ -412,11 +429,20 @@ namespace IOFrame\Handlers{
             foreach($needToMove as $src=>$dest){
                 $continue = (!$local) ? $this->renameResource( $src, $dest, $type, $params) !== -1 : true;
                 if($continue){
-                    if(!$test){
-                        IOFrame\Util\force_rename($rootFolder.$src, $rootFolder.$dest);
+                    if(!$copy){
+                        if(!$test){
+                            IOFrame\Util\force_rename($rootFolder.$src, $rootFolder.$dest);
+                        }
+                        if($verbose)
+                            echo 'Moving '.$rootFolder.$src.' to '.$rootFolder.$dest.EOL;
                     }
-                    if($verbose)
-                        echo 'Moving '.$rootFolder.$src.' to '.$rootFolder.$dest.EOL;
+                    else{
+                        if(!$test){
+                            copy($rootFolder.$src, $rootFolder.$dest);
+                        }
+                        if($verbose)
+                            echo 'Copying '.$rootFolder.$src.' to '.$rootFolder.$dest.EOL;
+                    }
                 }
                 else
                     return -1;

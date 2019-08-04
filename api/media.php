@@ -98,11 +98,15 @@
  *        oldAddress:  string, old Address of the image
  *        newAddress:  string, new Address of the image
  *
- *        Examples: action=moveImage&oldAddress=docs/installScreenshots/1.png&newAddress=docs/installScreenshots/potato.png
+ *        Examples:
+ *          action=moveImage&oldAddress=docs/installScreenshots/1.png&newAddress=docs/installScreenshots/potato.png
+ *          action=moveImage&oldAddress=docs/installScreenshots/1.png&newAddress=docs/installScreenshots/potato.png&copy=1
  *
  *        Returns integer code:
  *             -1 - failed to connect to DB (this causes local files to be deleted)
  *              0 - success
+ *              1 - newAddress address already exists
+ *              2 - oldAddress address does not exist
  *      *note - DOES NOT TELL YOU if a resource does not exist locally - will simply ignore it.
  *_________________________________________________
  * deleteImages
@@ -327,7 +331,7 @@ switch($action){
         if(!validateThenRefreshCSRFToken($SessionHandler))
             exit(WRONG_CSRF_TOKEN);
 
-        $arrExpected =["oldAddress","newAddress"];
+        $arrExpected =["oldAddress","newAddress","copy"];
 
         require 'setExpectedInputs.php';
         require 'mediaAPI_fragments/moveImage_checks.php';

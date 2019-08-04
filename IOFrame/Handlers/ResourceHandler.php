@@ -425,33 +425,87 @@ namespace IOFrame\Handlers{
         /** Renames a resource
          * @param string $address Old address
          * @param string $newAddress New address
+         * @param string $type
+         * @param array $params of the form:
+         *          'copy'             - bool, default false - copies the file instead of moving it
+         *          'existingAddresses' - Array, potential existing addresses if we already got them earlier.
          * @returns int Code of the form:
          *         -1 - Could not connect to db
          *          0 - All good
+         *          1 target address already exists
+         *          2 source address does not exist
          */
         function renameResource( string $address, string $newAddress, string $type, array $params = []){
             $test = isset($params['test'])? $params['test'] : false;
             $verbose = isset($params['verbose'])?
                 $params['verbose'] : $test ? true : false;
+            $copy = isset($params['copy'])? $params['copy'] : false;
+            $existingAddresses =
+                isset($params['existingAddresses'])? $params['existingAddresses']
+                    :
+                    $this->getResources([$address,$newAddress],$type,$params);
+            $existingNew = $existingAddresses[$newAddress];
+            $existingOld = $existingAddresses[$address];
 
-            $res = $this->SQLHandler->updateTable(
-                $this->SQLHandler->getSQLPrefix().'RESOURCES',
-                ['Address = "'.$newAddress.'"'],
-                [
+            //Check for existing resources at the new address
+            if($existingNew != 1){
+                if($verbose)
+                    echo 'New target already exists in the db!'.EOL;
+                return 1;
+            }
+
+            //Check for existing resources at the old address
+            if($existingOld === 1){
+                if($verbose)
+                    echo 'Source address does not exist in the db!'.EOL;
+                return 2;
+            }
+
+            //If we are copying,
+            if($copy){
+
+                $oldColumns = [];
+                $newValues = [];
+
+                foreach($existingOld as $key=>$oldInfo){
+                    //Fucking trash results returning twice with number indexes. WHY? WHY???
+                    if(!preg_match('/^\d+$/',$key)){
+                        array_push($oldColumns,$key);
+                        if(gettype($oldInfo) === 'string')
+                            $oldInfo = [$oldInfo,'STRING'];
+                        if($key === 'Address')
+                            array_push($newValues,[$newAddress,'STRING']);
+                        else
+                            array_push($newValues,$oldInfo);
+                    }
+                }
+                //Just insert the new values into the table
+                $res = $this->SQLHandler->insertIntoTable(
+                    $this->SQLHandler->getSQLPrefix().'RESOURCES',
+                    $oldColumns,
+                    [$newValues],
+                    $params
+                );
+            }
+            else
+                $res = $this->SQLHandler->updateTable(
+                    $this->SQLHandler->getSQLPrefix().'RESOURCES',
+                    ['Address = "'.$newAddress.'"'],
                     [
-                        'Address',
-                        [$address,'STRING'],
-                        '='
+                        [
+                            'Address',
+                            [$address,'STRING'],
+                            '='
+                        ],
+                        [
+                            'Resource_Type',
+                            [$type,'STRING'],
+                            '='
+                        ],
+                        'AND'
                     ],
-                    [
-                        'Resource_Type',
-                        [$type,'STRING'],
-                        '='
-                    ],
-                    'AND'
-                ],
-                $params
-            );
+                    $params
+                );
 
             if($res){
                 if(!$test)
