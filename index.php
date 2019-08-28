@@ -83,18 +83,22 @@ if(isset($matches[$routeTarget]) && is_array($matches[$routeTarget])){
         //Check whether the file exists, for each extension
         foreach($extensions as $extension){
             if((file_exists($filename.'.'.$extension))){
+
                 //If the file does exist, make sure it does not violate the exclusion regex.
                 $shouldBeExcluded = false;
-                foreach($ruleArray['exclude'] as $exclusionRegex){
-                    if(preg_match('/'.$exclusionRegex.'/',$filename.'.'.$extension)){
-                        $shouldBeExcluded = true;
-                        break;
+                if(isset($ruleArray['exclude']))
+                    foreach($ruleArray['exclude'] as $exclusionRegex){
+                        if(preg_match('/'.$exclusionRegex.'/',$filename.'.'.$extension)){
+                            $shouldBeExcluded = true;
+                            break;
+                        }
                     }
-                }
+
                 if(!$shouldBeExcluded){
                     require $filename.'.'.$extension;
                     die();
                 }
+
             }
         }
     }

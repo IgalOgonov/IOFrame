@@ -12,19 +12,14 @@ class ezAlert{
     }
 
     /* The target can be an element ID, or the element itself.
-       It will first check whether the target is a string, then whether an id like that exists.
-       If the target is not a string, it will check whether it is an object.
-
+    *  It will first check whether the target is a string, then whether an id like that exists.
+    *  If the target is not a string, it will check whether it is an object.
     * Content can be any content for the alert. Only if allowSpec is true can the content contain HTML (and most other characters)
-
     * If dismissible is not false, alert will be dismissible.
-      If the value is 'button', will create a button to dismiss (default).
-      If the value is 'click', will be dismissible on click.
-
+    *  If the value is 'button', will create a button to dismiss (default).
+    *  If the value is 'click', will be dismissible on click.
     * If allowSpec is false, content will only be allowed to contain word characters,',','.','?','!', and '.
-
     * extraClasses will add more classes to this specific alert.
-
     * closeClass will specify the name of the button that closes the class (default 'close')
     * */
     initAlert(target, content, dismissible = 'button', allowSpec = true, extraClasses = '', closeClass = ''){
@@ -62,15 +57,15 @@ class ezAlert{
         alert.className=this.className+" "+extraClasses;
         alert.innerHTML = content;
         if(dismissible == 'click'){
-            alert.href = '#';
+            alert.href = '';
             alert.style.display = 'block';
             alert.style.textDecoration = 'none';
             alert.addEventListener('click',e =>{e.target.parentNode.removeChild(e.target)});
         }
         if(dismissible == 'button'){
-            let alertClose = document.createElement("a");
+            let alertClose = document.createElement("p");
             alertClose.innerHTML = 'X';
-            alertClose.href = '#';
+            alertClose.href = '';
             (closeClass == '')?
                 alertClose.className = 'close'
                 : alertClose.className = closeClass;
@@ -79,6 +74,7 @@ class ezAlert{
             alertClose.style.float = 'right';
             alertClose.style.padding = '0px 10px 0px 0px';
             alertClose.style.fontWeight = '800';
+            alertClose.style.cursor = 'pointer';
             alert.appendChild(alertClose);
             alertClose.addEventListener('click',e =>{e.target.parentNode.parentNode.removeChild(e.target.parentNode)});
         }

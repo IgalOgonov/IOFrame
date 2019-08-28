@@ -688,8 +688,57 @@ namespace IOFrame\Handlers{
             return 0;
         }
 
+        /** Returns all collections a resource belongs to. Is quite expensive, should not be used often.
+         *
+         * @param string $address Name of the resource collection
+         * @param string $type
+         * @param array $params
+         *
+         * @returns Int|Array
+     *           Possible codes:
+         *          -1 Could not connect to db.
+         *       Else returns array of the form:
+         *          [<collection name 1>, <collection name 2>, ...]
+         *
+         */
+        function getCollectionsOfResource(string $address , string $type, array $params = []){
+            $test = isset($params['test'])? $params['test'] : false;
+            $verbose = isset($params['verbose'])?
+                $params['verbose'] : $test ? true : false;
+
+            $res = $this->SQLHandler->selectFromTable(
+                $this->SQLHandler->getSQLPrefix().'RESOURCE_COLLECTIONS_MEMBERS',
+                [
+                    [
+                        'Address',
+                        [$address,'STRING'],
+                        '='
+                    ],
+                    [
+                        'Resource_Type',
+                        [$type,'STRING'],
+                        '='
+                    ],
+                    'AND'
+                ],
+                ['Collection_Name'],
+                ['DISTINCT'=>true,'test'=>$test,'verbose'=>$verbose]
+            );
+
+            if($res === false)
+                return -1;
+            else{
+                $collections = [];
+                for($i=0; $i<count($res); $i++){
+                    array_push($collections,$res[$i][0]);
+                };
+                return $collections;
+            }
+        }
+
         /** Gets a single resource collection. Gets all its members, and returns it in-order if an order exists.
          * @param string $name Name of the resource collection
+         * @param string $type
          * @param array $params of the form:
          *          'getMembers' - bool, default false - will also get ALL of the members of the resource collections.
          *                         When this is true, all of the getResources() parameters except 'type' are valid.
@@ -714,6 +763,7 @@ namespace IOFrame\Handlers{
 
         /* Gets resource collections. Does not return members by default.
          * @param array $names Defaults to []. If empty, will get all collections but without members.
+         * @param string $type
          * @param array $params of the form:
          *          'getMembers' - bool, default false - will also get ALL of the members of the resource collections.
          *                         When this is true, all of the getResources() parameters except 'type' are valid.

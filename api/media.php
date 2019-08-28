@@ -97,6 +97,7 @@
  *      - Moves an image from one Address to another (can be used to rename it too)
  *        oldAddress:  string, old Address of the image
  *        newAddress:  string, new Address of the image
+ *        copy: bool, default false - whether to copy the image
  *
  *        Examples:
  *          action=moveImage&oldAddress=docs/installScreenshots/1.png&newAddress=docs/installScreenshots/potato.png
@@ -130,6 +131,17 @@
  *             -1 - failed to connect to DB (this causes local files to be deleted)
  *              0 - success
  *      *note - DOES NOT TELL YOU if a resource does not exist locally
+ *_________________________________________________
+ * getImageGalleries
+ *      - Gets all the galleries an image belongs to
+ *        address:  Address of the image.
+ *
+ *        Examples: action=getImageGalleries&address=docs/installScreenshots
+ *
+ *        Returns integer code OR Array:
+ *             -1 - failed to connect to DB (this causes local files to be deleted)
+ *             [<collection name 1>, <collection name 2>, ...]
+ *      *note - DOES NOT TELL YOU if a resource does not exist - will return an empty array instead
  *_________________________________________________
  * getGalleries
  *      - Gets all image galleries availible - but only meta information, not members!.
@@ -257,6 +269,21 @@
  *                  1 - Indexes do not exist in order
  *                  2 - Collection does not exist
  *_________________________________________________
+ * createFolder
+ *      - Creates a new folder
+ *        relativeAddress: String, default '' - where the folder is to be created
+ *        name: String, default 'New Folder' - name of the new folder
+ *
+ *        Examples:
+ *          action=createFolder&name=test
+ *          action=createFolder&relativeAddress=test&name=test2
+ *
+ *        Returns integer code:
+ *                  -1 - Could not connect to DB
+ *                  0 - All good
+ *                  1 - Indexes do not exist in order
+ *                  2 - Collection does not exist
+ *_________________________________________________
  *
  * */
 
@@ -369,6 +396,23 @@ switch($action){
             '0' : $result;
         break;
 
+    case 'getImageGalleries':
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
+
+        $arrExpected =["address"];
+
+        require 'setExpectedInputs.php';
+        require 'mediaAPI_fragments/getImageGalleries_checks.php';
+        require 'mediaAPI_fragments/getImageGalleries_execution.php';
+
+        if(is_array($result))
+            echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS);
+        else
+            echo ($result === 0)?
+                '0' : $result;
+        break;
+
     case 'getGalleries':
         $arrExpected =[];
 
@@ -470,7 +514,6 @@ switch($action){
             '0' : $result;
         break;
 
-
     case 'swapImagesInGallery':
         if(!validateThenRefreshCSRFToken($SessionHandler))
             exit(WRONG_CSRF_TOKEN);
@@ -480,6 +523,20 @@ switch($action){
         require 'setExpectedInputs.php';
         require 'mediaAPI_fragments/swapImagesInGallery_checks.php';
         require 'mediaAPI_fragments/swapImagesInGallery_execution.php';
+
+        echo ($result === 0)?
+            '0' : $result;
+        break;
+
+    case 'createFolder':
+        if(!validateThenRefreshCSRFToken($SessionHandler))
+            exit(WRONG_CSRF_TOKEN);
+
+        $arrExpected =["relativeAddress","name",];
+
+        require 'setExpectedInputs.php';
+        require 'mediaAPI_fragments/createFolder_checks.php';
+        require 'mediaAPI_fragments/createFolder_execution.php';
 
         echo ($result === 0)?
             '0' : $result;

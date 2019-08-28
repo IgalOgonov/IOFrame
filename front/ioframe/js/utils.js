@@ -20,10 +20,10 @@ function isElement(obj) {
 
 //Creates an bootstrap alert with the content of str, type of type, above errorLog.
 //types are success, info, warning, and danger.
-function alertLog(str, type = 'info', allowSpec = true, closeClass = ''){
+function alertLog(str, type = 'info', targetElement = document.body, allowSpec = true, extraClasses = '', closeClass = ''){
     if(document.alertHandler === undefined)
         document.alertHandler = new ezAlert('alert');
-    document.alertHandler.initAlert(document.body,str,'button',allowSpec,'alert-'+type,closeClass);
+    document.alertHandler.initAlert(targetElement,str,'button',allowSpec,extraClasses + ' alert-'+type ,closeClass);
 }
 
 //Checks if a string is Json
@@ -91,7 +91,7 @@ function strhash( str ) {
 
 // Returns a function, that, as long as it continues to be invoked, will not
 // be triggered. The function will be called after it stops being called for
-// N milliseconds.
+// wait milliseconds.
 // This function generates a global scope timer for the function.
 // The timer is either based on the hash of the function source, or is given as input.
 function debounce(func, wait, timerName = '') {
@@ -103,7 +103,7 @@ function debounce(func, wait, timerName = '') {
             'lastCalled':Date.now()
         };
 	return function() {
-        
+
 		var context = this, args = arguments;
 		var later = function() {
 			document[timerName].function = function(){};
@@ -328,14 +328,36 @@ function bindImagePreview(input,img,params = {}){
     //Whether to make clicks on the image open the upload
     var bindClick = (params['bindClick'])?
         true : false;
-
-    if(bindClick)
-        img.onclick = function () {
-            input.click();
-        };
+    console.log(params['bindClick']);
+    console.log(params['bindClick']);
+    if(bindClick){
+        if(isElement(params['bindClick']))
+            params['bindClick'].onclick = function () {
+                input.click();
+            };
+        else
+            img.onclick = function () {
+                input.click();
+            };
+    }
 
     input.onchange = function(){
         displayImageFromInput(input,img,{'checkElements':false});
         callback();
     }
+}
+
+/** Returns Luminance given RGB values.
+ * If perceived  is true, will return perceived luminance, else standard luminance.
+ * If percentage is true, will return a number between 0 and 100 - the percentage of Luminance relative to maximum (#fff)
+ * **/
+function getLuminance(R,G,B, percieved = true, percentage = true){
+    let divider = 1;
+    let coefficientR = (percieved)? 0.299 : 0.2126;
+    let coefficientG = (percieved)? 0.587 : 0.7152;
+    let coefficientB = (percieved)? 0.114: 0.0722;
+    if(percentage)
+        divider = Math.sqrt(coefficientR*Math.pow(255,2) + coefficientG*Math.pow(255,2) + coefficientB*Math.pow(255,2)) / 100;
+    const luminance = Math.sqrt(coefficientR*Math.pow(R,2) + coefficientG*Math.pow(G,2) + coefficientB*Math.pow(B,2));
+    return (luminance / divider);
 }

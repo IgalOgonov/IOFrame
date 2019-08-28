@@ -324,7 +324,10 @@ namespace IOFrame\Util{
         if( !is_dir( $dir ) )
             mkdir( $dir, 0777, true );
 
-        rename( $oldname, $newname, $context );
+        if($context !== null)
+            rename( $oldname, $newname, $context );
+        else
+            rename( $oldname, $newname );
     }
 
     /**

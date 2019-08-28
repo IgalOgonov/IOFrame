@@ -49,6 +49,7 @@ namespace IOFrame\Handlers{
          *           'imageQualityPercentage' => int, default 100 - can be 0 to 100
          *           'resourceOpMode' => string, default 'local' - where to upload to (only local implemented at the time)
          *           'resourceTargetPath' => string, default 'front/ioframe/img/' - where to upload to
+         *           'createFolders' => bool, default true - create folders in resourceTargetPath when they dont exist
          *          ]
          * ]
          * @returns array Codes or resource address for each upload name, of the form:
@@ -110,6 +111,12 @@ namespace IOFrame\Handlers{
             else{
                 die('Only local mode has been implemented for this handler!');
             }
+
+            //Create folders if they dont exist?
+            if(isset($params['createFolders']))
+                $createFolders = $params['createFolders'];
+            else
+                $createFolders = true;
 
             //Resault
             $res = [];
@@ -178,11 +185,18 @@ namespace IOFrame\Handlers{
                     }
                     if(!$test)
                         imagedestroy( $img );
+
                     switch($opMode){
                         case 'local':
                             // Can we move the file to the web root from the temp folder?
                             if(!$test){
-                                $writePath = $this->settings->getSetting('absPathToRoot') . $resourceTargetPath . $target_file;
+                                $basePath = $this->settings->getSetting('absPathToRoot') . $resourceTargetPath;
+
+                                //If the folder doesn't exist, and the setting is true, create it
+                                if($createFolders && !is_dir($basePath))
+                                        mkdir($basePath,0777,true);
+
+                                $writePath = $basePath . $target_file;
                                 if(!$overwrite && file_exists($writePath)){
                                     $res[$uploadName] = 3;
                                     $moveFile = false;

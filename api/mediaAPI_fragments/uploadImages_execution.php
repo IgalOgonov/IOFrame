@@ -19,7 +19,7 @@ foreach($inputs['items'] as $uploadName => $item){
 $result = $UploadHandler->handleUploadedImage(
     $uploadNames,
     [
-        'test'=>false,
+        'test'=>$test,
         'verbose'=>$test,
         'overwrite'=>$inputs['overwrite'] && !$test,
         'imageQualityPercentage'=>$inputs['imageQualityPercentage'],
