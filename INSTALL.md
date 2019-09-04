@@ -123,7 +123,7 @@ Go to the folder you cloned IOFrame to, and run
     chmod 777 IOFrame (Or whichever name you cloned it under)
     
 There are probably safer ways to make it work, but this is the fastest, and a threat model where an attacker who compromises your linux VM / Server compromises the whole system is not irrational.  
-If you do know a safer solution for Linux, feel free to contact me.
+Alternatively, you can change ownership of the folder to the PHP user. A simple guide/answer on how to do it can be found [here](https://stackoverflow.com/questions/2900690/how-do-i-give-php-write-access-to-a-directory#2900727)
 
 **Apache**  
 In order for the routing to work, the following must be true:  
@@ -158,49 +158,47 @@ Once that is done, you need to prepare the following things:
 Now, open your browser, and go to http://127.0.0.1/IOFrame/_install.php (replace "IOFrame" with path/from/server/root if you didn't just clone the repo there).  
 
 **Stage 1**  
-![Stage 1](/docs/installScreenshots/1.png)  
+![Stage 1](front/ioframe/img/docs/installScreenshots/1.png)  
 At this stage, you merely choose the name of the site. It will be used in a few places, such as default mail templates you send.  
  
 **Stage 2**  
-![Stage 2](/docs/installScreenshots/2.png)  
+![Stage 2](front/ioframe/img/docs/installScreenshots/2.png)  
 Lots of settings here. They are all explained, but I need to emphesize - WRITE DOWN AND KEEP THE PRIVATE KEY IN A SECURE PLACE WHERE YOU WONT LOSE IT.  
  
 **Stage 3**  
-![Stage 3](/docs/installScreenshots/3.png)  
+![Stage 3](front/ioframe/img/docs/installScreenshots/3.png)  
 Configurations for the Redis handler. Apart from the obvious ones:  
 * "Timeout" is the timeout before the handler will stop trying to connect to an unreachable server.
 * "Presistent connection" is explained over at the PHPRedis github page.
  
 **Stage 4**  
-![Stage 4](/docs/installScreenshots/4.png)  
+![Stage 4](front/ioframe/img/docs/installScreenshots/4.png)  
 Everything except two things were explained earlier:  
 * Table Prefix - an optional table prefix, always trimmed to 6 characters - here in case you are installing an instance of the framework on a DB that contains other tables.
 * Safe DB Mode - Just leave this unchecked, otherwise during each Create/Update/Delete query your whole DB will wait for it to complete before letting the other queries to execute. And if you are running more than 1 node, this is just useless.  
  
 **Stage 5**  
-![Stage 5](/docs/installScreenshots/5.png)  
+![Stage 5](front/ioframe/img/docs/installScreenshots/5.png)  
 At this stage, will try to connect to the DB with the given settings.  
 If the output at the bottom is "All is well", the connection was successful. Otherwise, it failed, and the error will be displayed.  
 In the latter case, go back check that the DB is properly installed/configured, and that your user/password/db/address/port were correct.
  
 **Stage 6**  
-![Stage 6](/docs/installScreenshots/6.png)  
+![Stage 6](front/ioframe/img/docs/installScreenshots/6.png)  
 Database initiation happens here.  
 If the bottom of the output reads "Database Initiated", and there is no mention of errors, it means all went well.  
 If there are some errors, consider dropping the database from PHPMyAdmin and trying again (or checking the configurations mentioned earlier in this post).
  
 **Stage 7**  
-![Stage 7](/docs/installScreenshots/7.png)  
+![Stage 7](front/ioframe/img/docs/installScreenshots/7.png)  
 A few database tables are initiated here, after the previous stage was confirmed successful.  
 If you have your SMTP settings prepared, input them here, else just press next.  
  
 **Stage 8**  
-![Stage 8](/docs/installScreenshots/8.png)  
+![Stage 8](front/ioframe/img/docs/installScreenshots/8.png)  
 Here, create your admin account. The username/password/mail provided here are not validated, so make sure the password matches the restrictions of the system (hover over that ? mark to see the default ones). 
  
 **Stage 9**  
-![Stage 9](/docs/installScreenshots/9.png)  
+![Stage 9](front/ioframe/img/docs/installScreenshots/9.png)  
 You are finished, now you will be taken to the admin panel, and should be able to log in with the user you created at the last stage.
  
-
-
