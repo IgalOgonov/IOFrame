@@ -6,8 +6,6 @@ namespace IOFrame{
         require 'abstractDB.php';
     if(!defined('RedisHandler'))
         require 'RedisHandler.php';
-    use Monolog\Logger;
-    use Monolog\Handler\IOFrameHandler;
 
     /**
      * To be extended by modules operate user info (login, register, etc)
@@ -82,7 +80,7 @@ namespace IOFrame{
          *                                      ...
          *                                       'AND'(Default) / 'OR'
          *                                      ]
-         *                                      where possible conditions are '>','<','>=','<=','=', '!=', 'IN', 'INREV', 'RLIKE' and 'NOT RLIKE'.
+         *                                      where possible conditions are '>','<','>=','<=','=', '!=', 'IN', 'INREV', 'ISNULL', 'RLIKE' and 'NOT RLIKE'.
          *                                      The difference between IN and INREV is that in the first, the 1st parameter is
          *                                      the name of the column that matches one of the strings in the 2nd parameter, while
          *                                      with INREV (REV is reverse) the 1st parameter is a string that matches one of the
@@ -240,10 +238,10 @@ namespace IOFrame{
                                     $colCompare[$colName] = 1;
                                 }
                                 //If columns do not match, this item is invalid
-                                $missingColumns = count(array_diff_key($colCompare, $cachedResult2));
-                                if ($missingColumns != 0){
+                                $missingColumns = array_diff_key($colCompare, $cachedResult2);
+                                if (count($missingColumns) != 0){
                                     if($verbose)
-                                        echo 'Item '.$indexMap[$index].' failed to pass column checks, '.$missingColumns.' missing, removing from results'.EOL;
+                                        echo 'Item '.$indexMap[$index].' failed to pass column checks, '.json_encode($missingColumns).' missing, removing from results'.EOL;
                                     $cacheResultArrayHadError = true;
                                     continue;
                                 }
@@ -275,31 +273,43 @@ namespace IOFrame{
                                 $resultPasses = 0;
 
                                 foreach ($columnConditions as $condition) {
-                                    if(isset($cachedResult2[$condition[0]]))
+                                    if(isset($cachedResult2[$condition[0]])){
                                         switch($condition[2]){
                                             case '>=':
                                                 if($cachedResult2[$condition[0]]>=$condition[1])
                                                     $resultPasses++;
+                                                elseif($verbose)
+                                                    echo 'Item '.$index2.' failed to pass >= column check'.EOL;
                                                 break;
                                             case '<=':
                                                 if($cachedResult2[$condition[0]]<=$condition[1])
                                                     $resultPasses++;
+                                                elseif($verbose)
+                                                    echo 'Item '.$index2.' failed to pass <= column check'.EOL;
                                                 break;
                                             case '>':
                                                 if($cachedResult2[$condition[0]]>$condition[1])
                                                     $resultPasses++;
+                                                elseif($verbose)
+                                                    echo 'Item '.$index2.' failed to pass > column check'.EOL;
                                                 break;
                                             case '<':
                                                 if($cachedResult2[$condition[0]]<$condition[1])
                                                     $resultPasses++;
+                                                elseif($verbose)
+                                                    echo 'Item '.$index2.' failed to pass < column check'.EOL;
                                                 break;
                                             case '=':
                                                 if($cachedResult2[$condition[0]]==$condition[1])
                                                     $resultPasses++;
+                                                elseif($verbose)
+                                                    echo 'Item '.$index2.' failed to pass = column check'.EOL;
                                                 break;
                                             case '!=':
                                                 if($cachedResult2[$condition[0]]!=$condition[1])
                                                     $resultPasses++;
+                                                elseif($verbose)
+                                                    echo 'Item '.$index2.' failed to pass != column check'.EOL;
                                                 break;
                                             case 'INREV':
                                             case 'IN':
@@ -323,16 +333,29 @@ namespace IOFrame{
                                                         $inArray = true;
                                                 if($inArray)
                                                     $resultPasses++;
+                                                elseif($verbose)
+                                                    echo 'Item '.$index2.' failed to pass '.$condition[2].' column check'.EOL;
                                                 break;
                                             case 'RLIKE':
                                                 if(preg_match('/'.$condition[1].'/',$cachedResult2[$condition[0]]))
                                                     $resultPasses++;
+                                                elseif($verbose)
+                                                    echo 'Item '.$index2.' failed to pass RLIKE column check'.EOL;
                                                 break;
                                             case 'NOT RLIKE':
                                                 if(!preg_match('/'.$condition[1].'/',$cachedResult2[$condition[0]]))
                                                     $resultPasses++;
+                                                elseif($verbose)
+                                                    echo 'Item '.$index2.' failed to pass NOT RLIKE column check'.EOL;
                                                 break;
                                         }
+                                    }
+                                    elseif($condition[1]==='ISNULL'){
+                                        if($cachedResult2[$condition[0]]===null)
+                                            $resultPasses++;
+                                        elseif($verbose)
+                                            echo 'Item '.$index2.' failed to pass ISNULL column check'.EOL;
+                                    }
                                 }
 
                                 //If conditions are not met, this item exists but does not meet the conditions, and as such

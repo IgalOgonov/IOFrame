@@ -612,7 +612,7 @@ var galleries = new Vue({
             if(this.test)
                 console.log('Current Operation ', this.currentOperation ,'Current input ',this.operationInput);
             var data = new FormData();
-            var apiURL = document.pathToRoot+"api/media";
+            var apiURL = document.pathToRoot+"api/v1/media";
             var test = this.test;
             var verbose = this.verbose;
             var currentOperation = this.currentOperation;

@@ -1,4 +1,5 @@
 .idea/
+vendor/
 localFiles/
 CV/
 test2.php

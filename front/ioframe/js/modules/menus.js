@@ -86,7 +86,7 @@ var menus = new Vue({
                 }
             ],
             //SearchList API (and probably the only relevant API) URL
-            url: document.pathToRoot+ 'api/menu',
+            url: document.pathToRoot+ 'api/v1/menu',
             //Current page
             page:0,
             //Go to page
@@ -369,7 +369,7 @@ var menus = new Vue({
                 //TODO Add what's needed
                  this.apiRequest(
                      data,
-                      'api/menu',
+                      'api/v1/menu',
                       'operationRequest',
                       {
                          verbose: this.verbose,

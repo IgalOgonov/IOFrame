@@ -82,7 +82,7 @@ Vue.component('media-selector', {
                 }
             },
             currentMode: 'view',
-            mediaURL: document.rootURI + 'api/media',
+            mediaURL: document.rootURI + 'api/v1/media',
             view: {
                 url: '',
                 target: '',
@@ -173,7 +173,7 @@ Vue.component('media-selector', {
                             this.mediaType === 'img'?
                                 function (item) {
                                     let src = item.dataType ?
-                                        (document.rootURI + 'api/media?action=getDBMedia&address=' + item.identifier + '&lastChanged=' + item.lastChanged+'&resourceType=img')
+                                        (document.rootURI + 'api/v1/media?action=getDBMedia&address=' + item.identifier + '&lastChanged=' + item.lastChanged+'&resourceType=img')
                                         :
                                         item.identifier;
                                     return '<img src="' + src + '">';
@@ -181,7 +181,7 @@ Vue.component('media-selector', {
                                 :
                                 function (item) {
                                     let src = item.dataType ?
-                                        (document.rootURI + 'api/media?action=getDBMedia&address=' + item.identifier + '&lastChanged=' + item.lastChanged+'&resourceType=vid')
+                                        (document.rootURI + 'api/v1/media?action=getDBMedia&address=' + item.identifier + '&lastChanged=' + item.lastChanged+'&resourceType=vid')
                                         :
                                         item.identifier;
                                     return '<video src="'+src+'" preload="metadata"></video>';

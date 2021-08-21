@@ -3,11 +3,10 @@
 namespace IOFrame{
     define('abstractLogger',true);
 
-    require_once 'ext/monolog/vendor/autoload.php';
     if(!defined('abstractSettings'))
         require 'abstractSettings.php';
     use Monolog\Logger;
-    use Monolog\Handler\IOFrameHandler;
+    use IOFrame\Handlers\Monolog\IOFrameHandler;
 
     //Define the default log chanel if one isn't defined yet
     if(!defined('LOG_DEFAULT_CHANNEL'))

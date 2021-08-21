@@ -24,10 +24,10 @@ if(\IOFrame\Util\is_json($CPMenuSetting)){
     $siteConfig['cp'] = json_decode($CPMenuSetting,true);
 }
 
-$devMode =
-    $auth->isAuthorized(0) ||
-    isset($_REQUEST['devMode']) && $_REQUEST['devMode'] && $auth->hasAction('DEV_MODE') ||
-    isset($_SESSION['devMode']) && $_SESSION['devMode'];
+$devMode = true;
+$auth->isAuthorized(0) ||
+( isset($_REQUEST['devMode']) && $_REQUEST['devMode'] && $auth->hasAction('DEV_MODE') )||
+(isset($_SESSION['devMode']) && $_SESSION['devMode']);
 
 if($devMode)
     echo '<script src="'.$dirToRoot.'front/ioframe/js/ext/vue/2.6.10/vue.js"></script>';

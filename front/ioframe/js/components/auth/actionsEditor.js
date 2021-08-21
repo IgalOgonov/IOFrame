@@ -88,7 +88,7 @@ Vue.component('auth-actions-editor', {
 
             this.apiRequest(
                 data,
-                'api/auth',
+                'api/v1/auth',
                 'setResponse',
                 {
                     'verbose': this.verbose,

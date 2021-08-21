@@ -80,7 +80,7 @@ Vue.component('auth-groups-editor', {
             //Whether we are currently searching
             searchInitiated: false,
             //SearchList API URL
-            url: document.rootURI+'api/auth',
+            url: document.rootURI+'api/v1/auth',
             //Whether we are currently initiating the item
             initiating: false,
             //Whether we are currently updating the item
@@ -149,7 +149,7 @@ Vue.component('auth-groups-editor', {
 
             this.apiRequest(
                 data,
-                'api/auth',
+                'api/v1/auth',
                 'getResponse',
                 {
                     'verbose': this.verbose,
@@ -198,7 +198,7 @@ Vue.component('auth-groups-editor', {
 
             this.apiRequest(
                 data,
-                'api/auth',
+                'api/v1/auth',
                 'setResponse',
                 {
                     'verbose': this.verbose,

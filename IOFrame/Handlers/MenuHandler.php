@@ -2,7 +2,6 @@
 namespace IOFrame\Handlers{
     use IOFrame;
     use Monolog\Logger;
-    use Monolog\Handler\IOFrameHandler;
     define('MenuHandler',true);
     if(!defined('abstractObjectsHandler'))
         require 'abstractObjectsHandler.php';

@@ -410,7 +410,7 @@ Vue.component('users-editor', {
 
             this.apiRequest(
                 data,
-                'api/users',
+                'api/v1/users',
                 'setResponse',
                 {
                     'verbose': this.verbose,

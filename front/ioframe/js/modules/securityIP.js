@@ -46,7 +46,7 @@ var securityIP = new Vue({
             columns:[
             ],
             //SearchList API (and probably the only relevant API) URL
-            url: document.pathToRoot+ 'api/security',
+            url: document.pathToRoot+ 'api/v1/security',
             //SearchList API (and probably the only relevant API) URL
             apiAction: 'getIPs',
             //Current page
@@ -518,7 +518,7 @@ var securityIP = new Vue({
 
                  this.apiRequest(
                      data,
-                      'api/security',
+                      'api/v1/security',
                       'deleteItems',
                       {
                          verbose: this.verbose,

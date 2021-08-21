@@ -1,4 +1,4 @@
-DirectoryIndex index.php home.php
+DirectoryIndex index.php
 
 <Files .git*> 
    Require all denied

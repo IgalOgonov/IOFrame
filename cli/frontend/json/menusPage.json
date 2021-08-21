@@ -15,7 +15,7 @@
 	},
 	"items":{
 		"js":[
-			"mixins/sourceURL.js",
+			"mixins/sourceUrl.js",
 			"mixins/eventHubManager.js",
 			"components/searchList.js",
 			{
@@ -24,7 +24,7 @@
 				"template":"js/components/viewUpdateCreateComponent.txt",
 				"variables":{
 				  "COMPONENT_NAME":"menus-editor",
-				  "API_URL":"api/menus",
+				  "API_URL":"api/v1/menus",
 				  "MIXINS":"sourceURL,eventHubManager,IOFrameCommons",
 				  "PASS_ID":false,
 				  "PASS_ITEM":true
@@ -39,7 +39,7 @@
 				  "VARIABLE_NAME":"menus",
 				  "ELEMENT_NAME":"menus",
 				  "VUE_NAME":"menus",
-				  "API_URL":"api/menus",
+				  "API_URL":"api/v1/menus",
 				  "SEARCH_TITLE":"Browsing Menus",
 				  "EDIT_TITLE":"Editing User",
 				  "MIXINS":"sourceURL,eventHubManager,IOFrameCommons"

@@ -3,15 +3,9 @@
 namespace IOFrame\Handlers{
     use IOFrame;
     use PHPMailer\PHPMailer\PHPMailer;
-    use Monolog\Logger;
-    use Monolog\Handler\IOFrameHandler;
     define('MailHandler',true);
     if(!defined('abstractDBWithCache'))
         require 'abstractDBWithCache.php';
-    require_once 'ext/phpmailer/vendor/phpmailer/phpmailer/src/PHPMailer.php';
-    require_once 'ext/phpmailer/vendor/phpmailer/phpmailer/src/SMTP.php';
-    require_once 'ext/phpmailer/vendor/phpmailer/phpmailer/src/Exception.php';
-    require_once 'ext/phpmailer/vendor/phpmailer/phpmailer/src/OAuth.php';
     /*Handles mail sending authentication
      * @author Igal Ogonov <igal1333@hotmail.com>
      * @license LGPL

@@ -1,8 +1,6 @@
 <?php
 namespace IOFrame\Handlers{
     use IOFrame;
-    use Monolog\Logger;
-    use Monolog\Handler\IOFrameHandler;
     define('PluginHandler',true);
     if(!defined('abstractDBWithCache'))
         require 'abstractDBWithCache.php';
@@ -622,7 +620,7 @@ namespace IOFrame\Handlers{
             $plugInfo = $this->getInfo(['name'=>$name])[0];
 
             //-------Check if the plugin is installed
-            $status = json_decode($plugList->getSetting($name),true)['status'];
+            $status = $plugList->getSetting($name) ? json_decode($plugList->getSetting($name),true)['status'] : false;
             if($status == 'installed' || $status == 'zombie' || $status == 'installing'){
                 if($verbose)
                     echo 'Plugin '.$name.' is either installed, installing or zombie!'.EOL;
@@ -1020,7 +1018,7 @@ namespace IOFrame\Handlers{
             else
                 $res['result'] = 1;
 
-            $currentVersion = (int)$plugInfo['currentVersion'];
+            $currentVersion = isset($plugInfo['currentVersion'])? (int)$plugInfo['currentVersion'] : 0;
             $targetVersion = 0;
             $currentRangeIndex = 0;
 
@@ -1875,13 +1873,13 @@ namespace IOFrame\Handlers{
                 if( $ver < $versions['minVersion'] || (isset($versions['maxVersion']) && $ver > $versions['maxVersion'])){
                     $errors++;
                     if($verbose)
-                        echo 'Plugin '.$name.' is missing '.$dep.' dependency, wrong version!'.EOL;
+                        echo 'Plugin '.$name.' is missing '.$dep['fileName'].' dependency, wrong version!'.EOL;
                 }
 
                 if($dep['status']!='active'){
                     $errors++;
                     if($verbose)
-                        echo 'Plugin '.$name.' is missing '.$dep.' dependency, not active!'.EOL;
+                        echo 'Plugin '.$name.' is missing '.$dep['fileName'].' dependency, not active!'.EOL;
                 }
 
             }

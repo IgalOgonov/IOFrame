@@ -1,9 +1,6 @@
 <?php
 namespace IOFrame\Handlers{
     use IOFrame;
-    use Monolog\Logger;
-    use Monolog\Handler\IOFrameHandler;
-    use PHPMailer\PHPMailer\Exception;
     use RobThree\Auth\TwoFactorAuth;
 
     define('UserHandler',true);

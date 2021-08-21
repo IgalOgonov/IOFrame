@@ -179,7 +179,7 @@ Vue.component('media-editor', {
                 data.append('req', 'test');
 
             //Api url
-            var apiURL = document.pathToRoot+"api/media";
+            var apiURL = document.pathToRoot+"api/v1/media";
             var verbose = this.verbose;
             var identifier = this.identifier;
             var thisElement = this.$el;
@@ -263,7 +263,7 @@ Vue.component('media-editor', {
             data.append('address', address);
 
             //Api url
-            var apiURL = document.pathToRoot+"api/media";
+            var apiURL = document.pathToRoot+"api/v1/media";
             var test = this.test;
             var verbose = this.verbose;
             var identifier = this.identifier;
@@ -374,7 +374,7 @@ Vue.component('media-editor', {
                 if(!this.image.dataType)
                     result = this.image.identifier;
                 else
-                    result = document.rootURI+'api/media?action=getDBMedia&address='+this.image.identifier+'&resourceType='+this.mediaType+'&lastChanged='+this.image.lastChanged;
+                    result = document.rootURI+'api/v1/media?action=getDBMedia&address='+this.image.identifier+'&resourceType='+this.mediaType+'&lastChanged='+this.image.lastChanged;
             }
             return result;
         },

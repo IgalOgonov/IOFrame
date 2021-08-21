@@ -31,7 +31,7 @@ namespace IOFrame\Handlers{
          *  the file contents,
          *  or throws an exception.
          * */
-        function readFile(string $url, string $fileName, $params = []){
+        function readFile(string $url, string $fileName = '', $params = []){
 
             //Set defaults
             $verbose = (isset($params['verbose']) && $params['verbose']) || (isset($params['test']) && $params['test']);
@@ -81,6 +81,11 @@ namespace IOFrame\Handlers{
                 $LockHandler = null;
             else
                 $LockHandler = $params['LockHandler'];
+
+            if(!isset($params['useNative']))
+                $useNative = false;
+            else
+                $useNative = $params['useNative'];
 
             if(substr($url,-1) != '/')
                 $url .= '/';

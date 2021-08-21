@@ -48,7 +48,7 @@ var settings = new Vue({
                 }
             ],
             //SearchList API (and probably the only relevant API) URL
-            url:document.rootURI+'api/settings',
+            url:document.rootURI+'api/v1/settings',
             //Main items
             items: [],
             selected:-1,

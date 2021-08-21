@@ -212,7 +212,7 @@ var articles = new Vue({
                         }
                         else
                             src = item.thumbnail.dataType?
-                                (document.rootURI+'api/media?action=getDBMedia&address='+item.thumbnail.address+'&lastChanged='+item.thumbnail.updated)
+                                (document.rootURI+'api/v1/media?action=getDBMedia&address='+item.thumbnail.address+'&lastChanged='+item.thumbnail.updated)
                                 :
                                 item.thumbnail.address;
                         let alt = item.meta.alt? item.meta.alt : (item.thumbnail.meta.alt? item.thumbnail.meta.alt : '');
@@ -311,7 +311,7 @@ var articles = new Vue({
                 }
             ],
             //SearchList API (and probably the only relevant API) URL
-            url: document.pathToRoot+ 'api/articles',
+            url: document.pathToRoot+ 'api/v1/articles',
             //Current page
             page:0,
             //Go to page
@@ -619,7 +619,7 @@ var articles = new Vue({
 
                  this.apiRequest(
                      data,
-                      'api/articles',
+                      'api/v1/articles',
                       'operationRequest',
                       {
                          verbose: this.verbose,

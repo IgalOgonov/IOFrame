@@ -15,7 +15,7 @@
 	},
 	"items":{
 		"js":[
-			"mixins/sourceURL.js",
+			"mixins/sourceUrl.js",
 			"mixins/eventHubManager.js",
 			"components/searchList.js",
 			{

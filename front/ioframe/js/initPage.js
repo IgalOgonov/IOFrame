@@ -136,7 +136,7 @@ function updateSesInfo(pathToRoot, callbacks = {}){
         let action;
         action = 'logged_in&Username&Auth_Rank&Actions&maxInacTime&Email&Active&CSRF_token';
         // url
-        let url=pathToRoot+"api\/session";
+        let url=pathToRoot+"api\/v1\/session";
         //Request itself
         var xhr = new XMLHttpRequest();
         xhr.open('GET', url+'?'+action);
@@ -230,7 +230,7 @@ function autoLogin(pathToRoot, timeout = 0, callbacks = {}, test = false){
                 dataToSend +='&sesKey='+tokenToSend.ciphertext.toString(CryptoJS.enc.Hex);
 
                 dataToSend += '&CSRF_token='+token;
-                const url = pathToRoot+"api/users";
+                const url = pathToRoot+"api/v1/users";
                 const header = 'application/x-www-form-urlencoded;charset=utf-8;';
                 //console.log('To url',url,' , send: ',dataToSend);
                 //return;

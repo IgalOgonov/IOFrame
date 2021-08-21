@@ -1,12 +1,13 @@
 <?php
 namespace IOFrame\Handlers{
-    use IOFrame;
-    use MatthiasMullie\Minify;
     define('FrontEndResourceHandler',true);
     if(!defined('ResourceHandler'))
         require 'ResourceHandler.php';
     if(!defined('helperFunctions'))
         require __DIR__.'/../Util/helperFunctions.php';
+    use IOFrame;
+    use MatthiasMullie\Minify;
+    use ScssPhp\ScssPhp;
 
     /*  This class manages front-end resources.
      *  Specifically, JS and CSS (for now).
@@ -670,7 +671,6 @@ namespace IOFrame\Handlers{
          *      and minifyName
          */
         function minifyFrontendResources( array $addresses, string $type, array $params = []){
-            require_once 'ext/minifyPHP/vendor/autoload.php';
             if(!defined('LockHandler'))
                 require 'LockHandler.php';
             $test = isset($params['test'])? $params['test'] : false;
@@ -1383,10 +1383,8 @@ namespace IOFrame\Handlers{
          *  Empty string if the compilation fails
          */
         function compileSCSS(string $address, array $params = []){
-            require_once 'ext/scssphp/scss.inc.php';
-
             $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : $test ? true : false;
+            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
             $checkExisting = isset($params['checkExisting'])? $params['checkExisting'] : true;
             $compileToFolder = isset($params['compileToFolder'])? $params['compileToFolder'] : '';
 
@@ -1468,7 +1466,7 @@ namespace IOFrame\Handlers{
             }
 
             if(!$test){
-                $scss = new \ScssPhp\ScssPhp\Compiler();
+                $scss = new ScssPhp\Compiler();
                 $scss->setImportPaths($importFolder);
                 $compiled = $scss->compile('@import "'.$originName.'";');
                 if($compiled){

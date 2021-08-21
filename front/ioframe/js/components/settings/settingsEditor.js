@@ -118,7 +118,7 @@ Vue.component('settings-editor', {
 
             this.apiRequest(
                 data,
-                'api/settings',
+                'api/v1/settings',
                 'getResponse',
                 {
                     'verbose': this.verbose,
@@ -177,7 +177,7 @@ Vue.component('settings-editor', {
 
             this.apiRequest(
                 data,
-                'api/settings',
+                'api/v1/settings',
                 'setResponse',
                 {
                     'verbose': this.verbose,

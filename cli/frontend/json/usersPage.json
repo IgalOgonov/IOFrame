@@ -15,7 +15,7 @@
 	},
 	"items":{
 		"js":[
-			"mixins/sourceURL.js",
+			"mixins/sourceUrl.js",
 			"mixins/eventHubManager.js",
 			"components/searchList.js",
 			{
@@ -24,8 +24,8 @@
 				"template":"js/components/viewUpdateCreateComponent.txt",
 				"variables":{
 				  "COMPONENT_NAME":"users-editor",
-				  "API_URL":"api/users",
-				  "MIXINS":"sourceURL,eventHubManager,IOFrameCommons",
+				  "API_URL":"api/v1/users",
+				  "MIXINS":"sourceUrl,eventHubManager,IOFrameCommons",
 				  "PASS_ID":false,
 				  "PASS_ITEM":true
 				}
@@ -39,10 +39,10 @@
 				  "VARIABLE_NAME":"users",
 				  "ELEMENT_NAME":"users",
 				  "VUE_NAME":"users",
-				  "API_URL":"api/users",
+				  "API_URL":"api/v1/users",
 				  "SEARCH_TITLE":"Browsing Users",
 				  "EDIT_TITLE":"Editing User",
-				  "MIXINS":"sourceURL,eventHubManager,IOFrameCommons"
+				  "MIXINS":"sourceUrl,eventHubManager,IOFrameCommons"
 				}
 			}
 		],

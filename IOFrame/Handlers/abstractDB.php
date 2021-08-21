@@ -6,8 +6,6 @@ namespace IOFrame{
         require 'abstractLogger.php';
     if(!defined('SQLHandler'))
         require 'SQLHandler.php';
-    use Monolog\Logger;
-    use Monolog\Handler\IOFrameHandler;
 
     /**
      * To be extended by modules which operate on the DB
@@ -139,7 +137,6 @@ namespace IOFrame{
 
             $extraConditions = isset($params['extraConditions'])? $params['extraConditions'] : [];
             $extraConditionsAnd = isset($params['extraConditionsAnd'])? $params['extraConditionsAnd'] : true;
-
             if(isset($params['limit']))
                 $limit = min((int)$params['limit'],$this->defaultQueryLimit);
             else
@@ -345,7 +342,7 @@ namespace IOFrame{
                         $keys = [];
                         foreach($dbFormattedKeys as $pair){
                             //If we were filling with nulls, we might have a valid row with null in a potential key column
-                            if($fillMissingKeysWithNull && $pair[0] === null)
+                            if(!isset($pair[0]) || ($fillMissingKeysWithNull && $pair[0] === null) )
                                 continue;
                             array_push($keys,$pair[0]);
                         }

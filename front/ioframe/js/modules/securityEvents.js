@@ -53,7 +53,7 @@ var securityEvents = new Vue({
                 }
             ],
             //SearchList API (and probably the only relevant API) URL TODO Edit
-            url: document.pathToRoot+ 'api/security',
+            url: document.pathToRoot+ 'api/v1/security',
             //Current page
             page:0,
             //Go to page
@@ -327,7 +327,7 @@ var securityEvents = new Vue({
                 //TODO Add what's needed
                  this.apiRequest(
                      data,
-                      'api/security',
+                      'api/v1/security',
                       eventName,
                       {
                          verbose: this.verbose,

@@ -1,12 +1,12 @@
 <?php
 
-if(!$siteSettings->getSetting('capcha_site_key'))
+if(!$siteSettings->getSetting('captcha_site_key'))
     echo 'Site key missing!'.EOL;
-elseif(!$siteSettings->getSetting('capcha_secret_key'))
+elseif(!$siteSettings->getSetting('captcha_secret_key'))
     echo 'Secret key missing!'.EOL;
 else{
-    $site = $siteSettings->getSetting('capcha_site_key');
-    $secret = $siteSettings->getSetting('capcha_secret_key');
+    $site = $siteSettings->getSetting('captcha_site_key');
+    $secret = $siteSettings->getSetting('captcha_secret_key');
 
     if(!empty($_REQUEST['email'])){
         echo 'Capcha request recieved:'.EOL;

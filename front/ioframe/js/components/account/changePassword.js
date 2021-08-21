@@ -131,7 +131,7 @@ Vue.component('change-password', {
 
             this.apiRequest(
                 data,
-                "api/users",
+                "api/v1/users",
                 'passwordChange',
                 {
                     'verbose': this.verbose,

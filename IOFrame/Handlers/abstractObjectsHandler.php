@@ -1,8 +1,6 @@
 <?php
 namespace IOFrame{
     use IOFrame;
-    use Monolog\Logger;
-    use Monolog\Handler\IOFrameHandler;
     define('abstractObjectsHandler',true);
     if(!defined('abstractDBWithCache'))
         require 'abstractDBWithCache.php';
@@ -730,7 +728,7 @@ namespace IOFrame{
                     $tableQuery,
                     $typeArray['cacheName'],
                     $selectionColumns,
-                    array_merge($retrieveParams,['extraKeyColumns'=>$extraKeyColumns,'groupByFirstNKeys'=>$groupByFirstNKeys,'compareCol'=>!$joinOtherTable])
+                    array_merge($retrieveParams,['extraKeyColumns'=>$extraKeyColumns,'groupByFirstNKeys'=>$groupByFirstNKeys,'compareCol'=>!$joinOtherTable,'test'=>$test])
                 );
 
                 foreach($results as $index => $res){
@@ -908,7 +906,10 @@ namespace IOFrame{
                             if($autoIncrementMainKey && !empty($colArr['autoIncrement']))
                                 continue;
 
-                            if(!isset($inputArr[$colName]) && !isset($colArr['default']) && !isset($colArr['forceValue']) && !is_null($colArr['default']) && !is_null($colArr['forceValue'])){
+                            if(!isset($inputArr[$colName]) &&
+                                !array_key_exists('default',$colArr) &&
+                                !array_key_exists('forceValue',$colArr))
+                            {
                                 if($verbose){
                                     echo 'Input '.$index.' is missing the required column '.$colName.EOL;
                                 }

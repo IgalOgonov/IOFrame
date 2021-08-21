@@ -546,7 +546,7 @@ Vue.component('articles-editor', {
 
             this.apiRequest(
                 data,
-                'api/articles',
+                'api/v1/articles',
                 'cleanGhostsResponse',
                 {
                     'verbose': this.verbose,
@@ -591,7 +591,7 @@ Vue.component('articles-editor', {
 
             this.apiRequest(
                 data,
-                'api/articles',
+                'api/v1/articles',
                 'newOrderResponse',
                 {
                     'verbose': this.verbose,
@@ -894,7 +894,7 @@ Vue.component('articles-editor', {
 
             this.apiRequest(
                 data,
-                'api/articles',
+                'api/v1/articles',
                 'articleInfo',
                 {
                     'verbose': this.verbose,
@@ -979,7 +979,7 @@ Vue.component('articles-editor', {
 
             this.apiRequest(
                 data,
-                'api/articles',
+                'api/v1/articles',
                 'setResponse',
                 {
                     'verbose': this.verbose,

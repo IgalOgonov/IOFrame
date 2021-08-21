@@ -151,14 +151,6 @@ if(!$requireOnlyTab || $requireOnlyTab === 'authTest'){
     echo '</section>';
 }
 
-if(!$requireOnlyTab || $requireOnlyTab === 'parsedownTest'){
-    echo '<h1>'.'Parsedown test'.'</h1>';
-    echo '<button @click = "tabs.parsedownTest = !tabs.parsedownTest">Toggle Visibility</button>';
-    echo '<section :class="{open:tabs.parsedownTest, closed:!tabs.parsedownTest}">';
-    require 'test/verbose/parsedownTest.php';
-    echo '</section>';
-}
-
 if(!$requireOnlyTab || $requireOnlyTab === 'timingTest'){
     echo '<h1>'.'Timing Test'.'</h1>';
     echo '<button @click = "tabs.timingTest = !tabs.timingTest">Toggle Visibility</button>';
@@ -394,7 +386,6 @@ echo '<script>
             userTest: false,
             securityTest: false,
             authTest: false,
-            parsedownTest: false,
             timingTest: false,
             safeStringTest: false,
             tokenTest: false,

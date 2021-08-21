@@ -364,7 +364,7 @@ Vue.component('security-events-editor', {
 
                 this.apiRequest(
                     data,
-                    'api/security',
+                    'api/v1/security',
                     'deleteRulebookRulesResponse',
                     {
                         'verbose': this.verbose,
@@ -387,7 +387,7 @@ Vue.component('security-events-editor', {
 
                 this.apiRequest(
                     data,
-                    'api/security',
+                    'api/v1/security',
                     'setRulebookRulesResponse',
                     {
                         'verbose': this.verbose,

@@ -63,7 +63,7 @@ class validator
      * */
     public static function validateFilename(string $fileName, $extensions = []){
         if($extensions == [])
-            $extensionRegex = '[a-zA-Z0-9]{1,259}';
+            $extensionRegex = '[a-zA-Z0-9_\-]{1,259}';
         else{
             $extensionRegex = '(';
             foreach($extensions as $extension)

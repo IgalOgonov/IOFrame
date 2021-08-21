@@ -16,7 +16,7 @@
 	"items":{
 		"js":[
 			"ext/SimpleMDE/simplemde.min.js",
-			"mixins/sourceURL.js",
+			"mixins/sourceUrl.js",
 			"mixins/eventHubManager.js",
 			"components/searchList.js",
 			{
@@ -25,7 +25,7 @@
 				"template":"js/components/viewUpdateCreateComponent.txt",
 				"variables":{
 				  "COMPONENT_NAME":"articles-editor",
-				  "API_URL":"api/articles",
+				  "API_URL":"api/v1/articles",
 				  "MIXINS":"sourceURL,eventHubManager,IOFrameCommons",
 				  "PASS_ID":false,
 				  "PASS_ITEM":true
@@ -40,7 +40,7 @@
 				  "VARIABLE_NAME":"articles",
 				  "ELEMENT_NAME":"articles",
 				  "VUE_NAME":"articles",
-				  "API_URL":"api/articles",
+				  "API_URL":"api/v1/articles",
 				  "SEARCH_TITLE":"Browsing Articles",
 				  "EDIT_TITLE":"Editing User",
 				  "MIXINS":"sourceURL,eventHubManager,IOFrameCommons"

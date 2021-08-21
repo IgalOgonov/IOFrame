@@ -215,7 +215,7 @@ Vue.component('gallery-editor', {
 
             this.apiRequest(
                 data,
-                "api/media",
+                "api/v1/media",
                 'galleryUpdateResponse',
                 {
                     'verbose': this.verbose,
@@ -266,7 +266,7 @@ Vue.component('gallery-editor', {
             data.append('action', this.galleryType === 'img' ? 'getGallery' : 'getVideoGallery');
             data.append('gallery', this.gallery.identifier);
             //Api url
-            let apiURL = document.pathToRoot+"api/media";
+            let apiURL = document.pathToRoot+"api/v1/media";
             var test = this.test;
             var verbose = this.verbose;
             var thisElement = this.$el;

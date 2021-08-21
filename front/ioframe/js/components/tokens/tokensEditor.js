@@ -412,7 +412,7 @@ Vue.component('tokens-editor', {
 
             this.apiRequest(
                 data,
-                'api/tokens',
+                'api/v1/tokens',
                 'setResponse',
                 {
                     'verbose': this.verbose,

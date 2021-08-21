@@ -42,7 +42,7 @@
 	},
 	"items":{
 		"js":[
-			"mixins/sourceURL.js",
+			"mixins/sourceUrl.js",
 			{
 				"path":"mixins/eventHubManager.js",
 				"create":false,

@@ -413,7 +413,7 @@ Vue.component('security-ip-ranges-editor', {
 
             this.apiRequest(
                 data,
-                'api/security',
+                'api/v1/security',
                 'setResponse',
                 {
                     'verbose': this.verbose,

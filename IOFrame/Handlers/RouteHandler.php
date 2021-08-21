@@ -1,8 +1,6 @@
 <?php
 namespace IOFrame\Handlers{
     use IOFrame;
-    use Monolog\Logger;
-    use Monolog\Handler\IOFrameHandler;
     define('RouteHandler',true);
     if(!defined('abstractDBWithCache'))
         require 'abstractDBWithCache.php';
@@ -145,7 +143,7 @@ namespace IOFrame\Handlers{
             )
                 return $res;
             else
-                $res = $this->SQLHandler->lastInsertId();
+                $res = $test ? 1 : (int)$this->SQLHandler->lastInsertId();
 
             if($verbose)
                 echo 'Inserted new routes with parameters :'.json_encode($inputs).', ID of the first one: '.$res.EOL;
@@ -541,6 +539,7 @@ namespace IOFrame\Handlers{
          *                          or an array of strings and associative arrays of the format above.
          *                          What each option does is explained in the documentation, as well as in SQLdbInit.
          * @param array|null $extensions Valid extensions to match with
+         * @param bool|null $partial Whether matching a partial route is allowed
          * @param array $params
          *              'override' - bool, default true - Whether to override existing match.
          * @returns int
@@ -549,8 +548,8 @@ namespace IOFrame\Handlers{
          *          1 - match exists and cannot be overwritten
          *          2 - Trying to create a new match with insufficient values.
          * */
-        function setMatch(string $match, $url = null, array $extensions = null, array $params = []){
-            return $this->setMatches([[$match=>[$url,$extensions]]],$params)[$match];
+        function setMatch(string $match, $url = null, array $extensions = null, bool $partial = null, array $params = []){
+            return $this->setMatches([[$match=>[$url,$extensions,$partial]]],$params)[$match];
         }
 
         /** Creates new matches, or update existing ones.
@@ -587,15 +586,18 @@ namespace IOFrame\Handlers{
             $matchNames = [];
             $matchesToSet = [];
             $isFullInput = [];
-            $columns = ['Match_Name','URL','Extensions'];
+            $columns = ['Match_Name','URL','Extensions','Match_Partial_URL'];
 
             foreach($inputs as $matchName=>$input){
                 array_push($matchNames,$matchName);
                 $isFullInput[$matchName] = ($input[0]!== null)? true : false;
+
                 if(gettype($inputs[$matchName][0]) === 'array')
                     $inputs[$matchName][0] = json_encode($inputs[$matchName][0]);
+
                 if($safeStr && $inputs[$matchName][0]!=null)
                     $inputs[$matchName][0] = IOFrame\Util\str2SafeStr($inputs[$matchName][0]);
+
                 $res[$matchName] = -1;
             }
 
@@ -614,17 +616,22 @@ namespace IOFrame\Handlers{
                         $paramsToSet = [];
                         array_push($paramsToSet,[$matchName,'STRING']);
 
-                        if($inputs[$matchName][0] == null)
+                        if(!isset($inputs[$matchName][0]))
                             array_push($paramsToSet,[$matchInfo['URL'],'STRING']);
                         else
                             array_push($paramsToSet,[$inputs[$matchName][0],'STRING']);
 
-                        if($inputs[$matchName][1] == null)
+                        if(!isset($inputs[$matchName][1]))
                             array_push($paramsToSet,[$matchInfo['Extensions'],'STRING']);
-                        elseif($inputs[$matchName][1] == '')
+                        elseif(isset($inputs[$matchName][2]) && $inputs[$matchName][1] == '')
                             array_push($paramsToSet,null);
                         else
                             array_push($paramsToSet,[$inputs[$matchName][1],'STRING']);
+
+                        if(!isset($inputs[$matchName][2]))
+                            array_push($paramsToSet,(bool)$matchInfo['Match_Partial_URL']);
+                        else
+                            array_push($paramsToSet,(bool)$inputs[$matchName][2]);
 
                         array_push($matchesToSet,$paramsToSet);
                     }
@@ -639,11 +646,15 @@ namespace IOFrame\Handlers{
                     else{
                         $paramsToSet = [];
                         array_push($paramsToSet,[$matchName,'STRING']);
+
                         array_push($paramsToSet,[$inputs[$matchName][0],'STRING']);
-                        if( $inputs[$matchName][1] == null || $inputs[$matchName][1] == '')
+
+                        if( $inputs[$matchName][1] === null || $inputs[$matchName][1] === '')
                             array_push($paramsToSet,null);
                         else
                             array_push($paramsToSet,[$inputs[$matchName][1],'STRING']);
+
+                        array_push($paramsToSet,isset($inputs[$matchName][2]) ? (bool)$inputs[$matchName][2] : false);
 
                         array_push($matchesToSet,$paramsToSet);
                     }

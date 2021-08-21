@@ -4,6 +4,7 @@
 $backUpArr = ['OBJECT_CACHE_META','OBJECT_CACHE','OBJECT_MAP'];//'OBJECT_CACHE_META','OBJECT_CACHE','OBJECT_MAP'
 $timeLimits = ['OBJECT_CACHE'=>3600*24,'OBJECT_MAP'=>3600*24 ,'OBJECT_CACHE_META'=>3600*24];//'OBJECT_CACHE'=>3600*24,'OBJECT_MAP'=>3600*24 ,'OBJECT_CACHE_META'=>3600*24
 $SQLHandler = new IOFrame\Handlers\SQLHandler($settings);
+$sqlSettings = new IOFrame\Handlers\SettingsHandler($rootFolder.'/localFiles/sqlSettings/',$defaultSettingsParams);
 $tableName = $sqlSettings->getSetting('sql_table_prefix').'OBJECT_MAP';
 $testMetaTime = 0;
 

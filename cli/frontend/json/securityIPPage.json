@@ -15,7 +15,7 @@
 	},
 	"items":{
 		"js":[
-			"mixins/sourceURL.js",
+			"mixins/sourceUrl.js",
 			"mixins/eventHubManager.js",
 			"components/searchList.js",
 			"modules/CPMenu.js",
@@ -28,7 +28,7 @@
 				  "VARIABLE_NAME":"securityIP",
 				  "ELEMENT_NAME":"security-ip",
 				  "VUE_NAME":"Security IP",
-				  "API_URL":"api/security",
+				  "API_URL":"api/v1/security",
 				  "SEARCH_TITLE":"Browsing IPs",
 				  "EDIT_TITLE":"IPs",
 				  "MIXINS":"sourceURL,eventHubManager,IOFrameCommons"

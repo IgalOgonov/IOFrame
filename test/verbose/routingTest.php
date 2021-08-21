@@ -7,8 +7,8 @@ echo 'Adding routes:'.EOL;
 var_dump(
     $RouteHandler->addRoutes(
         [
-            ['GET|POST','api/[*:trailing]','api',null],
-            ['GET|POST','[*:trailing]','front',null],
+            ['GET|POST','api/[*:trailing]','api',null,false],
+            ['GET|POST','[*:trailing]','front',null,false],
             ['GET|POST','*','404']
         ],
         [
@@ -23,10 +23,10 @@ echo 'Adding updating routes 0 to 3:'.EOL;
 var_dump(
     $RouteHandler->updateRoutes(
         [
-            [0,'GET|POST','*','test0.1',null],
-            [1,'GET|POST','*','test0.1',null],
-            [2,'GET|POST','/','test0.2',null],
-            [3,'GET|POST','/test','test0.3','']
+            [0,'GET|POST','*','test0.1',null,false],
+            [1,'GET|POST','*','test0.1',null,false],
+            [2,'GET|POST','/','test0.2',null,false],
+            [3,'GET|POST','/test','test0.3','',false]
         ],
         [
             'test'=>true,
@@ -59,8 +59,8 @@ var_dump(
     $RouteHandler->setMatches(
         [
             'front'=>['front/ioframe/pages/[trailing]', 'php,html,htm'],
-            'api'=>['api/[trailing]API','php'],
-            '404'=>['404','html']
+            'api'=>['api/[trailing]API','php',true],
+            '404'=>['404','html',false]
         ],
         [
             'test'=>true,

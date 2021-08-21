@@ -392,7 +392,7 @@ Vue.component('media-uploader', {
                                     alertLog('Could not upload a file because safeMode is true and the file type isn\'t supported!','error',this.$el);
                                     break;
                                 case 0:
-                                    alertLog('Media successfully uploaded <a href="'+document.rootURI+'api/media?action=getDBMedia&address='+this.newMediaInfo.identifier+'">here</a>','success',this.$el);
+                                    alertLog('Media successfully uploaded <a href="'+document.rootURI+'api/v1/media?action=getDBMedia&address='+this.newMediaInfo.identifier+'">here</a>','success',this.$el);
                                     this.resetImage();
                                     break;
                                 case 105:
@@ -512,7 +512,7 @@ Vue.component('media-uploader', {
 
             this.apiRequest(
                 data,
-                "api/media",
+                "api/v1/media",
                 'imageUploadedToServer',
                 {
                     'verbose': this.verbose,

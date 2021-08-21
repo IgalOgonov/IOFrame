@@ -163,7 +163,7 @@ var contacts = new Vue({
                 }
             ],
             //SearchList API (and probably the only relevant API) URL
-            url: document.pathToRoot + 'api/contacts',
+            url: document.pathToRoot + 'api/v1/contacts',
             //Current page
             page:0,
             //Go to page
@@ -524,7 +524,7 @@ var contacts = new Vue({
 
                  this.apiRequest(
                      data,
-                      'api/contacts',
+                      'api/v1/contacts',
                       'deleteContacts',
                       {
                          verbose: this.verbose,
@@ -593,7 +593,7 @@ var contacts = new Vue({
 
             this.apiRequest(
                 data,
-                'api/contacts',
+                'api/v1/contacts',
                 'getContactTypes',
                 {
                     verbose: this.verbose,

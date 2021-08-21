@@ -545,7 +545,7 @@ var pluginList = new Vue({
                     case 'fi':
                         redirect = location.href;
                         redirect = redirect.substring(0, redirect.indexOf('/plugins')+8);
-                        redirect = redirect+'/../../api/plugins?name='+pluginList.currentPlugin+'&action=fullInstall';
+                        redirect = redirect+'/../../api/v1/plugins?name='+pluginList.currentPlugin+'&action=fullInstall';
                         if(pluginList.testMode)
                             redirect += '&req=test';
                         location.assign(redirect);
@@ -553,7 +553,7 @@ var pluginList = new Vue({
                     case 'fu':
                         redirect = location.href;
                         redirect = redirect.substring(0, redirect.indexOf('/plugins')+8);
-                        redirect = redirect+'/../../api/plugins?name='+pluginList.currentPlugin+'&action=fullUninstall';
+                        redirect = redirect+'/../../api/v1/plugins?name='+pluginList.currentPlugin+'&action=fullUninstall';
                         if(pluginList.testMode)
                             redirect += '&req=test';
                         location.assign(redirect);

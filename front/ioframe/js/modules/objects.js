@@ -276,7 +276,7 @@
                         //sendData = sendData.substr(0,sendData.length-1); No need to waste resources
                         console.log(sendData);
 
-                        let url=document.pathToRoot+"api\/objects";
+                        let url=document.pathToRoot+"api\/v1\/objects";
                         var xhr = new XMLHttpRequest();
                         xhr.open('POST', url+'?'+sendData);
                         xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');

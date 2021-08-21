@@ -188,7 +188,7 @@ Vue.component('add-2fa', {
 
             this.apiRequest(
                 data,
-                "api/users",
+                "api/v1/users",
                 'twoFactorAppRequest',
                 {
                     'verbose': this.verbose,

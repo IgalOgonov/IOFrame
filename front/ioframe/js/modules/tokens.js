@@ -173,7 +173,7 @@ var tokens = new Vue({
                 }
             ],
             //SearchList API (and probably the only relevant API) URL
-            url: document.pathToRoot+ 'api/tokens',
+            url: document.pathToRoot+ 'api/v1/tokens',
             //Current page
             page:0,
             //Go to page
@@ -433,7 +433,7 @@ var tokens = new Vue({
 
                  this.apiRequest(
                      data,
-                      'api/tokens',
+                      'api/v1/tokens',
                      operation,
                       {
                          verbose: this.verbose,

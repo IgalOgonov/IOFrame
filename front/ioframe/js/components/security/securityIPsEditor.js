@@ -385,7 +385,7 @@ Vue.component('security-ips-editor', {
 
             this.apiRequest(
                 data,
-                'api/security',
+                'api/v1/security',
                 'setResponse',
                 {
                     'verbose': this.verbose,

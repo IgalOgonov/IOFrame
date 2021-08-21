@@ -755,7 +755,7 @@ namespace IOFrame\Handlers{
                 return false;
             };
             //Obviously, we also need to be initiated
-            if(!$this->isInit){
+            if(!$test && !$this->isInit){
                 return false;
             };
             foreach($this->settingsArrays as $name=>$settings){

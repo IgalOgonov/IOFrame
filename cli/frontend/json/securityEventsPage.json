@@ -15,7 +15,7 @@
 	},
 	"items":{
 		"js":[
-			"mixins/sourceURL.js",
+			"mixins/sourceUrl.js",
 			"mixins/eventHubManager.js",
 			"components/searchList.js",
 			{
@@ -24,7 +24,7 @@
 				"template":"js/components/viewUpdateCreateComponent.txt",
 				"variables":{
 				  "COMPONENT_NAME":"security-events-editor",
-				  "API_URL":"api/security",
+				  "API_URL":"api/v1/security",
 				  "MIXINS":"sourceURL,eventHubManager,IOFrameCommons",
 				  "PASS_ID":false,
 				  "PASS_ITEM":true
@@ -39,7 +39,7 @@
 				  "VARIABLE_NAME":"securityEvents",
 				  "ELEMENT_NAME":"security-events",
 				  "VUE_NAME":"Security Events",
-				  "API_URL":"api/security",
+				  "API_URL":"api/v1/security",
 				  "SEARCH_TITLE":"Browsing Events Rulebook",
 				  "EDIT_TITLE":"Events Rulebook",
 				  "MIXINS":"sourceURL,eventHubManager,IOFrameCommons"

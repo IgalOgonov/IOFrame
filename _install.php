@@ -874,7 +874,7 @@ function install(IOFrame\Handlers\SettingsHandler $userSettings,
 
             $routesAdded = $RouteHandler->addRoutes(
                 [
-                    ['GET|POST','api/[*:trailing]','api',null],
+                    ['GET|POST|PUT|DELETE|PATCH|HEAD','api/[*:trailing]','api',null],
                     ['GET|POST','[*:trailing]','front',null]
                 ]
             );
@@ -891,7 +891,7 @@ function install(IOFrame\Handlers\SettingsHandler $userSettings,
             $matches = $RouteHandler->setMatches(
                 [
                     'front'=>['front/ioframe/pages/[trailing]', 'php,html,htm'],
-                    'api'=>['api/[trailing]','php']
+                    'api'=>['api/[trailing]','php',true]
                 ]
             );
 

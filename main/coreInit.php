@@ -7,15 +7,15 @@ session_start();
 if(!defined('helperFunctions'))
     require __DIR__ . '/../IOFrame/Util/helperFunctions.php';
 IOFrame\Util\include_all_php(__DIR__.'/include/', true);
+require_once __DIR__.'/../vendor/autoload.php';
 use Monolog\Logger;
-use Monolog\Handler\IOFrameHandler;
-
+use IOFrame\Handlers\Monolog\IOFrameHandler;
 
 //This gives the user a way to run his own script through his include, independent of this framework.
 if(!isset($skipCoreInit) || $skipCoreInit==false){
     //Require basic things needed to function
     require 'definitions.php';
-    require __DIR__ . '/../IOFrame/Handlers/ext/monolog/vendor/autoload.php';
+    //require __DIR__ . '/../IOFrame/Handlers/ext/monolog/vendor/autoload.php';
     if(!defined('SettingsHandler'))
         require __DIR__ . '/../IOFrame/Handlers/SettingsHandler.php';
     if(!defined('SQLHandler'))

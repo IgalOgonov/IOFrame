@@ -223,7 +223,7 @@ Vue.component('media-viewer', {
             if(url!=='')
                 data.append('address', url);
             //Api url
-            let apiURL = document.pathToRoot+"api/media";
+            let apiURL = document.pathToRoot+"api/v1/media";
             var test = this.test;
             var verbose = this.verbose;
             var thisElement = this.$el;

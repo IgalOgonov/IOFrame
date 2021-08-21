@@ -8,7 +8,7 @@ var mails = new Vue({
     mixins: [IOFrameCommons],
     data: {
         configObject: JSON.parse(JSON.stringify(document.siteConfig)),
-        apiName: 'api/mail',
+        apiName: 'api/v1/mail',
         templates: {},
         action:'getTemplates',
         templateEdit: {

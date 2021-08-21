@@ -14,29 +14,50 @@ var apiTest = new Vue({
         resp: '',
         separateVariables: false,
         newVariableName: '',
+        apiTarget:'',
+        apiMethod:'post',
         variables:{}
     },
     methods:{
         send: function(){
             //output user inputs for testing
             this.resp = "Waiting...";
+            let context = this;
+            let methodHasBody = ['put','post','patch'].indexOf(context.apiMethod)!== -1;
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
+            let queryParams = [];
             if(this.separateVariables)
                 for(let name in this.variables){
-                    data.append(name, this.variables[name].value);
+                    if(methodHasBody)
+                        data.append(name, this.variables[name].value);
+                    else
+                        queryParams.push(name+' = '+this.variables[name].value);
                 }
             else{
-                let contentArray = this.content.split('&');
-                contentArray.forEach(function(postPair, index) {
-                    postPair = postPair.split('=');
-                    if(postPair.length == 1)
+                let contentIsJSON = IsJsonString(this.content);
+                let contentArray = contentIsJSON? Object.entries(JSON.parse(this.content)) : this.content.split('&');
+                contentArray.forEach(function(entry) {
+                    let postPair = contentIsJSON ? entry: entry.split('=');
+                    console.log(postPair);
+
+                    if(postPair[1] === undefined)
                         postPair[1] = '';
-                    data.append(postPair[0], postPair[1]);
+
+                    if(methodHasBody){
+                        data.append(postPair[0], postPair[1]);
+                    }
+                    else{
+                        queryParams.push(postPair[0]+'='+postPair[1]);
+                    }
+
                 });
             }
-            data.append('req', this.req);
+            if(methodHasBody)
+                data.append('req', this.req);
+            else
+                queryParams.push('req='+this.req);
             let image = document.querySelector('#uploaded1');
             let imageName = document.querySelector('#imgName');
             imageName = imageName.value? imageName.value : 'image';
@@ -49,17 +70,24 @@ var apiTest = new Vue({
             }
             this.inputs="Target:"+this.target+", Content:"+JSON.stringify(data);
             //Api url
-            let url=document.pathToRoot+"api/"+this.target;
+            let url=document.pathToRoot+"api/"+(this.apiTarget?this.apiTarget+'/':'')+this.target;
             //Request itself
             updateCSRFToken().then(
                 function(token){
-                    data.append('CSRF_token', token);
+                    if(methodHasBody)
+                        data.append('CSRF_token', token);
+                    else
+                        queryParams.push('CSRF_token='+token);
                     console.log(data);
-                    fetch(url, {
-                        method: 'post',
-                        body: data,
+                    let init = {
+                        method: context.apiMethod,
                         mode: 'cors'
-                    })
+                    };
+                    if(methodHasBody)
+                        init.body = data;
+                    else
+                        url += '?'+queryParams.join('&');
+                    fetch(url,init )
                         .then(function (json) {
                             return json.text();
                         })

@@ -52,7 +52,7 @@ var auth = new Vue({
             filters:[
             ],
             //SearchList API URL
-            url: document.rootURI+'api/auth',
+            url: document.rootURI+'api/v1/auth',
             //Current page
             page:0,
             //Go to page
@@ -424,7 +424,7 @@ var auth = new Vue({
 
                  this.apiRequest(
                      data,
-                      'api/auth',
+                      'api/v1/auth',
                       'genericAPIAction',
                       {
                          verbose: this.verbose,

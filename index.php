@@ -1,9 +1,22 @@
 <?php
 
-require 'IOFrame/Handlers/ext/AltoRouter.php';
-require 'IOFrame/Handlers/RouteHandler.php';
 require 'main/coreInit.php';
+require 'vendor/autoload.php';
+Use IOFrame\Handlers\RouteHandler;
+Use IOFrame\Handlers\SettingsHandler;
 define('REQUEST_PASSED_THROUGH_ROUTER',true);
+
+$pageSettings = new SettingsHandler(SETTINGS_DIR_FROM_ROOT.'/pageSettings/',$defaultSettingsParams);
+
+//Allow for a custom routing script at a different location. The "preRoutingScript" page setting should be the RELATIVE location
+//of the custom routing script from here (framework root)
+if($pageSettings->getSetting('preRoutingScript')){
+    $url = __DIR__.'/'.$pageSettings->getSetting('preRoutingScript').'.php';
+    if(is_file($url))
+        require $url;
+    unset($url);
+}
+
 
 $router = new AltoRouter();
 
@@ -11,7 +24,7 @@ $router = new AltoRouter();
 $router->setBasePath($settings->getSetting('pathToRoot'));
 
 //RouteHandler stuff
-$RouteHandler = new IOFrame\Handlers\RouteHandler($settings,$defaultSettingsParams);
+$RouteHandler = new RouteHandler($settings,$defaultSettingsParams);
 
 //Get routes
 $routes = $RouteHandler->getActiveRoutes();
@@ -27,6 +40,14 @@ foreach($routes as $index => $routeArray){
     $router->map( $routeArray['Method'], $routeArray['Route'], $routeArray['Match_Name'], $routeArray['Map_Name']);
 };
 
+//Allow custom mapping via include
+if($pageSettings->getSetting('preMappingScript')){
+    $url = __DIR__.'/'.$pageSettings->getSetting('preMappingScript').'.php';
+    if(is_file($url))
+        require $url;
+    unset($url);
+}
+
 //Get URI, and possible fix it
 $uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '/';
 $uri = preg_replace('/\/\/+/','/',$uri);
@@ -35,7 +56,7 @@ if($requestStringPos !== false)
     $uri = substr($uri,0,$requestStringPos);
 
 //Match and set parameters/target if we got a match
-$match = $router->match($uri);
+$match = @$router->match($uri);
 
 if( is_array($match)) {
     $routeTarget = $match['target'];
@@ -47,16 +68,44 @@ if( is_array($match)) {
 
 //Get required matches from the db/cache
 $matches = $RouteHandler->getMatches($matchNames);
+
+//Allow custom matching via include
+if($pageSettings->getSetting('preMatchingScript')){
+    $url = __DIR__.'/'.$pageSettings->getSetting('preMatchingScript').'.php';
+    if(is_file($url))
+        require $url;
+    unset($url);
+}
+
 //If the correct match is found, process it
 if(isset($matches[$routeTarget]) && is_array($matches[$routeTarget])){
-
     //DB array
     $matchArray = $matches[$routeTarget];
     //Get DB extensions, or set default ones
     $extensions = ($matchArray['Extensions']!==null)? explode(',',$matchArray['Extensions']): ['php','html','htm','js','css'];
+    //Edge case - API routing
+    if($routeTarget === 'api'){
+        $defaultAPIVersion = 'v'.($siteSettings->getSetting('apiVersion')?$siteSettings->getSetting('apiVersion'):'1');
+        $originalURL = $matchArray['URL'];
+        $versionURL = explode('/',$matchArray['URL']);
+        array_splice($versionURL,1,0,$defaultAPIVersion);
+        $versionURL = implode('/',$versionURL);
+        $fallbackVersionURL = str_replace($defaultAPIVersion,'v1',$versionURL);
 
+        $matchArray['URL'] = [
+            ['include' => $versionURL, 'exclude'=>[]]
+        ];
+        if($defaultAPIVersion !== 'v1')
+            array_push($matchArray['URL'],
+                ['include' => $fallbackVersionURL, 'exclude'=>[]]
+            );
+        array_push($matchArray['URL'],
+            ['include' => $originalURL, 'exclude'=>[]]
+        );
+        unset($defaultAPIVersion,$originalURL);
+    }
     //If the match is a string, enclose it in a JSON object
-    if(!\IOFrame\Util\is_json($matchArray['URL']))
+    elseif(!\IOFrame\Util\is_json($matchArray['URL']))
         $matchArray['URL'] = [
             ['include' => $matchArray['URL'], 'exclude'=>[]]
         ];
@@ -78,40 +127,55 @@ if(isset($matches[$routeTarget]) && is_array($matches[$routeTarget])){
     //Check the rules
     foreach($matchArray['URL'] as $ruleArray){
 
+
         //The include file
-        $filename = __DIR__.'/'.$ruleArray['include'];
+        $filename = $ruleArray['include'];
 
         //Replace the relevant parts with route parameters.
         foreach($routeParams as $paramName => $paramValue){
             $filename = preg_replace('/\['.$paramName.'\]/',$paramValue,$filename);
         }
 
-        //Check whether the file exists, for each extension
-        foreach($extensions as $extension){
-            if((file_exists($filename.'.'.$extension))){
+        //Whether this specific match allows partial URL matching
+        if($matchArray['Match_Partial_URL']){
+            $filename = explode('/',$filename);
+            $temp = [];
+            $filenames = [];
+            foreach ($filename as $index => $urlPart){
+                array_push($temp, $urlPart);
+                array_push($filenames, __DIR__.'/'.implode('/',$temp));
+            }
+            $filenames = array_reverse($filenames);
+        }
+        else
+            $filenames = [__DIR__.'/'.$filename];
 
-                //If the file does exist, make sure it does not violate the exclusion regex.
-                $shouldBeExcluded = false;
-                if(isset($ruleArray['exclude']))
-                    foreach($ruleArray['exclude'] as $exclusionRegex){
-                        if(preg_match('/'.$exclusionRegex.'/',$filename.'.'.$extension)){
-                            $shouldBeExcluded = true;
-                            break;
+        //Check whether the file exists, for each extension
+        foreach ($filenames as $filename){
+            foreach($extensions as $extension){
+                if((file_exists($filename.'.'.$extension))){
+                    //If the file does exist, make sure it does not violate the exclusion regex.
+                    $shouldBeExcluded = false;
+                    if(isset($ruleArray['exclude']))
+                        foreach($ruleArray['exclude'] as $exclusionRegex){
+                            if(preg_match('/'.$exclusionRegex.'/',$filename.'.'.$extension)){
+                                $shouldBeExcluded = true;
+                                break;
+                            }
                         }
+
+                    if(!$shouldBeExcluded){
+                        require $filename.'.'.$extension;
+                        die();
                     }
 
-                if(!$shouldBeExcluded){
-                    require $filename.'.'.$extension;
-                    die();
                 }
-
             }
         }
     }
 }
 
 //If we are here, we have to get our page without the match rules
-$pageSettings = new IOFrame\Handlers\SettingsHandler(SETTINGS_DIR_FROM_ROOT.'/pageSettings/',$defaultSettingsParams);
 
 //If the homepage was requested, and is defined in the settings, try to require the homepage
 if(
@@ -130,6 +194,14 @@ if(
     }
 }
 
+//Here, we can redirect to a custom routing script that executes AFTER the regular matches. Can be used for a different 404 page, too.
+if($pageSettings->getSetting('postRoutingScript')){
+    $url = __DIR__.'/'.$pageSettings->getSetting('postRoutingScript').'.php';
+    if(is_file($url))
+        require $url;
+    unset($url);
+}
+
 //The default is to require a 404 page - but we might have a dynamic one!
 if(gettype($pageSettings->getSetting('404')) == 'string'  && $pageSettings->getSetting('404')){
     $extensions = ['php','html','htm','png','jpg','gif'];
@@ -137,12 +209,14 @@ if(gettype($pageSettings->getSetting('404')) == 'string'  && $pageSettings->getS
     $url = __DIR__.'/'.$pageSettings->getSetting('404');
     foreach($extensions as $extension){
         if((file_exists($url.'.'.$extension))){
+            header("HTTP/1.0 404 Not Found");
             require $url.'.'.$extension;
             die();
         }
     }
 }
 else{
+    header("HTTP/1.0 404 Not Found");
     require '404.html';
     die();
 }

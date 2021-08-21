@@ -194,7 +194,7 @@ function checkMappedObjects(requestedMaps = []){
             function(token){
                 action += '&CSRF_token='+token;
                 // url
-                let url=document.pathToRoot+"api\/objects";
+                let url=document.pathToRoot+"api\/v1\/objects";
                 //Request itself
                 var xhr = new XMLHttpRequest();
                 xhr.open('GET', url+'?'+action);
@@ -333,7 +333,7 @@ function updateMappedObjects(maps,db){
                 function(token){
                     action += '&CSRF_token='+token;
                     // url
-                    let url=document.pathToRoot+"api\/objects";
+                    let url=document.pathToRoot+"api\/v1\/objects";
                     //Request itself
                     var xhr = new XMLHttpRequest();
                     xhr.open('GET', url+'?'+action);

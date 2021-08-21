@@ -124,7 +124,7 @@ Vue.component('reset-mail', {
 
             this.apiRequest(
                 data,
-                "api/users",
+                "api/v1/users",
                 'mailReset',
                 {
                     'verbose': this.verbose,

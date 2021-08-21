@@ -6,7 +6,6 @@ namespace IOFrame\Handlers{
     if(!defined('abstractDBWithCache'))
         require 'abstractDBWithCache.php';
     use Monolog\Logger;
-    use Monolog\Handler\IOFrameHandler;
 
 
     /** Handles client sessions.

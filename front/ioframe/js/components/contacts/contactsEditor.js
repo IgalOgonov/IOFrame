@@ -218,7 +218,7 @@ Vue.component('contacts-editor', {
 
             this.apiRequest(
                 data,
-                'api/contacts',
+                'api/v1/contacts',
                 'getResponse',
                 {
                     'verbose': this.verbose,
@@ -285,7 +285,7 @@ Vue.component('contacts-editor', {
 
             this.apiRequest(
                 data,
-                'api/contacts',
+                'api/v1/contacts',
                 'setResponse',
                 {
                     'verbose': this.verbose,

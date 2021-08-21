@@ -267,7 +267,7 @@ Vue.component('user-registration', {
                         data.append(agreement.onSend.sendAs, value);
                     }
                 };
-                let url=document.pathToRoot+"api\/users";
+                let url=document.pathToRoot+"api\/v1\/users";
                 //Request itself
                 fetch(url, {
                     method: 'post',

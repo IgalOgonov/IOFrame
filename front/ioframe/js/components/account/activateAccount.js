@@ -126,7 +126,7 @@ Vue.component('activate-account', {
 
             this.apiRequest(
                 data,
-                "api/users",
+                "api/v1/users",
                 'regConfirm',
                 {
                     'verbose': this.verbose,

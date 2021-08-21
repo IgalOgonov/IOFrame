@@ -661,7 +661,7 @@ Vue.component('article-block-editor', {
                 open:false,
                 newItem:null,
                 searchList:{
-                    url:document.rootURI + 'api/media',
+                    url:document.rootURI + 'api/v1/media',
                     action:'getGalleries',
                     filters:[
                         {
@@ -998,7 +998,7 @@ Vue.component('article-block-editor', {
                                 }
                                 else
                                     src = item.thumbnail.dataType?
-                                        (document.rootURI+'api/media?action=getDBMedia&address='+item.thumbnail.address+'&lastChanged='+item.thumbnail.updated)
+                                        (document.rootURI+'api/v1/media?action=getDBMedia&address='+item.thumbnail.address+'&lastChanged='+item.thumbnail.updated)
                                         :
                                         item.thumbnail.address;
                                 let alt = item.meta.alt? item.meta.alt : (item.thumbnail.meta.alt? item.thumbnail.meta.alt : '');
@@ -1073,7 +1073,7 @@ Vue.component('article-block-editor', {
                         }
                     ],
                     //SearchList API (and probably the only relevant API) URL
-                    url: document.pathToRoot+ 'api/articles',
+                    url: document.pathToRoot+ 'api/v1/articles',
                     //Current page
                     page:0,
                     //Go to page
@@ -1535,7 +1535,7 @@ Vue.component('article-block-editor', {
 
             this.apiRequest(
                 data,
-                'api/articles',
+                'api/v1/articles',
                 this.identifier+(permanent?'-delete-response':'-hide-response'),
                 {
                     'verbose': this.verbose,
@@ -1638,7 +1638,7 @@ Vue.component('article-block-editor', {
 
             this.apiRequest(
                 data,
-                'api/articles',
+                'api/v1/articles',
                 this.identifier+'-set-response',
                 {
                     'verbose': this.verbose,
@@ -1719,7 +1719,7 @@ Vue.component('article-block-editor', {
             if(item.local)
                 trueAddress = document.rootURI + document[(this.currentBlock.type !== 'video'?'imagePathLocal':'videoPathLocal')]+trueAddress;
             else if(item.dataType)
-                trueAddress = document.rootURI+'api/media?action=getDBMedia&address='+trueAddress+'&lastChanged='+item.updated+'&resourceType='+(this.currentBlock.type !== 'video' ? 'img' : 'vid');
+                trueAddress = document.rootURI+'api/v1/media?action=getDBMedia&address='+trueAddress+'&lastChanged='+item.updated+'&resourceType='+(this.currentBlock.type !== 'video' ? 'img' : 'vid');
             return trueAddress;
         },
         //Changes creation block back to initial state

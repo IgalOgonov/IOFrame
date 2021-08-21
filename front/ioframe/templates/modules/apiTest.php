@@ -28,6 +28,20 @@
             <option value="real" selected>Real</option>
             <option value="test">Test</option>
         </select>
+        <select id="api_target" name="target" v-model="apiTarget" required>
+            <option value="">Default API</option>
+            <option value="v1" selected>API Version 1</option>
+            <option value="v2" selected>API Version 2</option>
+        </select>
+        <select id="api_method" name="method" v-model="apiMethod" required>
+            <option value="post" selected>POST</option>
+            <option value="get">GET</option>
+            <option value="put">PUT</option>
+            <option value="delete">DELETE</option>
+            <option value="patch">PATCH</option>
+            <option value="head">HEAD</option>
+        </select>
+
 
         <button @click.prevent="send">Send</button>
 

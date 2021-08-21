@@ -1,8 +1,6 @@
 <?php
 namespace IOFrame\Handlers{
     use IOFrame;
-    use Monolog\Logger;
-    use Monolog\Handler\IOFrameHandler;
     define('TreeHandler',true);
     if(!defined('abstractDBWithCache'))
         require 'abstractDBWithCache.php';

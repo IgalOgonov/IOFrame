@@ -325,6 +325,8 @@ switch($action){
                 $newActions['INVITE_USERS_AUTH'] = 'Allows inviting users - either via mail, or by just creating invites';
                 $newActions['SET_INVITE_MAIL_ARGS'] = 'Allows passing invite mail arguments';
                 break;
+            case '1.2.0.0':
+                break;
             default:
         }
 
@@ -422,6 +424,33 @@ switch($action){
                             );
                             $stageSuccess = $insertedMailTemplateID > 0;
                             array_push($newSettings['userSettings'],['name'=>'inviteMailTemplate','value'=>$insertedMailTemplateID]);
+                            break;
+                        case '1.2.0.0':
+
+                            $query = 'ALTER TABLE '.$prefix.'ROUTING_MATCH ADD `Match_Partial_URL` BOOLEAN NOT NULL DEFAULT FALSE AFTER `Extensions`;';
+                            if($test)
+                                echo 'Query To execute: '.$query.EOL;
+                            else
+                                $stageSuccess = $SQLHandler->exeQueryBindParam($query,[],['test'=>$test]);
+                            if(!$stageSuccess)
+                                break;
+
+                            require_once __DIR__.'/../IOFrame/Handlers/RouteHandler.php';
+                            $RouteHandler = new IOFrame\Handlers\RouteHandler($settings,$defaultSettingsParams);
+
+                            $routingMatch = false;
+                            $routingOriginalMethods = 'GET|POST';
+                            foreach ($RouteHandler->getActiveRoutes(['test'=>$test]) as $item){
+                                if($item['Match_Name'] === 'api'){
+                                    $routingMatch = $item['ID'];
+                                    $routingOriginalMethods = $item['Method'];
+                                    break;
+                                }
+                            }
+                            $stageSuccess = $routingMatch &&
+                                ($RouteHandler->updateRoute((int)$routingMatch,'GET|POST|PUT|DELETE|PATCH|HEAD','api/[*:trailing]','api',null,['test'=>$test]) === 0) &&
+                                ($RouteHandler->setMatch('api','api/[trailing]','php',true) === 0);
+
                             break;
                         default:
                             $stageSuccess = true;
@@ -673,6 +702,13 @@ switch($action){
                                         ],
                                         ['test'=>$test]
                                     );
+                            case '1.2.0.0':
+                                $earlyFailure = false;
+                                if($routingMatch)
+                                    $earlyFailure = $RouteHandler->updateRoute((int)$routingMatch,$routingOriginalMethods,'api/[*:trailing]','api',null,true,['test'=>$test]) !== 0;
+                                if(!$earlyFailure)
+                                    $earlyFailure = !$SQLHandler->exeQueryBindParam('ALTER TABLE '.$prefix.'ROUTING_MAP DROP Match_Partial_URL;',[],['test'=>$test]);
+                                break;
                             default:
                         }
                         break;

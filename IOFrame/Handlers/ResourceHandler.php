@@ -307,7 +307,7 @@ namespace IOFrame\Handlers{
                 );
                 if($safeStr)
                     foreach($results as $address =>$result){
-                        if($results[$address]['Text_Content'] !== null)
+                        if( (gettype($result) === 'array') && ($results[$address]['Text_Content'] !== null) )
                             $results[$address]['Text_Content'] = IOFrame\Util\safeStr2Str($results[$address]['Text_Content']);
                     }
 

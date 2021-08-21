@@ -110,7 +110,7 @@ Vue.component('toggle-2fa', {
 
             this.apiRequest(
                 data,
-                "api/users",
+                "api/v1/users",
                 'toggle2FA',
                 {
                     'verbose': this.verbose,

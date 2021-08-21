@@ -228,7 +228,7 @@ function updateCSRFToken(consumeExisting = true){
             let action;
             action = 'CSRF_token';
             // url
-            let url=document.rootURI+"api\/session";
+            let url=document.rootURI+"api\/v1\/session";
             //Request itself
             var xhr = new XMLHttpRequest();
             xhr.open('GET', url+'?'+action);

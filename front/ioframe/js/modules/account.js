@@ -145,7 +145,7 @@ var users = new Vue({
 
             this.apiRequest(
                 data,
-                'api/users',
+                'api/v1/users',
                 'getMyUser',
                 {
                     'verbose': this.verbose,

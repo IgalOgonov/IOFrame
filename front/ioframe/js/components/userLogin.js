@@ -157,7 +157,7 @@ Vue.component('user-login', {
                             data.append('2FACode', context.twoFactorAuthCode);
                         }
                         //Api url
-                        let url=document.rootURI+"api\/users";
+                        let url=document.rootURI+"api\/v1\/users";
                         context.requesting = true;
                         //Request itself
                         fetch(url, {

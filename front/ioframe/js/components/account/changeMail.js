@@ -129,7 +129,7 @@ Vue.component('change-mail', {
 
             this.apiRequest(
                 data,
-                "api/users",
+                "api/v1/users",
                 'mailChange',
                 {
                     'verbose': this.verbose,

@@ -197,7 +197,7 @@ var users = new Vue({
                     }
                 ],
                 //SearchList API
-                url: document.pathToRoot+ 'api/users',
+                url: document.pathToRoot+ 'api/v1/users',
                 //Current page
                 page:0,
                 //Go to page
@@ -348,7 +348,7 @@ var users = new Vue({
                     }
                 },
                 //SearchList API (and probably the only relevant API) URL
-                url: document.pathToRoot+ 'api/tokens',
+                url: document.pathToRoot+ 'api/v1/tokens',
                 //Current page
                 page:0,
                 //Go to page
@@ -721,7 +721,7 @@ var users = new Vue({
             let data = new FormData();
             let currentOperation = this.currentOperation;
             let operation = '';
-            let api = 'api/tokens';
+            let api = 'api/v1/tokens';
 
             if(this.currentMode === 'tokens'){
                 switch (currentOperation){
@@ -760,7 +760,7 @@ var users = new Vue({
                         if(!this.tokenInput.token)
                             this.tokenInput.override = true;
 
-                        api = 'api/users';
+                        let api = 'api/v1/users';
 
                         data.append('action',this.tokenInput.sendMail?'sendInviteMail':'createUserInvite');
 
@@ -894,7 +894,7 @@ var users = new Vue({
                 if(!item)
                     continue;
 
-                const text = location.origin+document.rootURI+'api/users?action=checkInvite&token='+this.tokens.items[i].identifier;
+                const text = location.origin+document.rootURI+'api/v1/users?action=checkInvite&token='+this.tokens.items[i].identifier;
                 const segs = qrcodegen.QrSegment.makeSegments(text);
                 const qr = qrcodegen.QrCode.encodeSegments(segs, ecl, minVer, maxVer, mask, boostECC);
                 const code = qr.toSvgString(0);

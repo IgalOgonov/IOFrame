@@ -745,6 +745,7 @@ namespace IOFrame{
                                                               Method varchar(256) NOT NULL,
                                                               Route varchar(1024) NOT NULL,
                                                               Match_Name varchar(64) NOT NULL,
+                                                              Match_Partial_URL boolean DEFAULT false NOT NULL,
                                                               Map_Name varchar(256),
                                                               INDEX (Match_Name)
                                                               ) ENGINE=InnoDB DEFAULT CHARSET = utf8;";

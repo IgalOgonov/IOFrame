@@ -124,7 +124,7 @@ Vue.component('reset-password', {
 
             this.apiRequest(
                 data,
-                "api/users",
+                "api/v1/users",
                 'passwordReset',
                 {
                     'verbose': this.verbose,
