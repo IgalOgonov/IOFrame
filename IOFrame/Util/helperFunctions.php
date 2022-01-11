@@ -269,18 +269,25 @@ namespace IOFrame\Util{
     }
 
     //Recursive folder copying in PHP - simple function
-    function folder_copy($src,$dst) {
+    function folder_copy($src,$dst, array $exclude = []) {
         $dir = opendir($src);
         @mkdir($dst);
         while(false !== ( $file = readdir($dir)) ) {
-            if (( $file != '.' ) && ( $file != '..' )) {
-                if ( is_dir($src . '/' . $file) ) {
-                    folder_copy($src . '/' . $file,$dst . '/' . $file);
-                }
-                else {
-                    copy($src . '/' . $file,$dst . '/' . $file);
-                }
+
+            if (( $file == '.' ) || ( $file == '..' ))
+                continue;
+
+            foreach ($exclude as $excludeRegex)
+                if(preg_match('/'.$excludeRegex.'/',$src . '/' . $file))
+                    continue;
+
+            if ( is_dir($src . '/' . $file) ) {
+                folder_copy($src . '/' . $file,$dst . '/' . $file);
             }
+            else {
+                copy($src . '/' . $file,$dst . '/' . $file);
+            }
+
         }
         closedir($dir);
     }

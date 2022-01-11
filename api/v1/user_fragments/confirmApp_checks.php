@@ -19,7 +19,6 @@ if(!$test && empty($_SESSION['TEMP_2FASecret'])){
 }
 
 //Strangely located here, checking the app code VS what should
-require_once $settings->getSetting('absPathToRoot').'IOFrame/Handlers/ext/TwoFactorAuth/vendor/autoload.php';
 $tfa = new RobThree\Auth\TwoFactorAuth($siteSettings->getSetting('siteName'));
 $expectedSecret = $test? 'JBSWY3DPEHPK3PXP' : $_SESSION['TEMP_2FASecret'];
 

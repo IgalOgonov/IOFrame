@@ -209,7 +209,7 @@ namespace IOFrame\Handlers{
                 $folders = explode('/',$url.$fileName);
                 //Remove the file itself
                 array_pop($folders);
-                $newUrl = implode($folders,'/');
+                $newUrl = implode('/',$folders);
                 $folderExists = is_dir($newUrl);
 
                 if(!$folderExists && !$createFolders)

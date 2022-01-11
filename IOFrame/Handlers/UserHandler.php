@@ -55,6 +55,7 @@ namespace IOFrame\Handlers{
          * @param array $params
          *              'activateToken' => string, default null - checks a token, and activates account if it allows either any activation, or activation of provided email.
          *              'tokenConsumeUses' => int, default 1 - if activateToken is provided, indicates how many uses to consume on success
+         *              'considerActive' => bool, default false - if true, will consider user active no matter what
          * @returns int
          *      0 - success
          *      -2 - failed - registration not allowed!
@@ -69,6 +70,7 @@ namespace IOFrame\Handlers{
             $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
             $activateToken = isset($params['activateToken'])? $params['activateToken'] : null;
             $tokenConsumeUses = isset($params['tokenConsumeUses'])? $params['tokenConsumeUses'] : 1;
+            $considerActive = isset($params['considerActive'])? $params['considerActive'] : false;
 
             //Hash the password
             $pass = $inputs["p"];
@@ -104,10 +106,11 @@ namespace IOFrame\Handlers{
                     return  4;
                 /*else
                     TODO Log in case of crash before user is created;*/
+                $considerActive = true;
             }
 
             //Make user if all good
-            $res = $this->reg_makeUserCore($inputs, $hash, ['test'=>$test,'verbose'=>$verbose,'active'=>($activateToken? 1 : 0)]);
+            $res = $this->reg_makeUserCore($inputs, $hash, ['test'=>$test,'verbose'=>$verbose,'rank'=>isset($inputs['r'])?$inputs['r']:null,'active'=>(($considerActive || $activateToken)? 1 : 0)]);
             if($res !== 0)
                 return $res;
 
@@ -121,8 +124,8 @@ namespace IOFrame\Handlers{
             if($res !== 0)
                 return $res;
 
-            if($this->userSettings->getSetting('regConfirmMail') && !$activateToken){
-                $this->accountActivation($uMail,$uId,['test'=>$test,'verbose'=>$verbose]);
+            if($this->userSettings->getSetting('regConfirmMail') && !$considerActive){
+                $this->accountActivation($inputs["m"],null,['test'=>$test,'verbose'=>$verbose]);
             }
 
             if($verbose)
@@ -172,40 +175,27 @@ namespace IOFrame\Handlers{
          * @param string $hash password hash
          * @param array $params
          *              active - bool, default 0 - whether the account should be active or not on creation. Overridden by user setting regConfirmMail, or install session.
+         *              rank - bool, default 9999 - User rank to set. Defaults to lowest rank (9999), highest rank is 0.
          * @returns int description in main function
          */
         private function reg_makeUserCore(array $inputs, string $hash, array $params = []){
             $test = isset($params['test'])? $params['test'] : false;
             $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
             $active = isset($params['active'])? $params['active'] : 0;
+            $rank = isset($params['rank'])? $params['rank'] : 9999;
             $query = "INSERT INTO ".$this->SQLHandler->getSQLPrefix().
                 "USERS(Username, Password, Email, Active, Auth_Rank, SessionID)
              VALUES (:Username, :Password, :Email,:Active, :Auth_Rank,:SessionID)";
             $queryBind = [];
             array_push($queryBind,[':Username', $inputs["u"]],[':Password', $hash],[':Email', $inputs["m"]]);
             //Decides whether to activate user on creation or not
-            if($this->userSettings->getSetting('regConfirmMail') && !isset($_SESSION['INSTALLING']) ){
+            if($this->userSettings->getSetting('regConfirmMail') ){
                 array_push($queryBind,[':Active', $active]);
             }
             else
                 array_push($queryBind,[':Active', 1]);
             //Deciding whether to give a user a specific rank or not
-            if (isset($inputs["r"])){
-                if ( ($inputs["r"] < json_decode($_SESSION['details'],true)['Auth_Rank']))
-                    array_push($queryBind,[':Auth_Rank', $inputs["r"]]);
-                else
-                    array_push($queryBind,[':Auth_Rank', 9999]);
-            }
-            else {
-                if(isset($_SESSION['INSTALLING'])){
-                    if($_SESSION['INSTALLING'] = true)
-                        array_push($queryBind,[':Auth_Rank', 0]);
-                    else
-                        array_push($queryBind,[':Auth_Rank', 9999]);
-                }
-                else
-                    array_push($queryBind,[':Auth_Rank', 9999]);
-            }
+            array_push($queryBind,[':Auth_Rank', $rank]);
             //Push the session ID
             array_push($queryBind,[':SessionID', session_id()]);
             if(!$test)
@@ -285,10 +275,6 @@ namespace IOFrame\Handlers{
                 }
             if($verbose)
                 echo 'Executing query '.$query.EOL;
-            //If the user needs confirm his mail, we generate the confirmation code here and send the relevant mail to the user
-            if(isset($_SESSION['INSTALLING']))
-                if($_SESSION['INSTALLING'] = true)
-                    return 0;
 
             return 0;
         }
@@ -1227,7 +1213,6 @@ namespace IOFrame\Handlers{
                                 if(empty($TwoFactorAuth['2FADetails']['secret']))
                                     return 7;
                                 //Check the code
-                                require_once $this->settings->getSetting('absPathToRoot').'IOFrame/Handlers/ext/TwoFactorAuth/vendor/autoload.php';
                                 $tfa = new TwoFactorAuth($this->siteSettings->getSetting('siteName'));
                                 if(!$tfa->verifyCode((string)$TwoFactorAuth['2FADetails']['secret'],(string)$inputs['2FACode'],3))
                                     return 5;

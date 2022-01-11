@@ -1,6 +1,7 @@
 <?php
 
 require 'main/definitions.php';
+require_once __DIR__.'/vendor/autoload.php';
 if(!defined('SettingsHandler'))
     require 'IOFrame/Handlers/SettingsHandler.php';
 if(!defined('helperFunctions'))
@@ -1118,8 +1119,9 @@ function install(IOFrame\Handlers\SettingsHandler $userSettings,
                     if(isset($_REQUEST[$expected]))
                         $inputs[$expected] = $_REQUEST[$expected];
                 }
+                $inputs['r'] = 0;
 
-                $UserHandler->regUser($inputs);
+                $UserHandler->regUser($inputs,['considerActive'=>true]);
             }
             catch(PDOException $e)
             {

@@ -264,8 +264,7 @@ namespace IOFrame\Handlers{
                     ],
                     'moveColumns' => [
                         'Object_Auth_Category' => [
-                            'type' => 'string',
-                            'inputName' => 'New_Category'
+                            'type' => 'string'
                         ]
                     ],
                     'columnFilters' => [
@@ -337,8 +336,7 @@ namespace IOFrame\Handlers{
                     ],
                     'moveColumns' => [
                         'Object_Auth_Object' => [
-                            'type' => 'string',
-                            'inputName' => 'New_Object'
+                            'type' => 'string'
                         ],
                     ],
                     'columnFilters' => [
@@ -421,8 +419,7 @@ namespace IOFrame\Handlers{
                     ],
                     'moveColumns' => [
                         'Object_Auth_Object' => [
-                            'type' => 'string',
-                            'inputName' => 'New_Object'
+                            'type' => 'string'
                         ],
                     ],
                     'columnFilters' => [
@@ -509,8 +506,7 @@ namespace IOFrame\Handlers{
                     ],
                     'moveColumns' => [
                         'Object_Auth_Object' => [
-                            'type' => 'string',
-                            'inputName' => 'New_Object'
+                            'type' => 'string'
                         ],
                     ],
                     'columnFilters' => [
@@ -597,8 +593,7 @@ namespace IOFrame\Handlers{
                     ],
                     'moveColumns' => [
                         'Object_Auth_Object' => [
-                            'type' => 'string',
-                            'inputName' => 'New_Object'
+                            'type' => 'string'
                         ],
                     ],
                     'columnFilters' => [

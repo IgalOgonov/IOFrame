@@ -1,5 +1,4 @@
 <?php
-require_once $settings->getSetting('absPathToRoot').'IOFrame/Handlers/ext/TwoFactorAuth/vendor/autoload.php';
 $tfa = new RobThree\Auth\TwoFactorAuth($siteSettings->getSetting('siteName'));
 $secret = $tfa->createSecret(160);
 if(!$test)

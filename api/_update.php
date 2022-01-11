@@ -327,6 +327,8 @@ switch($action){
                 break;
             case '1.2.0.0':
                 break;
+            case '1.2.0.1':
+                break;
             default:
         }
 
@@ -687,8 +689,6 @@ switch($action){
                 switch ($updateStages[$currentStage]){
                     case 'customActions':
                         switch ($next){
-                            case '1.1.0.0':
-                                break;
                             case '1.1.1.0':
                                 if($insertedMailTemplateID > 0)
                                     $earlyFailure = !$SQLHandler->deleteFromTable(
@@ -702,12 +702,15 @@ switch($action){
                                         ],
                                         ['test'=>$test]
                                     );
+                                break;
                             case '1.2.0.0':
                                 $earlyFailure = false;
                                 if($routingMatch)
                                     $earlyFailure = $RouteHandler->updateRoute((int)$routingMatch,$routingOriginalMethods,'api/[*:trailing]','api',null,true,['test'=>$test]) !== 0;
                                 if(!$earlyFailure)
                                     $earlyFailure = !$SQLHandler->exeQueryBindParam('ALTER TABLE '.$prefix.'ROUTING_MAP DROP Match_Partial_URL;',[],['test'=>$test]);
+                                break;
+                            case '1.2.0.1':
                                 break;
                             default:
                         }

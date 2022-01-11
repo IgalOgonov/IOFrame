@@ -745,7 +745,6 @@ namespace IOFrame{
                                                               Method varchar(256) NOT NULL,
                                                               Route varchar(1024) NOT NULL,
                                                               Match_Name varchar(64) NOT NULL,
-                                                              Match_Partial_URL boolean DEFAULT false NOT NULL,
                                                               Map_Name varchar(256),
                                                               INDEX (Match_Name)
                                                               ) ENGINE=InnoDB DEFAULT CHARSET = utf8;";
@@ -824,7 +823,8 @@ namespace IOFrame{
             $query = "CREATE TABLE IF NOT EXISTS ".$prefix."ROUTING_MATCH (
                                                               Match_Name varchar(64) PRIMARY KEY NOT NULL,
                                                               URL varchar(1024) NOT NULL,
-                                                              Extensions varchar(256)
+                                                              Extensions varchar(256),
+                                                              Match_Partial_URL boolean DEFAULT false NOT NULL
                                                               ) ENGINE=InnoDB DEFAULT CHARSET = utf8;";
             $makeTB = $conn->prepare($query);
             try{
@@ -861,7 +861,7 @@ namespace IOFrame{
             $query = "CREATE TABLE IF NOT EXISTS ".$prefix."IOFRAME_TOKENS (
                                                               Token varchar(256) PRIMARY KEY NOT NULL,
                                                               Token_Action varchar(1024) NOT NULL,
-                                                              Uses_Left UNSIGNED BIGINT NOT NULL,
+                                                              Uses_Left BIGINT NOT NULL,
                                                               Expires varchar(14) NOT NULL,
                                                               Session_Lock varchar(256) DEFAULT NULL,
                                                               Locked_At varchar(14) DEFAULT NULL,

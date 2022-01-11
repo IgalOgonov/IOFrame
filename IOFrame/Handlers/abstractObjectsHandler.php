@@ -89,18 +89,30 @@ namespace IOFrame{
          *                                                         as a JSON
          *                                          'autoIncrement' => bool, if set, indicates that this column auto-increments (doesn't need to be set on creation)
          *                                          'considerNull' => mixed, if passed, this value will be considered "NULL" (since we cannot pass an actual NULL value sometimes, like through the API)
+         *                                          'onDuplicateKeyColExp' => string, default null - if set, will set the relevant expression for the column.
+         *                                                                    More info in the SQLHandler class.
+         *                                          'function' => callable, default null - if set, will set the value of the item to the result of this function.
+         *                                                                                 The function receives 1 item as input, an associated array of the form:
+         *                                                                                 [
+         *                                                                                  'typeArray' => The objects details for the relevant item type.
+         *                                                                                  'params' => The parameters passed to the main set function
+         *                                                                                  'inputArray' => The user inputs for this specific object
+         *                                                                                  ['existingArray'] => The exising database object (when updating)
+         *                                                                                 ]
          *                                      ]
          *                      'moveColumns' => array of objects, where each object is of the form:
          *                                      <column name> => [
          *                                          'type' => 'int'/'string'/'bool'/'double' - type of the column for purposes of the SQL query,
-         *                                          'inputName' => string, name of the input key relevant to this
+         *                                          'inputName' => string, name of the input key relevant to this, defaults to column name
          *                                      ]
          *                                      * note that this can also be used to rename objects, not just move them.
          *                      'columnFilters' => object of objects, where each object is of the form:
          *                                      <filter name> => [
-         *                                          'column' => string, name of relevant column
+         *                                          'column' => string|array, name of relevant column, or array of columns to search for a value "IN"
+         *                                          'tableName' => string, if set, prepends this table name to the column
          *                                          'filter' => string, one of the filters from the abstract class abstractDBWithCache:
          *                                                      '>','<','=', '!=', 'IN', 'RLIKE' and 'NOT RLIKE'
+         *                                                      In case of multiple columns, this is ignored.
          *                                          'default' => if set, will be the default value for this filter
          *                                          'considerNull' => mixed, if passed, this value will be considered "NULL" (since we cannot pass an actual NULL value sometimes, like through the API)
          *                                          'alwaysSend' => if set to true, will always send the filter. Has to have 'default'
@@ -109,8 +121,9 @@ namespace IOFrame{
          *                                      where each object is of the form:
          *                                      <column name> => [
          *                                          'key' => string, key under which the results will be added to '@'
-         *                                          'type' => string, either 'min'/'max' (range values), 'count' (the key doesn't matter here)
-         *                                                    or 'distinct' (get all distinct values)
+         *                                          'type' => string, either 'min'/'max' (range values), 'count' (the key doesn't matter here),
+         *                                                    'distinct' (get all distinct values) or 'distinct_multiple' (get distinct values from multiple columns)
+         *                                          'columns' => array of strings, if the type is 'distinct_multiple', here you specify all relevant columns to get values from
          *                                      ],
          *                      'orderColumns' => array of column names by which it is possible to order the query.
          *                      'groupByFirstNKeys' => int, default 0 - whether to group results by the first n keys (less than the total number of keys).
@@ -196,6 +209,11 @@ namespace IOFrame{
              *              'key' => 'objects',
              *              'type' => 'distinct'
              *          ],
+             *          'exampleDistinctAreas' => [
+             *              'key' => 'areas',
+             *              'type' => 'distinct_multiple',
+             *              'columns' => ['Area_1','Area_2','Area_3']
+             *          ],
              *      ],
              *      'orderColumns' => ['Object_Auth_Category','Object_Auth_Object','ID','Object_Auth_Action'],
              *      'groupByFirstNKeys'=>3,
@@ -207,8 +225,11 @@ namespace IOFrame{
              */
         ];
 
-        /* common filters for all tables - dependant on commonColumns*/
-        protected $commonFilters=[
+        /* common columns for all tables - generally it's those two, but in some cases not every table has 'created'/'updated' set*/
+        protected $timeColumns=[ 'Created' , 'Last_Updated' ];
+
+        /* common filters for all tables - dependant on timeColumns*/
+        protected $timeFilters=[
             'createdBefore' => [
                 'column' => 'Created',
                 'filter' => '<'
@@ -227,11 +248,8 @@ namespace IOFrame{
             ],
         ];
 
-        /* common columns for all tables - generally it's those two, but in some cases not every table has 'created'/'updated' set*/
-        protected $commonColumns=[ 'Created' , 'Last_Updated' ];
-
         /* common order columns for all tables - defaults to $commonColumns*/
-        protected $commonOrderColumns= [ 'Created' , 'Last_Updated' ];
+        protected $timeOrderColumns= [ 'Created' , 'Last_Updated' ];
 
         /**
          * Basic construction function
@@ -244,7 +262,7 @@ namespace IOFrame{
              * As much as I hate variable variables, this is likely one of the only places where their use is for the best.
              * */
             $dynamicParams = $this->validObjectTypes;
-            $additionParams = ['commonFilters','commonColumns','commonOrderColumns'];
+            $additionParams = ['timeFilters','timeColumns','timeOrderColumns'];
 
             foreach($dynamicParams as $param){
                 if(!isset($params[$param]))
@@ -407,6 +425,8 @@ namespace IOFrame{
          * @param array $params of the form:
          *              <valid filter name> - valid filters are found in the type array's "columnFilters" - the param name
          *                                    is the same as the key.
+         *              'defaultTableToFilterColumns' - bool, default false. if set prepends table name to filter columns
+         *                                              without an explicit 'tableName'
          *              'getAllSubItems' - bool, default false. If true, will get all sub-items and ignore limit even if
          *                                 we are getting all items ($items is [])
          *              --- Usage of the params below disables cache even when searching for specific items ---
@@ -435,11 +455,12 @@ namespace IOFrame{
             else
                 throw new \Exception('Invalid object type!');
 
-            $validFilters = array_merge($typeArray['columnFilters'],$this->commonFilters);
 
             $test = isset($params['test'])? $params['test'] : false;
             $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $hasTimeColumns = isset($params['hasTimeColumns'])? $params['hasTimeColumns'] : ($this->objectsDetails[$type]['hasTimeColumns'] ?? true);
             $getAllSubItems =  isset($params['getAllSubItems']) ? $params['getAllSubItems'] : false;
+            $defaultTableToFilterColumns =  isset($params['defaultTableToFilterColumns']) ? $params['defaultTableToFilterColumns'] : false;
             if($getAllSubItems){
                 $params['limit'] = null;
             }
@@ -456,7 +477,13 @@ namespace IOFrame{
             $columnsToGet = isset($typeArray['columnsToGet']) ? $typeArray['columnsToGet'] : [];
             $extraKeyColumns = isset($typeArray['extraKeyColumns']) ? $typeArray['extraKeyColumns'] : [];
             $groupByFirstNKeys = isset($typeArray['groupByFirstNKeys']) ? $typeArray['groupByFirstNKeys'] : 0;
-            $orderColumns = array_merge($typeArray['orderColumns'],$this->commonOrderColumns);
+            $orderColumns = $typeArray['orderColumns'];
+            $validFilters = $typeArray['columnFilters'];
+
+            if($hasTimeColumns){
+                $orderColumns = array_merge($orderColumns,$this->timeOrderColumns);
+                $validFilters = array_merge($validFilters,$this->timeFilters);
+            }
 
             if(!count($orderColumns)){
                 $orderInputType = gettype($orderBy);
@@ -494,6 +521,24 @@ namespace IOFrame{
             $extraCacheConditions = [];
 
             foreach($validFilters as $filterParam => $filterArray){
+
+                $cond = null;
+                $cacheCond = null;
+
+                if(is_array($filterArray['column']))
+                    $filterArray['filter'] = null;
+
+                $prefix = isset($filterArray['tableName'])? $filterArray['tableName'] : ($defaultTableToFilterColumns ? $typeArray['tableName'] : null);
+                if($prefix){
+                    if(is_array($filterArray['column'])){
+                        foreach ($filterArray['column'] as $index => $val)
+                            $filterArray['column'][$index] = $prefix.'.'.$filterArray['column'][$index];
+                    }
+                    else{
+                        $filterArray['column'] = $prefix.'.'.$filterArray['column'];
+                    }
+                }
+
                 if(isset($params[$filterParam])){
                     if(isset($filterArray['considerNull']) && ($params[$filterParam] === $filterArray['considerNull']) ){
                         $params[$filterParam] = null;
@@ -503,20 +548,39 @@ namespace IOFrame{
                             $params[$filterParam][$key] = [$value,'STRING'];
                         }
                     }
-                    //Edge case
+                    //Edge cases
                     if($filterArray['filter'] === '=' && $params[$filterParam] === null){
                         $cond = [$filterArray['column'],'ISNULL'];
                     }
+                    elseif(is_array($filterArray['column'])){
+                        if($params[$filterParam] !== null)
+                            $cond = [[$params[$filterParam],'STRING'],$filterArray['column'],'IN'];
+                        else{
+                            $cond = [];
+                            foreach ($filterArray['column'] as $column)
+                                array_push($cond,[$column,'ISNULL']);
+                            array_push($cond,'OR');
+                        }
+                        $cacheCond = [$params[$filterParam],$filterArray['column'],'INREV'];
+                    }
                     else
                         $cond = [$filterArray['column'],$params[$filterParam],$filterArray['filter']];
-                    array_push($extraCacheConditions,$cond);
-                    array_push($extraDBConditions,$cond);
                 }
                 elseif(isset($filterArray['default']) && isset($filterArray['alwaysSend'])){
-                    $cond = [$filterArray['column'],[$filterArray['default'],'STRING'],$filterArray['filter']];
-                    array_push($extraCacheConditions,$cond);
+                    if(is_array($filterArray['column'])){
+                        $cond = [[$filterArray['default'],'STRING'],$filterArray['column'],'IN'];
+                        $cacheCond = [$filterArray['default'],$filterArray['column'],'INREV'];
+                    }
+                    else
+                        $cond = [$filterArray['column'],[$filterArray['default'],'STRING'],$filterArray['filter']];
+                }
+
+                if($cond){
+                    $cacheCond = $cacheCond ?? $cond;
+                    array_push($extraCacheConditions,$cacheCond);
                     array_push($extraDBConditions,$cond);
                 }
+
             }
 
             if($extraCacheConditions!=[]){
@@ -630,24 +694,30 @@ namespace IOFrame{
 
                     $resCount = isset($res[0]) ? count($res[0]) : 0;
                     foreach($res as $resultArray){
-
-                        for($i = 0; $i<$resCount/2; $i++)
+                        for($i = 0; $i<$resCount; $i++)
                             unset($resultArray[$i]);
                         $key = '';
-                        foreach($keyColumns as $keyColumn){
-                            $key .= $resultArray[$keyColumn].'/';
+                        $i = $groupByFirstNKeys;
+                        $keyPrefix = '';
+                        foreach(array_merge($keyColumns,$extraKeyColumns) as $keyColumn){
+                            if($i-->0){
+                                $keyPrefix .= $resultArray[$keyColumn].'/';
+                            }
+                            else
+                                $key .= $resultArray[$keyColumn].'/';
                         }
                         $key = substr($key,0,strlen($key) - 1);
-
+                        if($keyPrefix)
+                            $keyPrefix = substr($keyPrefix,0,strlen($keyPrefix) - 1);
                         //Convert safeSTR columns to normal
                         foreach($resultArray as $colName => $colArr){
                             if(in_array($colName,$safeStrColumns))
                                 $resultArray[$colName] = IOFrame\Util\safeStr2Str($resultArray[$colName]);
                         }
-                        if($groupByFirstNKeys && $getAllSubItems){
-                            if(!isset($results[$key]))
-                                $results[$key] = [];
-                            $results[$key][$resultArray[$extraKeyColumns[0]]] = $resultArray;
+                        if($keyPrefix){
+                            if(!isset($results[$keyPrefix]))
+                                $results[$keyPrefix] = [];
+                            $results[$keyPrefix][$key] = $resultArray;
                         }
                         else
                             $results[$key] = $resultArray;
@@ -687,6 +757,18 @@ namespace IOFrame{
                                             ['justTheQuery'=>true,'DISTINCT'=>true,'test'=>false]
                                         ).' UNION ';
                                     break;
+                                case 'distinct_multiple':
+                                    $selectQuery .= '(SELECT DISTINCT Temp_Val AS Val, "'.$columnName.'" as Type FROM (';
+                                    foreach ($arr['columns'] as $column)
+                                        $selectQuery .= $this->SQLHandler->selectFromTable(
+                                                $tableQuery,
+                                                $extraDBConditions,
+                                                [$column.' AS Temp_Val'],
+                                                ['justTheQuery'=>true,'DISTINCT'=>true,'test'=>false]
+                                            ).' UNION ';
+                                    $selectQuery = substr($selectQuery,0,-7);
+                                    $selectQuery .= ') as Meaningless_Alias ORDER BY Val) UNION ';
+                                    break;
                             }
                         }
                         $selectQuery = substr($selectQuery,0,strlen($selectQuery) - 7);
@@ -702,7 +784,7 @@ namespace IOFrame{
                                 $relevantToGetInfo = $typeArray['extraToGet'][$columnName];
                                 $key = $relevantToGetInfo['key'];
                                 $type = $relevantToGetInfo['type'];
-                                if($type !== 'distinct'){
+                                if(!in_array($type,['distinct','distinct_multiple'])){
                                     $results['@'][$key] = $arr['Val'];
                                 }
                                 else{
@@ -718,7 +800,9 @@ namespace IOFrame{
             }
             else{
                 if($joinOtherTable){
-                    $retrieveParams['keyColumnPrefixes'] = [$this->SQLHandler->getSQLPrefix().$typeArray['tableName'].'.'];
+                    $retrieveParams['keyColumnPrefixes'] = [];
+                    for($i = 0; $i<count($keyColumns); $i++)
+                        array_push($retrieveParams['keyColumnPrefixes'],$this->SQLHandler->getSQLPrefix().$typeArray['tableName'].'.');
                     $retrieveParams['pushKeyToColumns'] = false;
                 }
 
@@ -760,7 +844,7 @@ namespace IOFrame{
          * @param string $type Type of items. See the item objects at the top of the class for the parameters of each type.
          * @param array $params of the form:
          *              'update' - bool, whether to only update existing items. Overrides "override".
-         *              'override' - bool, whether to allow overriding existing items. Defaults to true,.
+         *              'override'/'overwrite' - bool, whether to allow overwriting existing items. Defaults to true,.
          *
          * @returns Array|Int, if not creating new auto-incrementing items, array of the form:
          *          <identifier> => <code>
@@ -790,8 +874,12 @@ namespace IOFrame{
             else
                 throw new \Exception('Invalid object type!');
 
+            if(isset($params['overwrite']) && !isset($params['override']))
+                $params['override'] = $params['overwrite'];
+
             $test = isset($params['test'])? $params['test'] : false;
             $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $hasTimeColumns = isset($params['hasTimeColumns'])? $params['hasTimeColumns'] : ($this->objectsDetails[$type]['hasTimeColumns'] ?? true);
             $update = isset($params['update'])? $params['update'] : false;
             $override = $update? true : (isset($params['override'])? $params['override'] : true);
             $autoIncrement = isset($typeArray['autoIncrement']) && $typeArray['autoIncrement'];
@@ -800,6 +888,7 @@ namespace IOFrame{
             $keyColumns = $typeArray['keyColumns'];
             $safeStrColumns = isset($typeArray['safeStrColumns']) ? $typeArray['safeStrColumns'] : [];
             $extraKeyColumns = isset($typeArray['extraKeyColumns']) ? $typeArray['extraKeyColumns'] : [];
+            $groupByFirstNKeys = isset($typeArray['groupByFirstNKeys']) ? $typeArray['groupByFirstNKeys'] : 0;
             $combinedColumns = isset($typeArray['extraKeyColumns']) ? array_merge($typeArray['keyColumns'],$typeArray['extraKeyColumns']) : $typeArray['keyColumns'];
 
             $identifiers = [];
@@ -812,6 +901,7 @@ namespace IOFrame{
             $itemsToGet = [];
             $setColumns = [];
             $inputsThatPassed = [];
+            $onDuplicateKeyColExp = [];
             $timeNow = (string)time();
 
             foreach($typeArray['setColumns'] as $colName => $colArr){
@@ -821,11 +911,13 @@ namespace IOFrame{
                     $colArr['autoIncrement']
                 )
                     continue;
+                if(!empty($colArr['onDuplicateKeyColExp']))
+                    $onDuplicateKeyColExp[$colName] = $colArr['onDuplicateKeyColExp'];
                 array_push($setColumns,$colName);
             }
 
-
-            $setColumns = array_merge($setColumns,$this->commonColumns);
+            if($hasTimeColumns)
+                $setColumns = array_merge($setColumns,$this->timeColumns);
 
             if(!$autoIncrementMainKey){
 
@@ -875,13 +967,17 @@ namespace IOFrame{
                 $identifier = substr($identifier,0,strlen($identifier)-1);
 
                 if(!$autoIncrementMainKey){
-                    if(count($extraKeyColumns) == 0){
+                    if(!$groupByFirstNKeys){
                         $existingArr = $existing[$identifierMap[$index]];
                     }
                     else{
                         $prefix =  explode('/',$identifierMap[$index]);
-                        $target = array_pop($prefix);
+                        $target = [];
+                        for($i=0;$i<$groupByFirstNKeys; $i++)
+                            array_push($target,array_pop($prefix));
+                        $target = array_reverse($target);
                         $prefix = implode('/',$prefix);
+                        $target = implode('/',$target);
                         $existingArr =  isset($existing[$prefix][$target])? $existing[$prefix][$target] : 1;
                     }
                 }
@@ -908,7 +1004,9 @@ namespace IOFrame{
 
                             if(!isset($inputArr[$colName]) &&
                                 !array_key_exists('default',$colArr) &&
-                                !array_key_exists('forceValue',$colArr))
+                                !array_key_exists('forceValue',$colArr) &&
+                                !array_key_exists('function',$colArr)
+                            )
                             {
                                 if($verbose){
                                     echo 'Input '.$index.' is missing the required column '.$colName.EOL;
@@ -919,6 +1017,14 @@ namespace IOFrame{
 
                             if(isset($colArr['forceValue']))
                                 $val = $colArr['forceValue'];
+                            elseif(isset($colArr['function'])){
+                                $tempInputs = [
+                                    'typeArray'=>$typeArray,
+                                    'inputArray'=>$inputArr,
+                                    'params'=>$params
+                                ];
+                                $val = $colArr['function']($tempInputs);
+                            }
                             elseif(isset($inputArr[$colName]))
                                 $val = $inputArr[$colName];
                             else
@@ -940,8 +1046,10 @@ namespace IOFrame{
                             array_push($arrayToSet,$val);
                         }
                         //Add creation and update time
-                        array_push($arrayToSet,[$timeNow,'STRING']);
-                        array_push($arrayToSet,[$timeNow,'STRING']);
+                        if($hasTimeColumns){
+                            array_push($arrayToSet,[$timeNow,'STRING']);
+                            array_push($arrayToSet,[$timeNow,'STRING']);
+                        }
 
                         if($missingInputs){
                             if(!$autoIncrementMainKey){
@@ -971,10 +1079,19 @@ namespace IOFrame{
 
                     foreach($typeArray['setColumns'] as $colName => $colArr){
 
-                        $existingVal = $existingArr[$colName];
+                        $existingVal = $existingArr[$colName] ?? null;
 
                         if(isset($colArr['forceValue']))
                             $val = $colArr['forceValue'];
+                        elseif(isset($colArr['function'])){
+                            $tempInputs = [
+                                'typeArray'=>$typeArray,
+                                'inputArray'=>$inputArr,
+                                'existingArray'=>$existingArr,
+                                'params'=>$params
+                            ];
+                            $val = $colArr['function']($tempInputs);
+                        }
                         elseif(isset($inputArr[$colName]) && $inputArr[$colName] !== null){
                             if(
                                 !empty($colArr['jsonObject'])&&
@@ -1021,12 +1138,14 @@ namespace IOFrame{
                     }
 
                     //Add creation and update time
-                    $created = isset($typeArray['extraKeyColumns'])?
-                        $existingArr['Created'] :
-                        $existingArr['Created'];
+                    if($hasTimeColumns){
+                        $created = isset($typeArray['extraKeyColumns'])?
+                            $existingArr['Created'] :
+                            $existingArr['Created'];
 
-                    array_push($arrayToSet,[$created,'STRING']);
-                    array_push($arrayToSet,[$timeNow,'STRING']);
+                        array_push($arrayToSet,[$created,'STRING']);
+                        array_push($arrayToSet,[$timeNow,'STRING']);
+                    }
 
                     //Add the resource to the array to set
                     array_push($itemsToSet,$arrayToSet);
@@ -1049,7 +1168,7 @@ namespace IOFrame{
                 $this->SQLHandler->getSQLPrefix().$typeArray['tableName'],
                 $setColumns,
                 $itemsToSet,
-                array_merge($params,['returnError'=>true,'onDuplicateKey'=>!$autoIncrementMainKey,'returnRows'=>$autoIncrementMainKey])
+                array_merge($params,['returnError'=>true,'onDuplicateKey'=>!$autoIncrementMainKey,'returnRows'=>$autoIncrementMainKey,'onDuplicateKeyColExp'=>$onDuplicateKeyColExp])
             );
 
             if(!$autoIncrementMainKey){
@@ -1139,13 +1258,18 @@ namespace IOFrame{
             else
                 throw new \Exception('Invalid object type!');
 
-            $validFilters = array_merge($typeArray['columnFilters'],$this->commonFilters);
-
             $test = isset($params['test'])? $params['test'] : false;
             $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $hasTimeColumns = isset($params['hasTimeColumns'])? $params['hasTimeColumns'] : ($this->objectsDetails[$type]['hasTimeColumns'] ?? true);
             $useCache = isset($typeArray['useCache']) ? $typeArray['useCache'] : !empty($typeArray['cacheName']);
             $keyColumns = isset($typeArray['extraKeyColumns']) ? array_merge($typeArray['keyColumns'],$typeArray['extraKeyColumns']) : $typeArray['keyColumns'];
             $childCache = isset($typeArray['childCache']) ? $typeArray['childCache'] : [];
+            $validFilters = $typeArray['columnFilters'];
+            $groupByFirstNKeys = isset($typeArray['groupByFirstNKeys']) ? $typeArray['groupByFirstNKeys'] : 0;
+
+            if($hasTimeColumns){
+                $validFilters = array_merge($validFilters,$this->timeFilters);
+            }
 
             $existingIdentifiers = [];
             $identifiers = [];
@@ -1153,7 +1277,7 @@ namespace IOFrame{
             foreach($items as $index=>$inputArr){
                 $identifier = [];
                 //Add the identifier to the existing identifiers - differentiates on whether we have extra key columns or not
-                if(!isset($typeArray['extraKeyColumns'])){
+                if(!$groupByFirstNKeys){
                     $commonIdentifier = '';
                     foreach($keyColumns as $keyCol){
                         $commonIdentifier .= $inputArr[$keyCol].'/';
@@ -1166,10 +1290,9 @@ namespace IOFrame{
                             array_push($existingIdentifiers,$childCollectionCacheName.$commonIdentifier);
                 }
                 else{
-
                     $commonIdentifier = '';
-                    foreach($typeArray['keyColumns'] as $keyCol)
-                        $commonIdentifier .= $inputArr[$keyCol].'/';
+                    for($i=0; $i<$groupByFirstNKeys; $i++)
+                        $commonIdentifier .= $inputArr[$typeArray['keyColumns'][$i]].'/';
                     $commonIdentifier = substr($commonIdentifier,0,strlen($commonIdentifier)-1);
                     if(!in_array($typeArray['cacheName'].$commonIdentifier,$existingIdentifiers)){
                         array_push($existingIdentifiers,$typeArray['cacheName'].$commonIdentifier);
@@ -1243,9 +1366,9 @@ namespace IOFrame{
         }
 
         /** Move multiple items (to a different category or object)
-         * $items  Array of objects (arrays). Each object needs to contain the keys from they type array's "keyColumns",
+         * @param Array $items  Array of objects (arrays). Each object needs to contain the keys from they type array's "keyColumns",
          *         each key pointing to the value of the desired item to move.
-         * $inputs Array of objects (arrays). Each object needs to contain the keys from they type array's "moveColumns" -
+         * @param Array $inputs Array of objects (arrays). Each object needs to contain the keys from they type array's "moveColumns" -
          *         the values are the new identifiers.
          * @param string $type Type of items. See the item objects at the top of the class for the parameters of each type.
          * @param array $params of the form:
@@ -1286,7 +1409,9 @@ namespace IOFrame{
 
             foreach($typeArray['moveColumns'] as $columnName=>$columnArr){
                 if(isset($inputs[$columnName])){
-                    array_push($assignments, $columnName.' = '.($columnArr['type'] === 'string' ? '\''.$inputs[$columnName].'\'' : $inputs[$columnName]) );
+                    $inputName = $columnArr['inputName'] ?? $columnName;
+                    $inputValue = $inputs[$inputName] ?? $inputs[$columnName];
+                    array_push($assignments, $columnName.' = '.($columnArr['type'] === 'string' ? '\''.$inputValue.'\'' : $inputValue) );
                 }
             }
 

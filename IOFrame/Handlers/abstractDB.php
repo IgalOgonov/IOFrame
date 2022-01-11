@@ -317,6 +317,9 @@ namespace IOFrame{
                         $tempRes[$identifier] = $res[$i];
                     //If we group by first N keys, do something different
                     else{
+                        //Remove old identifier
+                        if(!empty($tempRes[$identifier]))
+                            unset($tempRes[$identifier]);
                         //Calculate the identifier
                         $identifier = explode($keyDelimiter,$identifier);
                         $tempIdentifier = '';
@@ -328,13 +331,12 @@ namespace IOFrame{
                         }
                         $identifier = implode($keyDelimiter,$identifier);
                         //If the identifier was unset, set it
-                        if(!is_array($tempRes[$identifier]))
+                        if(empty($tempRes[$identifier]))
                             $tempRes[$identifier] = [];
                         //Push a DB object into the result array
                         $tempRes[$identifier][$tempIdentifier] = $res[$i];
                     }
                 }
-
                 //If we have extra key columns or grouped by keys, remove original keys from the result
                 if(count($extraKeyColumns) > 0 || $groupByFirstNKeys){
                     foreach($keys as $i=>$keyArray){

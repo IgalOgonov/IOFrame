@@ -35,7 +35,7 @@ namespace IOFrame\Handlers{
         /**Handles uploading a file, and writing it to a location (local or remote).
          * @credit Credit to Geordy James at https://shareurcodes.com/ for some of this code
          *
-         * @param string[] $uploadNames Array of the names of the uploaded files (under "name" in the form).
+         * @param string $uploadNames Array of the names of the uploaded files (under "name" in the form).
          *                  Can also contain a 2 slot array where Arr[0] is the uploaded file name, and Arr[1] is
          *                  a specific name you want to give to the file (otherwise it's randomly generated).
          *                  Defaults to [], then will push each file in $_FILES and give it
@@ -180,9 +180,21 @@ namespace IOFrame\Handlers{
                     $requestedName.'.'.$uploaded_ext : md5( uniqid().$uploaded_name ).'.'.$uploaded_ext;
                 $temp_file     = ( ( ini_get( 'upload_tmp_dir' ) == '' ) ? ( sys_get_temp_dir() ) : ( ini_get( 'upload_tmp_dir' ) ) );
                 $temp_file    .= '/' . md5( uniqid() . $uploaded_name ) . '.' . $uploaded_ext;
+                //Was there an error?
+                if(!empty($uploadedResource[ 'error' ])){
+                    if($verbose)
+                        echo 'Image '.$uploadName.' was not uploaded due to an upload error.'.EOL;
+                    $res[$uploadName] = -2;
+                }
                 // Is it small enough?
-                if( ( $uploaded_size < $maxFileSize )
+                elseif( ( $uploaded_size >= $maxFileSize )
                 ){
+                    if($verbose)
+                        echo 'Image '.$uploadName.' was not uploaded. We can only accept files of size up to '.$maxFileSize.EOL;
+                    $res[$uploadName] = 1;
+                }
+                // Invalid file
+                else {
                     // Strip any metadata, by re-encoding image
                     if( $uploaded_type == 'image/jpeg' ) {
                         if($verbose)
@@ -212,7 +224,7 @@ namespace IOFrame\Handlers{
                     }
                     else{
                         if($verbose)
-                            echo 'Uploaded file is of type '.$uploaded_type.EOL;
+                            echo 'Uploaded file is of type '.$uploaded_type.', moving to '.$temp_file.EOL;
                         //For consistency
                         rename($uploaded_tmp,$temp_file);
                     }
@@ -228,7 +240,7 @@ namespace IOFrame\Handlers{
 
                                 //If the folder doesn't exist, and the setting is true, create it
                                 if($createFolders && !is_dir($basePath))
-                                        mkdir($basePath,0777,true);
+                                    mkdir($basePath,0777,true);
 
                                 $writePath = $basePath . $target_file;
                                 if(!$overwrite && file_exists($writePath)){
@@ -280,12 +292,6 @@ namespace IOFrame\Handlers{
                         if($verbose)
                             echo 'Deleting file at '.$temp_file.EOL;
                     }
-                }
-                // Invalid file
-                else {
-                    if($verbose)
-                        echo 'Image '.$uploadName.' was not uploaded. We can only accept files of size up to '.$maxFileSize.EOL;
-                    $res[$uploadName] = 1;
                 }
             }
 
