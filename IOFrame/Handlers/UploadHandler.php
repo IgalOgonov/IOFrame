@@ -195,6 +195,15 @@ namespace IOFrame\Handlers{
                 }
                 // Invalid file
                 else {
+                    //Sometimes, images are named incorrectly but can still be read as their proper type
+                    $detectedType = exif_imagetype($uploaded_tmp);
+                    $supportedTypes = [
+                        IMAGETYPE_JPEG => 'image/jpeg',
+                        IMAGETYPE_PNG => 'image/png',
+                        IMAGETYPE_WBMP => 'image/webp',
+                    ];
+                    if($detectedType && !empty($supportedTypes[$detectedType]))
+                        $uploaded_type = $supportedTypes[$detectedType];
                     // Strip any metadata, by re-encoding image
                     if( $uploaded_type == 'image/jpeg' ) {
                         if($verbose)

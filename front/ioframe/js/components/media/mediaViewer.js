@@ -157,7 +157,7 @@ Vue.component('media-viewer', {
                         >\
                         <img \
                             v-else-if="mediaType === \'img\'" \
-                            :src="item.local? absoluteMediaURL(item.relativeAddress) : (item.dataType? calculateDBImageLink(item) : item.identifier)"\
+                            :src="extractImageURL(item)"\
                             :draggable="draggable"\
                             ondragstart="eventHub.$emit(\'dragStart\',event)"\
                             ondragenter="eventHub.$emit(\'dragEnter\',event)"\
@@ -167,7 +167,7 @@ Vue.component('media-viewer', {
                         >\
                         <video \
                             v-else-if="mediaType === \'vid\'" \
-                            :src="item.local? absoluteMediaURL(item.relativeAddress) : (item.dataType? calculateDBImageLink(item) : item.identifier)"\
+                            :src="extractImageURL(item)"\
                             preload="metadata"\
                             :draggable="draggable"\
                             ondragstart="eventHub.$emit(\'dragStart\',event)"\
@@ -326,8 +326,19 @@ Vue.component('media-viewer', {
         absoluteIOFrameImage:function(relativeURL){
             return this.sourceURL('ioframe')+'img/'+relativeURL;
         },
+        extractImageURL: function(img){
+            return img.local?
+                this.absoluteMediaURL(img.relativeAddress) :
+                (img.dataType? this.calculateDBImageLink(img) : img.identifier)
+        },
         absoluteMediaURL:function(relativeURL , type = this.mediaType){
             return document.rootURI + document[(type=== 'img'?'imagePathLocal':'videoPathLocal')]+relativeURL;
+        },
+        calculateDBImageLink: function(item){
+            let url = document.rootURI+'api/media?action=getDBMedia&address='+item.identifier+'&resourceType='+this.mediaType;
+            if(item.lastChanged)
+                url = url+'&lastChanged='+item.lastChanged.toString();
+            return url;
         },
         createDisplayName:function(relativeURL){
             return relativeURL.split('/').pop();
@@ -376,12 +387,6 @@ Vue.component('media-viewer', {
         },
         readableSize: function(bytes){
             return getReadableSize(bytes);
-        },
-        calculateDBImageLink: function(item){
-            let url = document.rootURI+'api/media?action=getDBMedia&address='+item.identifier+'&resourceType='+this.mediaType;
-            if(item.lastChanged)
-                url = url+'&lastChanged='+item.lastChanged.toString();
-            return url;
         },
         requestSelection: function(key){
             this.imagesNeedCropping = false;

@@ -1375,7 +1375,7 @@ Vue.component('menus-editor', {
                     </select>
 
                 </div>
-                `+`
+                
                 <div
                 class="meta"
                 :class="{changed:metaChanged}"
@@ -1406,7 +1406,7 @@ Vue.component('menus-editor', {
                     </div>
 
                 </div>
-                `+`
+                
             </form>
 
             <div class="control-buttons" v-if="changed">
@@ -1481,7 +1481,7 @@ Vue.component('menus-editor', {
                    @click.prevent="goUpMenu()"
                    ></button>
 
-                `+`
+                
                    <div class="menu-child-container" v-for="item,index in focusedMenu.children">
 
                        <div class="menu-child new" v-if="menu.preview.newChildIndex === index && !menu.preview.subChild" >
@@ -1517,7 +1517,7 @@ Vue.component('menus-editor', {
                        @click.prevent="menu.preview.newChildIndex = index;menu.preview.subChild=false;"
                        ></button>
 
-                `+`
+                
                        <div class="menu-child"
                        :class="{changed:item['@'].changed && !item['@'].add && !item['@'].remove,add:item['@'].add,remove:item['@'].remove}">
 
@@ -1556,7 +1556,7 @@ Vue.component('menus-editor', {
                            @click.prevent="removeMenuBranch(index)"
                            ></button>
 
-                `+`
+                
                            <div class="menu-child new" v-if="menu.preview.newChildIndex === index && menu.preview.subChild" >
                                <button
                                class="add-menu-child positive-1"
@@ -1598,7 +1598,7 @@ Vue.component('menus-editor', {
 
                    </div>
 
-                `+`
+                
                    <div class="menu-child new" v-if="menu.preview.newChildIndex<0 || !focusedMenu.children || menu.preview.newChildIndex>=focusedMenu.children.length">
 
                        <button

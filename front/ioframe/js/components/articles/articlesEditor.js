@@ -1270,7 +1270,7 @@ Vue.component('articles-editor', {
                 </button>
             </div>
 
-            `+`
+            
             <form class="article-info-editor" v-if="currentMode !== 'view' && (currentMode === 'create' || initiated)">
 
                 <div class="thumbnail-preview" :class="{changed:articleThumbnail.changed}" @click.prevent="mediaSelector.open = true">
@@ -1300,7 +1300,7 @@ Vue.component('articles-editor', {
                      ></button>
 
                 </div>
-            `+`
+            
                 <div
                 v-for="(item, key) in mainItem"
                 v-if="paramMap[key].edit && !paramMap[key].ignore"
@@ -1366,7 +1366,7 @@ Vue.component('articles-editor', {
                      :verbose="verbose"
                 ></div>
             </div>
-            `+`
+            
 
             <article
             v-if="currentMode !== 'create'  && initiated"
@@ -1437,7 +1437,7 @@ Vue.component('articles-editor', {
                     ></button>
 
                 </div>
-            `+`
+            
 
                 <p v-if="blockCreationIndex >= blocks.length && blockOptions.allowAdding"
                    is="article-block-editor"

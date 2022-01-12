@@ -54,6 +54,9 @@ namespace IOFrame{
          *                                              ]
          *                      'useCache'=> bool, default true - if set to false, specific object will not use cache
          *                      'cacheName'=> string - cache prefix
+         *                      'allItemsCacheName'=> string - if set, will use this name to to cache all results when searching without filters.
+         *                                                     DO NOT set for objects where total amount of results is too big to be cached.
+         *                                                     Also, DO NOT set for items that have fathers (as those are cached per father object)
          *                      'extendTTL'=> bool, whether to extend item TTL in cache
          *                      'cacheTTL'=> int, custom cache ttl - defaults to abstractDBWithCache value
          *                      'childCache'=> string[] - when deleting an item that has sub items, will delete the cache
@@ -116,6 +119,15 @@ namespace IOFrame{
          *                                          'default' => if set, will be the default value for this filter
          *                                          'considerNull' => mixed, if passed, this value will be considered "NULL" (since we cannot pass an actual NULL value sometimes, like through the API)
          *                                          'alwaysSend' => if set to true, will always send the filter. Has to have 'default'
+         *                                          'function' => callable - if set, add this expression to the conditions.
+         *                                                        Keep in mind that using even one filter with a function DISABLES CACHE.
+         *                                                                                 The function receives 1 item as input, an associated array of the form:
+         *                                                                                 [
+         *                                                                                  'filterName' => Name of the filter parameter (also how it should appear in "params")
+         *                                                                                  'SQLHandler' => SQLHandler from this class
+         *                                                                                  'typeArray' => The objects details for the relevant item type.
+         *                                                                                  'params' => The parameters passed to the main set function
+         *                                                                                 ]
          *                                      ],
          *                      'extraToGet' => object of objects, extra meta-data to get when getting multiple items,
          *                                      where each object is of the form:
@@ -124,6 +136,14 @@ namespace IOFrame{
          *                                          'type' => string, either 'min'/'max' (range values), 'count' (the key doesn't matter here),
          *                                                    'distinct' (get all distinct values) or 'distinct_multiple' (get distinct values from multiple columns)
          *                                          'columns' => array of strings, if the type is 'distinct_multiple', here you specify all relevant columns to get values from
+         *                                          'function' => callable, default null - if set, will add the result of this function - a string, that is a select query - to the result via UNION.
+         *                                                                                 The function receives 1 item as input, an associated array of the form:
+         *                                                                                 [
+         *                                                                                  'typeArray' => The exising object type array
+         *                                                                                  'params' => The parameters passed to the main set function
+         *                                                                                  'extraDBConditions' => The extra DB conditions that the main items had
+         *                                                                                  'tableQuery' => The string that represents the table/tables to get
+         *                                                                                 ]
          *                                      ],
          *                      'orderColumns' => array of column names by which it is possible to order the query.
          *                      'groupByFirstNKeys' => int, default 0 - whether to group results by the first n keys (less than the total number of keys).
@@ -401,11 +421,11 @@ namespace IOFrame{
             $tableQuery = substr($tableQuery,0,strlen($tableQuery)-12);
 
             $res = $this->SQLHandler->updateTable(
-                    $tableQuery,
-                    $updateArray,
-                    $tableCond,
-                    $params
-                );
+                $tableQuery,
+                $updateArray,
+                $tableCond,
+                $params
+            );
 
             if($res === true && !empty($affectedCacheIdentifiers)){
                 if($verbose)
@@ -429,6 +449,9 @@ namespace IOFrame{
          *                                              without an explicit 'tableName'
          *              'getAllSubItems' - bool, default false. If true, will get all sub-items and ignore limit even if
          *                                 we are getting all items ($items is [])
+         *              'cacheFullResultsCustomSuffix' - if you are getting a sub-set of all the items on an object with allItemsCacheName, but still
+         *                                               want to cache it (despite the filters making $cacheFullResults false),
+         *                                               use this to specify that you are in this specific sub-set.
          *              --- Usage of the params below disables cache even when searching for specific items ---
          *              'limit' - int, standard SQL parameter
          *              'offset' - int, standard SQL parameter
@@ -470,7 +493,7 @@ namespace IOFrame{
             $orderType = isset($params['orderType'])? $params['orderType'] : null;
             $keyColumns = $typeArray['keyColumns'];
             $useCache = isset($typeArray['useCache']) ? $typeArray['useCache'] : !empty($typeArray['cacheName']);
-            $extendTTL = isset($typeArray['extendTTL']) ? $typeArray['extendTTL'] : true;
+            $extendTTL = isset($typeArray['extendTTL']) ? $typeArray['extendTTL'] : false;
             $cacheTTL = isset($typeArray['cacheTTL']) ? $typeArray['cacheTTL'] : 3600;
             $safeStrColumns = isset($typeArray['safeStrColumns']) ? $typeArray['safeStrColumns'] : [];
             $joinOnGet = isset($typeArray['joinOnGet']) ? $typeArray['joinOnGet'] : [];
@@ -479,6 +502,10 @@ namespace IOFrame{
             $groupByFirstNKeys = isset($typeArray['groupByFirstNKeys']) ? $typeArray['groupByFirstNKeys'] : 0;
             $orderColumns = $typeArray['orderColumns'];
             $validFilters = $typeArray['columnFilters'];
+
+            $cacheFullResults = $useCache && !empty($typeArray['allItemsCacheName']) && empty($limit) && empty($offset) && empty($groupByFirstNKeys) &&
+                !(isset($params['allItemsCacheName']) && !$params['allItemsCacheName']);
+            $cacheFullResultsCustomSuffix = isset($params['cacheFullResultsCustomSuffix'])? $params['cacheFullResultsCustomSuffix'] : null;
 
             if($hasTimeColumns){
                 $orderColumns = array_merge($orderColumns,$this->timeOrderColumns);
@@ -525,21 +552,32 @@ namespace IOFrame{
                 $cond = null;
                 $cacheCond = null;
 
-                if(is_array($filterArray['column']))
-                    $filterArray['filter'] = null;
+                if(!empty($filterArray['column'])){
+                    if(is_array($filterArray['column']))
+                        $filterArray['filter'] = null;
 
-                $prefix = isset($filterArray['tableName'])? $filterArray['tableName'] : ($defaultTableToFilterColumns ? $typeArray['tableName'] : null);
-                if($prefix){
-                    if(is_array($filterArray['column'])){
-                        foreach ($filterArray['column'] as $index => $val)
-                            $filterArray['column'][$index] = $prefix.'.'.$filterArray['column'][$index];
-                    }
-                    else{
-                        $filterArray['column'] = $prefix.'.'.$filterArray['column'];
+                    $prefix = isset($filterArray['tableName'])? $filterArray['tableName'] : ($defaultTableToFilterColumns ? $typeArray['tableName'] : null);
+                    if($prefix){
+                        if(is_array($filterArray['column'])){
+                            foreach ($filterArray['column'] as $index => $val)
+                                $filterArray['column'][$index] = $prefix.'.'.$filterArray['column'][$index];
+                        }
+                        else{
+                            $filterArray['column'] = $prefix.'.'.$filterArray['column'];
+                        }
                     }
                 }
 
-                if(isset($params[$filterParam])){
+                if(!empty($filterArray['function'])){
+                    $retrieveParams['useCache'] = false;
+                    $cond = $filterArray['function']([
+                        'filterName'=>$filterParam,
+                        'SQLHandler'=>$this->SQLHandler,
+                        'typeArray'=>$typeArray,
+                        'params'=>$params
+                    ]);
+                }
+                elseif(isset($params[$filterParam])){
                     if(isset($filterArray['considerNull']) && ($params[$filterParam] === $filterArray['considerNull']) ){
                         $params[$filterParam] = null;
                     }
@@ -591,6 +629,15 @@ namespace IOFrame{
                 array_push($extraDBConditions,'AND');
                 $retrieveParams['extraConditions'] = $extraDBConditions;
             }
+
+            if(!empty($extraCacheConditions) || !empty($extraDBConditions))
+                $cacheFullResults = false;
+
+            //This is here because $cacheFullResults can change due to filters
+            if(!$cacheFullResults && $cacheFullResultsCustomSuffix)
+                $cacheFullResultsCustomSuffix =  $typeArray['allItemsCacheName'].$cacheFullResultsCustomSuffix;
+            else
+                $cacheFullResultsCustomSuffix = false;
 
             $joinOtherTable = count($joinOnGet) > 0;
 
@@ -684,12 +731,41 @@ namespace IOFrame{
                 if($groupByFirstNKeys && !$getAllSubItems)
                     $retrieveParams['groupBy'] = $keyColumns;
 
-                $res = $this->SQLHandler->selectFromTable(
-                    $tableQuery,
-                    $extraDBConditions,
-                    $selectionColumns,
-                    $retrieveParams
-                );
+                //Get all items, handle case when allItemsCacheName is set
+                $res = null;
+                $cacheTarget = ($cacheFullResults || $cacheFullResultsCustomSuffix) ?
+                    ($cacheFullResultsCustomSuffix ? $cacheFullResultsCustomSuffix : $typeArray['allItemsCacheName']) :
+                    false;
+                $cacheTargetMeta = $cacheTarget? $cacheTarget.'_@' : false;
+                $gotCacheResults = false;
+                if($cacheTarget){
+                    if($verbose)
+                        echo 'Getting '.$cacheTarget.' from cache'.EOL;
+                    $cacheResults = $this->RedisHandler->call('get', $cacheTarget);
+                    if(!empty($cacheResults) && IOFrame\Util\is_json($cacheResults)){
+                        $res = json_decode($cacheResults,true);
+                        $gotCacheResults = true;
+                    }
+                    elseif($verbose)
+                        echo 'Got nothing from cache!'.EOL;
+                    unset($cacheResults);
+                }
+                if(!$res){
+                    $res = $this->SQLHandler->selectFromTable(
+                        $tableQuery,
+                        $extraDBConditions,
+                        $selectionColumns,
+                        $retrieveParams
+                    );
+                    if($cacheFullResults || $cacheFullResultsCustomSuffix) {
+                        if(!$test)
+                            $this->RedisHandler->call('set',[$cacheTarget,json_encode($res),$cacheTTL]);
+                        if($verbose)
+                            echo 'Adding '.$cacheTarget.' to cache for '.
+                                $cacheTTL.' seconds as '.json_encode($res).EOL;
+                    }
+                }
+
                 if(is_array($res)){
 
                     $resCount = isset($res[0]) ? count($res[0]) : 0;
@@ -726,57 +802,89 @@ namespace IOFrame{
                     if(isset($typeArray['extraToGet']) && $typeArray['extraToGet']){
                         //Prepare the meta information
                         $results['@'] = [];
+                        $response = false;
 
-                        //Get all relevant stuff
-                        $selectQuery = '';
+                        //Only relevant in case we got regular cache results - otherwise, meta results may be out of date.
+                        if($cacheTargetMeta && $gotCacheResults){
+                            if($verbose)
+                                echo 'Getting '.$cacheTargetMeta.' from cache'.EOL;
+                            $cacheResults = $this->RedisHandler->call('get', $cacheTargetMeta);
+                            if(!empty($cacheResults) && IOFrame\Util\is_json($cacheResults))
+                                $response = json_decode($cacheResults,true);
+                            elseif($verbose)
+                                echo 'Got nothing from cache!'.EOL;
+                            unset($cacheResults);
+                        }
 
-                        foreach($typeArray['extraToGet'] as $columnName => $arr){
-                            switch($arr['type']){
-                                case 'min':
-                                case 'max':
-                                    $selectQuery .= $this->SQLHandler->selectFromTable(
-                                            $tableQuery,
-                                            $extraDBConditions,
-                                            [($arr['type'] === 'min' ? 'MIN('.$columnName.')': 'MAX('.$columnName.')').' AS Val, "'.$columnName.'" as Type'],
-                                            ['justTheQuery'=>true,'test'=>false]
-                                        ).' UNION ';
-                                    break;
-                                case 'count':
-                                    $selectQuery .= $this->SQLHandler->selectFromTable(
-                                            $tableQuery,
-                                            $extraDBConditions,
-                                            [(($groupByFirstNKeys && !$getAllSubItems)? 'COUNT(DISTINCT '.implode(',',$keyColumns).')': 'COUNT(*)').' AS Val, "'.$columnName.'" as Type'],
-                                            ['justTheQuery'=>true,'test'=>false]
-                                        ).' UNION ';
-                                    break;
-                                case 'distinct':
-                                    $selectQuery .= $this->SQLHandler->selectFromTable(
-                                            $tableQuery,
-                                            $extraDBConditions,
-                                            [$columnName.' AS Val, "'.$columnName.'" as Type'],
-                                            ['justTheQuery'=>true,'DISTINCT'=>true,'test'=>false]
-                                        ).' UNION ';
-                                    break;
-                                case 'distinct_multiple':
-                                    $selectQuery .= '(SELECT DISTINCT Temp_Val AS Val, "'.$columnName.'" as Type FROM (';
-                                    foreach ($arr['columns'] as $column)
+                        if(!$response){
+                            //Get all relevant stuff
+                            $selectQuery = '';
+
+                            foreach($typeArray['extraToGet'] as $columnName => $arr){
+                                switch($arr['type']){
+                                    case 'min':
+                                    case 'max':
                                         $selectQuery .= $this->SQLHandler->selectFromTable(
                                                 $tableQuery,
                                                 $extraDBConditions,
-                                                [$column.' AS Temp_Val'],
+                                                [($arr['type'] === 'min' ? 'MIN('.$columnName.')': 'MAX('.$columnName.')').' AS Val, "'.$columnName.'" as Type'],
+                                                ['justTheQuery'=>true,'test'=>false]
+                                            ).' UNION ';
+                                        break;
+                                    case 'count':
+                                        $selectQuery .= $this->SQLHandler->selectFromTable(
+                                                $tableQuery,
+                                                $extraDBConditions,
+                                                [(($groupByFirstNKeys && !$getAllSubItems)? 'COUNT(DISTINCT '.implode(',',$keyColumns).')': 'COUNT(*)').' AS Val, "'.$columnName.'" as Type'],
+                                                ['justTheQuery'=>true,'test'=>false]
+                                            ).' UNION ';
+                                        break;
+                                    case 'distinct':
+                                        $selectQuery .= $this->SQLHandler->selectFromTable(
+                                                $tableQuery,
+                                                $extraDBConditions,
+                                                [$columnName.' AS Val, "'.$columnName.'" as Type'],
                                                 ['justTheQuery'=>true,'DISTINCT'=>true,'test'=>false]
                                             ).' UNION ';
-                                    $selectQuery = substr($selectQuery,0,-7);
-                                    $selectQuery .= ') as Meaningless_Alias ORDER BY Val) UNION ';
-                                    break;
+                                        break;
+                                    case 'distinct_multiple':
+                                        $selectQuery .= '(SELECT DISTINCT Temp_Val AS Val, "'.$columnName.'" as Type FROM (';
+                                        foreach ($arr['columns'] as $column)
+                                            $selectQuery .= $this->SQLHandler->selectFromTable(
+                                                    $tableQuery,
+                                                    $extraDBConditions,
+                                                    [$column.' AS Temp_Val'],
+                                                    ['justTheQuery'=>true,'DISTINCT'=>true,'test'=>false]
+                                                ).' UNION ';
+                                        $selectQuery = substr($selectQuery,0,-7);
+                                        $selectQuery .= ') as Meaningless_Alias ORDER BY Val) UNION ';
+                                        break;
+                                    case 'function':
+                                        $selectQuery .= '('.$arr['function']([
+                                                'tableQuery'=>$tableQuery,
+                                                'typeArray'=>$typeArray,
+                                                'params'=>$params,
+                                                'SQLHandler'=>$this->SQLHandler,
+                                                'extraDBConditions'=>$extraDBConditions
+                                            ]).') UNION ';
+                                        break;
+                                }
+                            }
+                            $selectQuery = substr($selectQuery,0,strlen($selectQuery) - 7);
+
+                            if($verbose)
+                                echo 'Query to send: '.$selectQuery.EOL;
+
+                            $response = $this->SQLHandler->exeQueryBindParam($selectQuery,[],['fetchAll'=>true]);
+
+                            if($cacheTargetMeta){
+                                if(!$test)
+                                    $this->RedisHandler->call('set',[$cacheTargetMeta,json_encode($response),$cacheTTL]);
+                                if($verbose)
+                                    echo 'Adding '.$cacheTargetMeta.' to cache for '.
+                                        $cacheTTL.' seconds as '.json_encode($response).EOL;
                             }
                         }
-                        $selectQuery = substr($selectQuery,0,strlen($selectQuery) - 7);
-
-                        if($verbose)
-                            echo 'Query to send: '.$selectQuery.EOL;
-
-                        $response = $this->SQLHandler->exeQueryBindParam($selectQuery,[],['fetchAll'=>true]);
 
                         if($response){
                             foreach($response as $arr){
@@ -784,10 +892,12 @@ namespace IOFrame{
                                 $relevantToGetInfo = $typeArray['extraToGet'][$columnName];
                                 $key = $relevantToGetInfo['key'];
                                 $type = $relevantToGetInfo['type'];
-                                if(!in_array($type,['distinct','distinct_multiple'])){
+                                if( !in_array($type,['distinct','distinct_multiple']) && empty($relevantToGetInfo['aggregate']) ){
                                     $results['@'][$key] = $arr['Val'];
                                 }
                                 else{
+                                    if($arr['Val'] === null)
+                                        continue;
                                     if(!isset( $results['@'][$key]))
                                         $results['@'][$key] = [];
                                     array_push( $results['@'][$key],$arr['Val']);
@@ -815,6 +925,9 @@ namespace IOFrame{
                     array_merge($retrieveParams,['extraKeyColumns'=>$extraKeyColumns,'groupByFirstNKeys'=>$groupByFirstNKeys,'compareCol'=>!$joinOtherTable,'test'=>$test])
                 );
 
+                if(empty($results))
+                    $results = [];
+
                 foreach($results as $index => $res){
                     if(!is_array($res))
                         continue;
@@ -826,6 +939,8 @@ namespace IOFrame{
                         }
                     else{
                         foreach($res as $subIndex => $subItemArray){
+                            if(!is_array($subItemArray))
+                                continue;
                             foreach($subItemArray as $colName => $colArr){
                                 if(in_array($colName,$safeStrColumns))
                                     $results[$index][$subIndex][$colName] = IOFrame\Util\safeStr2Str($results[$index][$subIndex][$colName]);
@@ -890,6 +1005,10 @@ namespace IOFrame{
             $extraKeyColumns = isset($typeArray['extraKeyColumns']) ? $typeArray['extraKeyColumns'] : [];
             $groupByFirstNKeys = isset($typeArray['groupByFirstNKeys']) ? $typeArray['groupByFirstNKeys'] : 0;
             $combinedColumns = isset($typeArray['extraKeyColumns']) ? array_merge($typeArray['keyColumns'],$typeArray['extraKeyColumns']) : $typeArray['keyColumns'];
+            $cacheFullResults = $useCache && !empty($typeArray['allItemsCacheName']) && empty($groupByFirstNKeys);
+            $cacheFullResultsCustomSuffix = isset($params['cacheFullResultsCustomSuffix'])? $params['cacheFullResultsCustomSuffix'] : null;
+            if($cacheFullResults && $cacheFullResultsCustomSuffix)
+                $cacheFullResultsCustomSuffix =  $typeArray['allItemsCacheName'].$cacheFullResultsCustomSuffix;
 
             $identifiers = [];
             $existingIdentifiers = [];
@@ -1186,6 +1305,10 @@ namespace IOFrame{
                             $results[$identifier] = 0;
                     }
                     //If we succeeded, set results to success and remove them from cache
+                    if($cacheFullResults)
+                        array_push($existingIdentifiers,$typeArray['allItemsCacheName']);
+                    if($cacheFullResultsCustomSuffix)
+                        array_push($existingIdentifiers,$cacheFullResultsCustomSuffix);
                     if($existingIdentifiers != [] && $useCache){
                         if(count($existingIdentifiers) == 1)
                             $existingIdentifiers = $existingIdentifiers[0];
@@ -1193,8 +1316,9 @@ namespace IOFrame{
                         if($verbose)
                             echo 'Deleting objects of type "'.$type.'" '.json_encode($existingIdentifiers).' from cache!'.EOL;
 
-                        if(!$test)
+                        if(!$test){
                             $this->RedisHandler->call('del',[$existingIdentifiers]);
+                        }
                     }
                 }
                 //This is the code for missing dependencies
@@ -1221,6 +1345,10 @@ namespace IOFrame{
 
                     };
                     //If we succeeded, set results to success and remove them from cache
+                    if($cacheFullResults)
+                        array_push($existingIdentifiers,$typeArray['allItemsCacheName']);
+                    if($cacheFullResultsCustomSuffix)
+                        array_push($existingIdentifiers,$cacheFullResultsCustomSuffix);
                     if($existingIdentifiers != [] && $useCache){
                         if(count($existingIdentifiers) == 1)
                             $existingIdentifiers = $existingIdentifiers[0];
@@ -1266,6 +1394,10 @@ namespace IOFrame{
             $childCache = isset($typeArray['childCache']) ? $typeArray['childCache'] : [];
             $validFilters = $typeArray['columnFilters'];
             $groupByFirstNKeys = isset($typeArray['groupByFirstNKeys']) ? $typeArray['groupByFirstNKeys'] : 0;
+            $cacheFullResults = $useCache && !empty($typeArray['allItemsCacheName']) && empty($groupByFirstNKeys);
+            $cacheFullResultsCustomSuffix = isset($params['cacheFullResultsCustomSuffix'])? $params['cacheFullResultsCustomSuffix'] : null;
+            if($cacheFullResults && $cacheFullResultsCustomSuffix)
+                $cacheFullResultsCustomSuffix =  $typeArray['allItemsCacheName'].$cacheFullResultsCustomSuffix;
 
             if($hasTimeColumns){
                 $validFilters = array_merge($validFilters,$this->timeFilters);
@@ -1353,6 +1485,10 @@ namespace IOFrame{
 
                 };
                 if($useCache) {
+                    if($cacheFullResults)
+                        array_push($existingIdentifiers,$typeArray['allItemsCacheName']);
+                    if($cacheFullResultsCustomSuffix)
+                        array_push($existingIdentifiers,$cacheFullResultsCustomSuffix);
                     if ($verbose)
                         echo 'Deleting  cache of ' . json_encode($existingIdentifiers) . EOL;
                     if (!$test)
@@ -1393,6 +1529,10 @@ namespace IOFrame{
             $useCache = isset($typeArray['useCache']) ? $typeArray['useCache'] : !empty($typeArray['cacheName']);
             $keyColumns = isset($typeArray['extraKeyColumns']) ? array_merge($typeArray['keyColumns'],$typeArray['extraKeyColumns']) : $typeArray['keyColumns'];
             $childCache = isset($typeArray['childCache']) ? $typeArray['childCache'] : [];
+            $cacheFullResults = $useCache && !empty($typeArray['allItemsCacheName']) && empty($typeArray['groupByFirstNKeys']);
+            $cacheFullResultsCustomSuffix = isset($params['cacheFullResultsCustomSuffix'])? $params['cacheFullResultsCustomSuffix'] : null;
+            if($cacheFullResults && $cacheFullResultsCustomSuffix)
+                $cacheFullResultsCustomSuffix =  $typeArray['allItemsCacheName'].$cacheFullResultsCustomSuffix;
 
             if(!isset($typeArray['moveColumns']) || count($typeArray['moveColumns']) < 1){
                 if($verbose)
@@ -1504,6 +1644,10 @@ namespace IOFrame{
 
                 };
                 if($useCache){
+                    if($cacheFullResults)
+                        array_push($existingIdentifiers,$typeArray['allItemsCacheName']);
+                    if($cacheFullResultsCustomSuffix)
+                        array_push($existingIdentifiers,$cacheFullResultsCustomSuffix);
                     if($verbose)
                         echo 'Deleting  cache of '.json_encode($existingIdentifiers).EOL;
                     if(!$test)

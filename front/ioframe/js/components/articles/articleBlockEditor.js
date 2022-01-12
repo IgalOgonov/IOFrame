@@ -2069,7 +2069,7 @@ Vue.component('article-block-editor', {
                 class="cancel-1 reset"
                 ></button>
             </div>
-            `+`
+            
 
         <form class="block-edit">
                 <div
@@ -2094,7 +2094,7 @@ Vue.component('article-block-editor', {
                      ></button>
 
                 </div>
-                `+`
+                
 
                 <div
                 v-for="(item, key) in mainItem"
@@ -2141,7 +2141,7 @@ Vue.component('article-block-editor', {
                      </select>
 
                 </div>
-                `+`
+                
 
                 <div class="selector-container article-selector" v-if="currentBlock.type === 'article'">
                     <button class="article-name positive-3" :class="{changed:articleSelector.changed}" @click.prevent="articleSelector.open = true">
@@ -2176,7 +2176,7 @@ Vue.component('article-block-editor', {
                     </div>
                 </div>
 
-                `+`
+                
                 <div class="selector-container gallery-selector" v-else-if="currentBlock.type === 'gallery'">
                     <button class="gallery-name positive-3" :class="{changed:gallerySelector.changed}" @click.prevent="gallerySelector.open = true">
                         <span class="title" v-text="paramMap['collection.name'].title"></span> <span v-text="currentBlock.collection ? currentBlock.collection.name : ' - '"></span>
@@ -2209,7 +2209,7 @@ Vue.component('article-block-editor', {
                         ></div>
                     </div>
                 </div>
-                `+`
+                
                 <div class="selector-container image-selector" v-else-if="currentBlock.type === 'cover' || currentBlock.type === 'image' || currentBlock.type === 'video'">
                     <div class="image-preview" :class="{changed:mediaSelector.changed}" @click.prevent="mediaSelector.open = true">
                         <img v-if="currentBlock.type !== 'video'" :src="extractMediaAddress(currentBlock.resource)">
@@ -2235,7 +2235,7 @@ Vue.component('article-block-editor', {
                     </div>
                 </div>
         </form>
-                `+`
+                
     </div>
     <div class="article-block view" :class="{changed:changed}" v-else="">
 

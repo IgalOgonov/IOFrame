@@ -110,7 +110,7 @@ Vue.component('user-login', {
             if(this.verbose)
                 console.log('Inputs are ' + "Email:"+this.m.val+", password:"+this.p.val);
             //validate email
-            if(this.m.val==undefined || this.m.val==""){
+            if(this.m.val==undefined || this.m.val=="" || !this.m.val.match(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/)){
                 this.m.class = "error";
                 errors++;
             }
@@ -118,9 +118,9 @@ Vue.component('user-login', {
                 this.m.class = "";
 
             //validate password
-            if( (this.p.val.length>64) ||(this.p.val.length<8) || (this.p.val.match(/(\s|<|>)/g)!=null)
-                || (this.p.val.match(/[0-9]/g) == null) || (this.p.val.match(/[a-z]|[A-Z]/g) == null) ){
-                this.p.class = "warning";
+            if( (this.p.val.length>64) || (this.p.val.length<8) || (this.p.val.match(/(\s|<|>)/g)!=null)
+                || (this.p.val.match(/[0-9]/g) == null) || (this.p.val.match(/[A-Z]/g) == null)){
+                this.p.class = "error";
                 errors++;
             }
             else
@@ -131,8 +131,6 @@ Vue.component('user-login', {
                 if(!this.twoFactorAuthCode.match(this.regex[this.twoFactorAuthType]))
                     errors++;
             }
-            else
-                this.p.class = "";
 
             //If no errors, log in
             var context = this;

@@ -562,7 +562,7 @@ Vue.component('auth-users-editor', {
                 <button class="type positive-3" @click.prevent="changeAdditionType('actions')" :class="{selected:(additionType==='actions')}">Actions</button>
                 <button  class="type positive-3" @click.prevent="changeAdditionType('groups')" :class="{selected:(additionType==='groups')}">Groups</button>
             </div>
-            `+`
+            
             <div v-if="additionType === 'actions'">
                 <h3> Add New Actions: </h3>
                     <div is="search-list"

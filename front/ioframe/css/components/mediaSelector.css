@@ -73,6 +73,9 @@ html[dir="rtl"] .media-selector .types{
     width: max-content;
     margin: 5px auto;
 }
+.media-selector .search-list .search-results > .search-item.small > .image span > img{
+    min-height: 50px;
+}
 .media-selector .search-list .search-results > .search-item > .identifier textarea {
     width: 100%;
     margin: 5px 0px;

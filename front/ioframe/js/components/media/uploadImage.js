@@ -118,7 +118,7 @@ Vue.component('media-uploader', {
                     <input name="identifier" class="identifier property" type="text" v-model:value="newMediaInfo.identifier" placeholder="Image identifier">
                     </label>
 
-                `+`
+                
                     <label v-for="(itemArr, item) in expectedMeta"
                     >
                         <div v-text="itemArr.text"></div>

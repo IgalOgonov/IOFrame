@@ -1,6 +1,6 @@
 <?php
 if(!defined('validator'))
-    require __DIR__ . '..//../../IOFrame/Util/validator.php';
+    require __DIR__ . '/../../../IOFrame/Util/validator.php';
 require_once $settings->getSetting('absPathToRoot').'vendor/autoload.php';
 $config = HTMLPurifier_Config::createDefault();
 $config->set('HTML.AllowedElements', []);

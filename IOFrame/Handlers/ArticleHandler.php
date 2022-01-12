@@ -40,6 +40,8 @@ namespace IOFrame\Handlers{
             //The first type is the main articles table. The other tables are for individual blocks.
             $this->validObjectTypes = array_merge(['articles'],$this->validBlockTypes);
 
+            $prefix = $params['SQLHandler']->getSQLPrefix();
+
             $this->objectsDetails = [
                 'articles' => [
                     'tableName' => 'ARTICLES',
@@ -54,7 +56,6 @@ namespace IOFrame\Handlers{
                         [
                             'tableName'=> 'CONTACTS',
                             'on' => [
-                                [['user','STRING'],'Contact_Type'],
                                 ['Creator_ID','Identifier'],
                             ],
                         ]
@@ -140,6 +141,16 @@ namespace IOFrame\Handlers{
                     'moveColumns' => [
                     ],
                     'columnFilters' => [
+                        'contactTypeIs' => [
+                            'tableName' => $prefix.'CONTACTS',
+                            'column' => 'Contact_Type',
+                            'filter' => '='
+                        ],
+                        'contactTypeIn' => [
+                            'tableName' => $prefix.'CONTACTS',
+                            'column' => 'Contact_Type',
+                            'filter' => 'IN'
+                        ],
                         'articleIs' => [
                             'column' => 'Article_ID',
                             'filter' => '='

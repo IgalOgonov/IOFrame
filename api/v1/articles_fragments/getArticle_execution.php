@@ -70,7 +70,8 @@ if(is_array($res)){
         }
     }
     //Second, append blocks
-    $blocks = $ArticleHandler->getItems([[$res['articleId']]], 'general-block', $retrieveParams)[$res['articleId']];
+    $blocks = $ArticleHandler->getItems([[$res['articleId']]], 'general-block', $retrieveParams);
+    $blocks = $blocks[$res['articleId']] ?? [];
     $blockOrder = !empty($res['blockOrder']) ? explode(',',$res['blockOrder']) : [];
     $res['blocks'] = [];
 

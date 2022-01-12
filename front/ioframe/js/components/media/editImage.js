@@ -116,7 +116,7 @@ Vue.component('media-editor', {
                         ></button>
                     </label>
                 </div>
-                `+`
+                
                 <div class="properties">
                     <label v-if="type==='local'" for="size" v-text="'Size'"></label>
                     <div v-if="type==='local'" name="size"" class="size property"  v-text="getImageSize"></div>

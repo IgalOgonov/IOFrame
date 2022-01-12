@@ -110,6 +110,7 @@
 /* Media Selector */
 .articles-editor .media-selector-container{
     position: fixed;
+    z-index: 9999;
     top: 5vh;
     right: 125px;
     width: calc(100vw - 250px);
@@ -138,7 +139,6 @@
     max-width: 90vw;
     max-height: 85vh;
     width: 100%;
-
 }
 
 /** Blocks **/

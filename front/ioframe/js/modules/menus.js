@@ -107,7 +107,7 @@ var menus = new Vue({
             operationInput: '',
             //Whether we are currently loading
             initiated: false,
-            verbose:true, //TODO remove this when done building
+            verbose:false,
             test:false
         }
     },

@@ -48,6 +48,7 @@
 #media .search-list .search-results > .search-item > .media span img {
     max-width: 100%;
     max-height: 100%;
+    min-height: 50px;
 }
 #media .search-list .search-results > .search-item > .identifier textarea {
     width: 100%;

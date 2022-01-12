@@ -120,3 +120,15 @@ if(empty($retrieveParams['languageIs']))
     $retrieveParams['languageIs'] = '@';
 elseif($retrieveParams['languageIs'] === '@')
     $retrieveParams['languageIs'] = null;
+
+//Allows restriction of article types via settings
+if(empty($apiSettings))
+    $apiSettings = new IOFrame\Handlers\SettingsHandler($rootFolder.'/localFiles/apiSettings/',$defaultSettingsParams);
+$relevantSetting = $apiSettings->getSetting('articles');
+if(\IOFrame\Util\is_json($relevantSetting)){
+    $relevantSetting = json_decode($relevantSetting,true);
+    if(!empty($relevantSetting['articleContactTypes'])){
+        $types = explode(',',$relevantSetting['articleContactTypes']);
+        $retrieveParams['contactTypeIn'] = $types;
+    }
+}

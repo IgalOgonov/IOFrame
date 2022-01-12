@@ -118,7 +118,7 @@ Vue.component('gallery-editor', {
                     </button>
                 </div>
             </div>
-            `+`
+            
 
                 <div v-if="galleryMembers.length === 0">
                 Nothing to display!

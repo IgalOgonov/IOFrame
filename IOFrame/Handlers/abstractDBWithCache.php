@@ -219,13 +219,14 @@ namespace IOFrame{
 
                 //If we were grouping by keys, "expand" the cached results
                 if($groupByFirstNKeys){
-                    foreach ($cachedTempResults as $index => $results){
+                    $cachedTempResults[$indexMap[$index]] = [];
+                    foreach ($cachedTempResults as $tempCachedResultsIndex => $results){
                         if (!$results || !Util\is_json($results))
                             continue;
                         $results = json_decode($results, true);
                         foreach ($results as $secondIndex => $result)
-                            $cachedTempResults[$index.$keyDelimiter.$secondIndex] = json_encode($result);
-                        unset($cachedTempResults[$index]);
+                            $cachedTempResults[$indexMap[$index]][$secondIndex] = json_encode($result);
+                        unset($cachedTempResults[$tempCachedResultsIndex]);
                     }
                 }
 
@@ -470,12 +471,13 @@ namespace IOFrame{
             if(count($extraKeyColumns)===0 && $missingErrorCode !== -1)
                 foreach($targets as $target){
                     if(gettype($target) === 'array'){
+                        $targetLength = count($target) - $groupByFirstNKeys;
                         if($groupByFirstNKeys)
-                            for($i = 0; $i < count($target) - $groupByFirstNKeys; $i++)
+                            for($i = 0; $i < $targetLength; $i++)
                                 array_pop($target);
                         $target = implode($keyDelimiter,$target);
                     }
-                    if(!is_array($results[$target]))
+                    if(empty($results[$target]))
                         $results[$target] = $missingErrorCode;
                 }
             return $results;

@@ -221,7 +221,21 @@ namespace IOFrame{
                     else
                         $keys[$i] = [$keys[$i]];
 
-                    $tempRes[$key] = 1;
+                    if($groupByFirstNKeys == 0)
+                        $tempRes[$key] = 1;
+                    else{
+                        //Calculate the identifier
+                        $identifier = $keys[$i];
+                        $tempIdentifier = '';
+                        for($j = 0; $j < $totalColCount - $groupByFirstNKeys; $j++)
+                            $tempIdentifier = $j == 0? array_pop($identifier) : array_pop($identifier).$keyDelimiter.$tempIdentifier;
+                        $identifier = implode($keyDelimiter,$identifier);
+                        //If the identifier was unset, set it
+                        if(empty($tempRes[$identifier]))
+                            $tempRes[$identifier] = [];
+                        //Push a DB object into the result array
+                        $tempRes[$identifier][$tempIdentifier] = 1;
+                    }
 
                     //Fill with nulls if needed
                     if($fillMissingKeysWithNull && (count($keys[$i]) < count($keyCol)) ){
@@ -323,12 +337,8 @@ namespace IOFrame{
                         //Calculate the identifier
                         $identifier = explode($keyDelimiter,$identifier);
                         $tempIdentifier = '';
-                        for($j = 0; $j < $totalColCount - $groupByFirstNKeys; $j++){
-                            if($j == 0)
-                                $tempIdentifier = array_pop($identifier);
-                            else
-                                $tempIdentifier = array_pop($identifier).$keyDelimiter.$tempIdentifier;
-                        }
+                        for($j = 0; $j < $totalColCount - $groupByFirstNKeys; $j++)
+                            $tempIdentifier = $j == 0? array_pop($identifier) : array_pop($identifier).$keyDelimiter.$tempIdentifier;
                         $identifier = implode($keyDelimiter,$identifier);
                         //If the identifier was unset, set it
                         if(empty($tempRes[$identifier]))
@@ -339,7 +349,7 @@ namespace IOFrame{
                 }
                 //If we have extra key columns or grouped by keys, remove original keys from the result
                 if(count($extraKeyColumns) > 0 || $groupByFirstNKeys){
-                    foreach($keys as $i=>$keyArray){
+                    foreach($keys as $keyArray){
                         $dbFormattedKeys = $keyArray[0];
                         $keys = [];
                         foreach($dbFormattedKeys as $pair){

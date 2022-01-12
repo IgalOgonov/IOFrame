@@ -77,6 +77,17 @@ Vue.component('user-registration', {
                 ];
             }
         },
+        //Various alert related options
+        alertOptions:{
+            type: Object,
+            default: function(){
+                return {
+                    alertTarget: document.body, /*where to append default alerts to*/
+                    defaultAlerts: true, /*whether default alerts are displayed - if false, always sends events*/
+                    alertEvents: false /*sends events when (or instead of) displaying alerts*/
+                };
+            }
+        },
         text: {
             type: Object,
             default: function(){
@@ -172,13 +183,19 @@ Vue.component('user-registration', {
         eventHub.$on('registrationExpired',this.captchaExpired);
         eventHub.$on('registrationError',this.captchaError);
         for(let i in this.agreementOptions){
-            this.agreements[i] = false;
-            if(this.agreementOptions[i].agreeable === undefined)
-                this.agreementOptions[i].agreeable = true;
-            if(this.agreementOptions[i].required === undefined)
-                this.agreementOptions[i].required = true;
-            if(this.agreementOptions[i].relativeLink)
-                this.agreementOptions[i].link = document.rootURI + this.agreementOptions[i].link;
+            Vue.set(this.agreements,i,JSON.parse(JSON.stringify(this.agreementOptions[i])));
+            //Set defaults
+            this.agreements[i].agree = false;
+            if(this.agreements[i].agreeable === undefined)
+                this.agreements[i].agreeable = true;
+            if(this.agreements[i].required === undefined)
+                this.agreements[i].required = true;
+            if(this.agreements[i].relativeLink)
+                this.agreements[i].link = document.rootURI + this.agreements[i].link;
+            //Function has to be assigned directly
+            if(this.agreements[i].onSend !== undefined && this.agreements[i].onSend.parse !== undefined){
+                this.agreements[i].onSend.parse = this.agreementOptions[i].onSend.parse;
+            }
         };
     },
     methods:{
@@ -232,15 +249,21 @@ Vue.component('user-registration', {
 
             //validate captcha
             if(this.requireCaptcha && this.captchaOptions.siteKey && (this.captcha === '')){
-                alertLog(this.text.captcha.validation,'warning');
+                if(this.alertOptions.defaultAlerts)
+                    alertLog(this.text.captcha.validation,'warning',this.alertOptions.alertTarget);
+                if(this.alertOptions.alertEvents)
+                    eventHub.$emit('registrationEvent',{from:'registration-component',text:this.text.captcha.validation,type:'warning'});
                 errors++;
             }
             let agreement;
             //Check whether any required agreement is checked
-            for(let i in this.agreementOptions){
-                agreement = this.agreementOptions[i];
-                if(agreement.required && !this.agreements[i]){
-                    alertLog(agreement.text.required,'warning');
+            for(let i in this.agreements){
+                agreement = this.agreements[i];
+                if(agreement.required && !this.agreements[i].agree){
+                    if(this.alertOptions.defaultAlerts)
+                        alertLog(agreement.text.required,'warning',this.alertOptions.alertTarget);
+                    if(this.alertOptions.alertEvents)
+                        eventHub.$emit('registrationEvent',{from:'registration-component',text:agreement.text.required,type:'warning'});
                     errors++;
                 }
             };
@@ -260,10 +283,10 @@ Vue.component('user-registration', {
                 data.append('m', this.m.val);
                 data.append('p', context.p.val);
                 data.append('req', req);
-                for(let i in this.agreementOptions){
-                    agreement = this.agreementOptions[i];
-                    if(this.agreements[i] && (agreement.onSend!==undefined) && (agreement.onSend.sendAs!==undefined)){
-                        let value = (agreement.onSend.parse!==undefined)? agreement.onSend.parse(this.agreements[i]) : this.agreements[i];
+                for(let i in this.agreements){
+                    agreement = this.agreements[i];
+                    if(agreement.agree && (agreement.onSend!==undefined) && (agreement.onSend.sendAs!==undefined)){
+                        let value = (agreement.onSend.parse!==undefined)? agreement.onSend.parse(agreement.agree) : agreement.agree;
                         data.append(agreement.onSend.sendAs, value);
                     }
                 };
@@ -382,13 +405,19 @@ Vue.component('user-registration', {
         captchaExpired: function(response){
             if(this.verbose)
                 console.log('Captcha expired!',response);
-            alertLog(this.text.captcha.expired,'warning');
+            if(this.alertOptions.defaultAlerts)
+                alertLog(this.text.captcha.expired,'warning',this.alertOptions.alertTarget);
+            if(this.alertOptions.alertEvents)
+                eventHub.$emit('registrationEvent',{from:'registration-component',text:this.text.captcha.expired,type:'warning'});
             this.captcha = '';
         },
         captchaError: function(response){
             if(this.verbose)
                 console.log('Captcha error!',response);
-            alertLog(this.text.captcha.error,'warning');
+            if(this.alertOptions.defaultAlerts)
+                alertLog(this.text.captcha.error,'warning',this.alertOptions.alertTarget);
+            if(this.alertOptions.alertEvents)
+                eventHub.$emit('registrationEvent',{from:'registration-component',text:this.text.captcha.error,type:'warning'});
             this.captcha = '';
             hcaptcha.reset(this.captchaID);
         }
@@ -440,8 +469,8 @@ Vue.component('user-registration', {
             <input type="text" id="invite_token" :value="visibleToken" disabled>
         </label>
         
-        <div v-for="(options, index) in agreementOptions" class="agreement" :class="{required:options.required}">
-                <input v-if="options.agreeable" type="checkbox" v-model:value="agreements[index]">
+        <div v-for="(options, index) in agreements" class="agreement" :class="{required:options.required}">
+                <input v-if="options.agreeable" type="checkbox" v-model:value="options.agree">
                 <span v-if="options.text.prefix" v-html="options.text.prefix"></span>
                 <a v-if="options.text.link" v-html="options.text.link" :href="options.link"></a>
                 <span v-if="options.text.suffix" v-html="options.text.suffix"></span>

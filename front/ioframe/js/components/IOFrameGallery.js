@@ -34,10 +34,20 @@ Vue.component('ioframe-gallery', {
             type: Boolean,
             default: false
         },
+        //Whether the preview image should instead be the div background
+        previewInBackground:{
+            type: Boolean,
+            default: false
+        },
         //Whether the image slider should be displayed
         hasSlider:{
             type: Boolean,
             default: true
+        },
+        //Whether each slider image should instead be the div background
+        sliderInBackground:{
+            type: Boolean,
+            default: false
         },
         //Whether to go into full-screen display mode when one of the images is clicked
         fullScreenOnClick:{
@@ -416,9 +426,16 @@ Vue.component('ioframe-gallery', {
 
             <div v-if="hasPreview || displayNumber<2 || !hasSlider" class="gallery-preview">
 
-                <div v-for="(item, index) in gallery" class="preview-container" :class="[{selected:selected === index}, 'preview-'+index]" @click="toggleFullScreen()">
-                    <img v-if="loadingImageUrl" :src="loadingImageUrl" class="gallery-member-preview" :class="'gallery-member-preview-placeholder-'+index" style="display:none;">
-                    <img :src="item.url" :alt="item.alt? item.alt : ''" class="gallery-member-preview" :class="'gallery-member-preview-'+index">
+                <div v-for="(item, index) in gallery"
+                 class="preview-container"
+                  :class="[{selected:selected === index}, 'preview-'+index]"
+                    :style="{
+                        'background-image':previewInBackground?'url('+item.url+')':false
+                    }"
+                  @click="toggleFullScreen()"
+                   >
+                    <img v-if="loadingImageUrl && !previewInBackground" :src="loadingImageUrl" class="gallery-member-preview" :class="'gallery-member-preview-placeholder-'+index" style="display:none;">
+                    <img v-if="!previewInBackground" :src="item.url" :alt="item.alt? item.alt : ''" class="gallery-member-preview" :class="'gallery-member-preview-'+index">
                 </div>
 
             </div>
@@ -439,10 +456,13 @@ Vue.component('ioframe-gallery', {
                     v-if="indicesInDisplayRange.indexOf(index)!==-1 && hasSlider"
                     class="image-container gallery"
                     :class="[{selected:selected === index}, 'image-'+index]"
+                    :style="{
+                        'background-image':sliderInBackground?'url('+item.url+')':false
+                    }"
                     @click.prevent="select(index)"
                     >
-                        <img v-if="loadingImageUrl" :src="loadingImageUrl" class="gallery-member" :class="'gallery-member-placeholder-'+index" style="display:none;">
-                        <img :src="item.url" :alt="item.alt? item.alt : ''" class="gallery-member" :class="'gallery-member-'+index">
+                        <img v-if="loadingImageUrl && !sliderInBackground" :src="loadingImageUrl" class="gallery-member" :class="'gallery-member-placeholder-'+index" style="display:none;">
+                        <img  v-if="!sliderInBackground" :src="item.url" :alt="item.alt? item.alt : ''" class="gallery-member" :class="'gallery-member-'+index">
                     </div>
 
                     <div v-if="nextItemsOutOfDisplayRange && outOfDisplayImagesUrl.next" class="out-of-view next" v-html="outOfDisplayImagesUrl.next"></div>
