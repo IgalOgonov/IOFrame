@@ -328,6 +328,7 @@ switch($action){
             case '1.2.0.0':
                 break;
             case '1.2.0.1':
+            case '1.2.1.0':
                 break;
             default:
         }
@@ -711,6 +712,8 @@ switch($action){
                                     $earlyFailure = !$SQLHandler->exeQueryBindParam('ALTER TABLE '.$prefix.'ROUTING_MAP DROP Match_Partial_URL;',[],['test'=>$test]);
                                 break;
                             case '1.2.0.1':
+                                break;
+                            case '1.2.1.0':
                                 break;
                             default:
                         }
