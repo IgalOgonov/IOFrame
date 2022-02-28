@@ -338,6 +338,11 @@ namespace IOFrame\Util{
             rename( $oldname, $newname );
     }
 
+    //Check if an array is sequential or not
+    function array_has_string_keys(array $array) {
+        return count(array_filter(array_keys($array), 'is_string')) > 0;
+    }
+
     /**
      * array_merge_recursive does indeed merge arrays, but it converts values with duplicate
      * keys to arrays rather than overwriting the value in the first array with the duplicate
@@ -380,7 +385,7 @@ namespace IOFrame\Util{
         //Merge every element from array 2 into array 1
         foreach ( $array2 as $key => &$value )
         {
-            if ( is_array ( $value ) && isset ( $merged [$key] ) && is_array ( $merged [$key] ) )
+            if (is_array ( $value ) && array_has_string_keys($value) && isset ( $merged [$key] ) && is_array ( $merged [$key] ) )
             {
                 $merged [$key] = array_merge_recursive_distinct ( $merged [$key], $value, $params );
                 //If we merged with an array full of nulls, delete the result

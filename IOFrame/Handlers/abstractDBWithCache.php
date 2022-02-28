@@ -440,7 +440,8 @@ namespace IOFrame{
                             unset($targets[$identifierMap[$identifier]]);
                         else{
                             foreach ($dbResult as $secondaryKey=>$res)
-                                unset($targets[$identifierMap[$identifier.$keyDelimiter.$secondaryKey]]);
+                                if(!empty($identifierMap[$identifier.$keyDelimiter.$secondaryKey]))
+                                    unset($targets[$identifierMap[$identifier.$keyDelimiter.$secondaryKey]]);
                         }
                     //Dont forget to update the cache with the DB objects, if we're using cache
                     if(

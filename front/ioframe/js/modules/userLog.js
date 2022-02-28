@@ -7,6 +7,7 @@ if(eventHub === undefined)
 //The plugin list component, which is responsible for everything
 var userLog = new Vue({
     el: '#userLog',
+    name: 'User Login',
     data: {
         test: false,
         verbose: false

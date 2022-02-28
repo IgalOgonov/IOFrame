@@ -6,6 +6,7 @@ if(eventHub === undefined)
 //***************************//
 var galleries = new Vue({
     el: '#galleries',
+    name: 'Galleries',
     mixins:[sourceURL],
     data: {
         configObject: JSON.parse(JSON.stringify(document.siteConfig)),

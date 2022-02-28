@@ -17,13 +17,13 @@ namespace IOFrame{
     const DB_FIELD_SEPARATOR = '#&%#'; //For DB purposes
     ////--------------------Correct EOL - CLI vs Server--------------------
     if(!defined('EOL')){
-        if (php_sapi_name() == "cli") {
+        if (\php_sapi_name() == "cli") {
             define("EOL",PHP_EOL);
         } else {
             define("EOL",'<br>');;
         }
     }
-    define('EOL_FILE',mb_convert_encoding('&#x000A;', 'UTF-8', 'HTML-ENTITIES'));
+    define('EOL_FILE',\mb_convert_encoding('&#x000A;', 'UTF-8', 'HTML-ENTITIES'));
 
 //-------------------Opens definitions.json and defines them.
     $dynamicDefinitions = __DIR__.'\..\localFiles\definitions\definitions.json';

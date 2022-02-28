@@ -5,6 +5,7 @@
 //The plugin list component, which is responsible for everything
 var userReg = new Vue({
     el: '#userReg',
+    name: 'User Registration',
     data: {
         test:false,
         verbose:false

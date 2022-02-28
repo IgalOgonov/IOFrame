@@ -89,6 +89,38 @@ function generateFP(attrName, target){
     });
 }
 
+/**
+ * Deep merge two objects.
+ * @param target
+ * @param ...sources
+ */
+function mergeDeep(target, ...sources) {
+    if (!sources.length)
+        return target;
+
+    const isObject = function(item){
+        return (item && typeof item === 'object' && !Array.isArray(item));
+    }
+
+    const source = sources.shift();
+
+    if (isObject(target) && isObject(source)) {
+        for (const key in source) {
+            if (isObject(source[key])) {
+                if (!target[key]) Object.assign(target, { [key]: {} });
+                mergeDeep(target[key], source[key]);
+            } else {
+                if((source[key] !== undefined) && (source[key] !== null))
+                    Object.assign(target, { [key]: source[key] });
+                else
+                    delete target[key];
+            }
+        }
+    }
+
+    return mergeDeep(target, ...sources);
+}
+
 // Simple but unreliable function to create string hash by Sergey.Shuchkin [t] gmail.com
 // alert( strhash('http://www.w3schools.com/js/default.asp') ); // 6mn6tf7st333r2q4o134o58888888888
 function strhash( str ) {

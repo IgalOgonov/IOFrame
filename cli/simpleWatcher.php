@@ -30,7 +30,7 @@ echo EOL.'----IOFrame Simple Watcher----'.EOL.EOL;
 
 //-------------------- Get user options --------------------
 $test = false;
-$flags = getopt('f:r:i:o:d:hts',['fulloath']);
+$flags = getopt('f:r:i:o:d:hxts',['fulloath']);
 //Help message
 if(isset($flags['h']))
     die('Available flags are:'.EOL.'
@@ -42,6 +42,7 @@ if(isset($flags['h']))
     -o timeOut - number of times a changed file that failed to update tries again. Minimum 0, maximum 100, default 3. '.EOL.'
     -s Silent mode - will not print changes made to files - Defaults to false'.EOL.'
     -t Test mode - will not change files, only print would-be changes (overrides silent mode)'.EOL.'
+    -x Overrides files (even if not newer)'.EOL.'
     ');
 
 if(!isset($flags['f']))
@@ -75,6 +76,8 @@ if(isset($flags['t'])){
     $silent = false;
 }
 
+$overwrite = isset($flags['x']);
+
 $jsonPath = __DIR__.'/'.$flags['f'];
 
 if(!is_file($jsonPath))
@@ -98,7 +101,7 @@ $inputs = json_decode($JSONFile,true);
 $watchArray = [];
 
 //The following function is here to allow recursively watching folders
-function populateWatchArray($inputs,&$watchArray,$depth,$silent,$test,$baseUrl){
+function populateWatchArray($inputs,&$watchArray,$depth,$silent,$test,$baseUrl,$overwrite = false){
     foreach($inputs as $index => $input){
         if(empty($input['target'])){
             if(!$silent)
@@ -121,7 +124,7 @@ function populateWatchArray($inputs,&$watchArray,$depth,$silent,$test,$baseUrl){
         elseif(is_file($fullTarget)){
             if(!$silent)
                 echo '['.$changeTime.'] '.$fullTarget.' added to watchlist'.EOL;
-            if(!is_file($fullDestination) || @filemtime($fullDestination) < $changeTime){
+            if((!is_file($fullDestination) || @filemtime($fullDestination) < $changeTime) || $overwrite){
                 if(!$silent){
                     if(is_file($fullDestination))
                         echo 'Watched file '.$index.' target file '.$fullDestination.' does not exist, copying file!'.EOL;
@@ -166,7 +169,7 @@ function populateWatchArray($inputs,&$watchArray,$depth,$silent,$test,$baseUrl){
                     'depth'=>$currentDepth-1,
                 ]);
             }
-            populateWatchArray($dirInputs,$watchArray,$depth-1,$silent,$test,$baseUrl);
+            populateWatchArray($dirInputs,$watchArray,$depth-1,$silent,$test,$baseUrl,$overwrite);
         }
         else{
             if(!$silent)
@@ -174,7 +177,7 @@ function populateWatchArray($inputs,&$watchArray,$depth,$silent,$test,$baseUrl){
         }
     }
 }
-populateWatchArray($inputs,$watchArray,$depth,$silent,$test,$baseUrl);
+populateWatchArray($inputs,$watchArray,$depth,$silent,$test,$baseUrl,$overwrite);
 
 //Input related - not on windows
 $windows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';

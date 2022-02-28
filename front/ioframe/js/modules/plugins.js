@@ -250,6 +250,7 @@ Vue.component('plugin', {
 //The plugin list component, which is responsible for everything
 var pluginList = new Vue({
     el: '#plugin-list',
+    name: 'Plugin list',
     data: {
         updateComplete: false,
         currentOptions: {},     //Currently displayed options in the prompt

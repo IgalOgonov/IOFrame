@@ -43,6 +43,7 @@ Vue.component('plugin-order', {
 //------------The plugin list component, which is responsible for everything
 var pluginOrderList = new Vue({
     el: '#plugin-order-list',
+    name: 'Plugin order list',
     data: {
         temp: {},
         replyInTransit: false,
