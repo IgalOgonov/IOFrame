@@ -23,7 +23,6 @@
  * getOrders
  *      - Gets multiple orders from the database
  *          ids                 - string, default null - JSON encoded array of IDs. If null, gets all orders instead.
- *          getLimitedInfo      - bool, default false - ill only get 'id', 'created' and 'lastUpdated' (apart from 'userInfo').
  *          typeIs              - string, default null - If not null, only returns orders of this type
  *          statusIs            - string, default null - If not null, only returns orders with this status
  *          The following are ONLY relevant if IDs is null:
@@ -123,7 +122,7 @@
  *          ]
  *
  *_________________________________________________
- * getUserOrders
+ * getUserOrders TODO
  *      - Gets all the orders of a single user.
  *          userID - int, ID of the user
  *          getLimitedInfo - bool, default false -  Will only return Order_ID, Relation_Type, Created and Last_Updated columns
@@ -279,8 +278,8 @@ switch($action){
         $arrExpected = array_merge(["ids","getLimitedInfo","typeIs","statusIs"],$standardPaginationInputs);
 
         require __DIR__ . '/../setExpectedInputs.php';
-        require 'orders_fragments/getOrders_auth_checks.php';
         require 'orders_fragments/getOrders_validation_checks.php';
+        require 'orders_fragments/getOrders_auth_checks.php';
         require 'orders_fragments/getOrders_execution.php';
 
         if(is_array($result))
@@ -324,11 +323,12 @@ switch($action){
 
     case 'getUserOrders':
         $arrExpected = array_merge(["userID","returnOrders","getLimitedInfo","relationType"],$standardPaginationInputs);
-
+        /* TODO
         require __DIR__ . '/../setExpectedInputs.php';
         require 'orders_fragments/getUserOrders_validation_checks.php';
         require 'orders_fragments/getUserOrders_auth_checks.php';
         require 'orders_fragments/getUserOrders_execution.php';
+         */
 
         if(is_array($result))
             echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_FORCE_OBJECT);

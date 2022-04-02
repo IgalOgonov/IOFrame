@@ -15,6 +15,11 @@ function generateFP(attrName,target){res=["123"];if(attrName===undefined)
 attrName="deviceID";if(target===undefined)
 target="localStorage";var options={excludeLanguage:!0,excludeColorDepth:!0,excludeAvailableScreenResolution:!0,excludeScreenResolution:!0,excludeTimezoneOffset:!0,excludePlugins:!0,excludeAdBlock:!0};fingerprints=new Fingerprint2(options);fingerprints.get(function(result){if(target=='localStorage')
 localStorage.setItem(attrName,result)})}
+function mergeDeep(target,...sources){if(!sources.length)
+return target;const isObject=function(item){return(item&&typeof item==='object'&&!Array.isArray(item))}
+const source=sources.shift();if(isObject(target)&&isObject(source)){for(const key in source){if(isObject(source[key])){if(!target[key])Object.assign(target,{[key]:{}});mergeDeep(target[key],source[key])}else{if((source[key]!==undefined)&&(source[key]!==null))
+Object.assign(target,{[key]:source[key]});else delete target[key]}}}
+return mergeDeep(target,...sources)}
 function strhash(str){if(str.length%32>0)str+=Array(33-str.length%32).join("z");var hash='',bytes=[],i=j=k=a=0,dict=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','1','2','3','4','5','6','7','8','9'];for(i=0;i<str.length;i++){ch=str.charCodeAt(i);bytes[j++]=(ch<127)?ch&0xFF:127}
 var chunk_len=Math.ceil(bytes.length/32);for(i=0;i<bytes.length;i++){j+=bytes[i];k++;if((k==chunk_len)||(i==bytes.length-1)){a=Math.floor(j/k);if(a<32)
 hash+='0';else if(a>126)
@@ -64,6 +69,11 @@ function dateToTimestamp(date){date=date.split("-");var newDate=date[0]+","+date
 function timestampToDate(timestamp){let date=new Date(+timestamp);let realDate=date.getFullYear()+'-';let month=date.getMonth()+1;if(month<10)
 month='0'+month;realDate+=month+'-';date=date.getDate();if(date<10)
 date='0'+date;realDate+=date;return realDate}
+function timeStampToFullDate(timestamp){timestamp-=0;timestamp+=document.serverTimeDelta??0;timestamp*=1000;let date=timestampToDate(timestamp);let hours=Math.floor(timestamp%(1000*60*60*24)/(1000*60*60));let minutes=Math.floor(timestamp%(1000*60*60)/(1000*60));let seconds=Math.floor(timestamp%(1000*60)/(1000));if(hours<10)
+hours='0'+hours;if(minutes<10)
+minutes='0'+minutes;if(seconds<10)
+seconds='0'+seconds;return{date:date,hours:hours,minutes:minutes,seconds:seconds}}
+function timeStampToReadableFullDate(timestamp){let obj=timeStampToFullDate(timestamp);return obj.date.split('-').reverse().join('-')+', '+obj.hours+':'+obj.minutes+':'+obj.seconds}
 function htmlDecode(input){var e=document.createElement('textarea');e.innerHTML=input;return e.childNodes.length===0?"":e.childNodes[0].nodeValue};function initPage(pathToRoot,callbacks={}){if(callbacks.sessionInfoUpdated===undefined)
 callbacks.sessionInfoUpdated=function(){location.reload()};var timenow=new Date().getTime();timenow=Math.floor(timenow/1000);if(typeof(Storage)==="undefined"){alertLog('Local storage not enabled! Certain functions will be available to you.','warning')}else{if(!sessionStorage.getItem('good_exit')||sessionStorage.getItem('good_exit')==='true')
 window.addEventListener('load',function(){sessionStorage.setItem('good_exit','pending')});else{console.log('Possible crash, trying to recover...');checkLoggedIn(document.pathToRoot,!1).then(function(res){if(!res){if(callbacks.notLoggedIn!==undefined)

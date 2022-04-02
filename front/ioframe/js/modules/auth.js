@@ -372,7 +372,7 @@ var auth = new Vue({
             if(this.test)
                 console.log('Current Type ', this.currentType ,'Current Operation ', this.currentOperation ,'Current input ',this.operationInput);
 
-            var data = new FormData();
+            let data = new FormData();
             var test = this.test;
             var currentOperation = this.currentOperation;
 

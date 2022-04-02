@@ -42,7 +42,6 @@ Vue.component('add-2fa', {
                     messageFailed:'Unknown server response!',
                     codePlaceholderExisting:'Existing App Code',
                     codePlaceholderNew:'New App Code',
-                    send:'Toggle 2FA '+(this.initialState?'off':'on'),
                     responses: {
                         'AUTHENTICATION_FAILURE':'You are no longer logged in!',
                         'INPUT_VALIDATION_FAILURE':'Invalid code, or request timed out and needs to be retried',
@@ -57,10 +56,16 @@ Vue.component('add-2fa', {
             type: Boolean,
             default: false
         },
-        //Will either display result as an alert (default), or send the parsed event
-        alertResult: {
-            type: Boolean,
-            default: true
+        //Alert Options
+        alertOptions: {
+            type: Object,
+            default: function(){
+				return {
+					use:true, //Whether to use this, or send event instead
+					target:document.body, //Alert target
+					params:{} //Alert params
+				};
+			}
         },
         //App Identifier
         identifier: {
@@ -164,7 +169,7 @@ Vue.component('add-2fa', {
 
             //Validation
             if( (action==='confirm' || this.requireExistingCode) && !this.code.match(/^\d{6}$/) ){
-                if(this.alertResult)
+                if(this.alertOptions.use)
                     alertLog(this.text.validationFailure,'warning');
                 eventHub.$emit('toggle2FAValidationFailure');
                 return ;
@@ -252,7 +257,7 @@ Vue.component('add-2fa', {
                         this.renderQR();
                     }
             }
-            if(this.alertResult && message)
+            if(this.alertOptions.use && message)
                 alertLog(message,messageType);
             eventHub.$emit('twoFactorAppResponse',{
                 action:action,

@@ -94,18 +94,7 @@ Vue.component('default-headline-renderer', {
                     parser: function(context = this){
                         let article = context.article;
                         let timestamp = article.updated;
-                        timestamp *= 1000;
-                        let date = timestampToDate(timestamp).split('-').reverse().join('-');
-                        let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
-                        let minutes = Math.floor(timestamp%(1000 * 60 * 60)/(1000 * 60));
-                        let seconds = Math.floor(timestamp%(1000 * 60)/(1000));
-                        if(hours < 10)
-                            hours = '0'+hours;
-                        if(minutes < 10)
-                            minutes = '0'+minutes;
-                        if(seconds < 10)
-                            seconds = '0'+seconds;
-                        return '<span class="updated">'+date + ', ' + hours+ ':'+ minutes+ ':'+seconds+'</span>';
+                        return '<span class="updated">'+timeStampToReadableFullDate(timestamp)+'</span>';
                     }
                 },
                 created:{
@@ -113,18 +102,7 @@ Vue.component('default-headline-renderer', {
                     parser: function(context = this){
                         let article = context.article;
                         let timestamp = article.created;
-                        timestamp *= 1000;
-                        let date = timestampToDate(timestamp).split('-').reverse().join('-');
-                        let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
-                        let minutes = Math.floor(timestamp%(1000 * 60 * 60)/(1000 * 60));
-                        let seconds = Math.floor(timestamp%(1000 * 60)/(1000));
-                        if(hours < 10)
-                            hours = '0'+hours;
-                        if(minutes < 10)
-                            minutes = '0'+minutes;
-                        if(seconds < 10)
-                            seconds = '0'+seconds;
-                        return '<span class="created">'+date + ', ' + hours+ ':'+ minutes+ ':'+seconds+'</span>';
+                        return '<span class="updated">'+timeStampToReadableFullDate(timestamp)+'</span>';
                     }
                 },
                 subtitle:{

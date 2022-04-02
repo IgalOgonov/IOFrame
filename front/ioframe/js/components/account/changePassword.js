@@ -34,10 +34,16 @@ Vue.component('change-password', {
                 }
             }
         },
-        //Will either display result as an alert (default), or send the parsed event
-        alertResult: {
-            type: Boolean,
-            default: true
+        //Alert Options
+        alertOptions: {
+            type: Object,
+            default: function(){
+				return {
+					use:true, //Whether to use this, or send event instead
+					target:document.body, //Alert target
+					params:{} //Alert params
+				};
+			}
         },
         //App Identifier
         identifier: {
@@ -176,8 +182,10 @@ Vue.component('change-password', {
                 default:
                     message = this.test? ('Test response: '+ response) : this.text.messageFailed;
             }
-            if(this.alertResult)
-                alertLog(message,messageType);
+            if(!message)
+                message = this.text.responses[response];
+            if(this.alertOptions.use)
+                alertLog(message,messageType,this.alertOptions.target,this.alertOptions.params);
 
             eventHub.$emit('passwordChangeResult',{
                 newPassword:this.input,
@@ -191,8 +199,7 @@ Vue.component('change-password', {
     template: `
         <div class="change-password">
             <h4 v-if="expires > -1" v-text="validFor" :class="success? 'positive' : (authExpires>0 ? 'warning' : 'negative')"></h4>
-            <label v-if="finished" for="password" v-text="text.title"></label>
-            <input v-if="finished" name="password" type="password" v-model:value="input">
+            <input v-if="finished" name="password" type="password" :placeholder="text.title" v-model:value="input">
             <h4 v-if="finished" v-html="text.secondary"></h4>
             <button v-if="finished" @click.prevent="changePassword()" v-text="text.send"></button>
         </div>

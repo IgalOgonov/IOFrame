@@ -1,6 +1,6 @@
 <?php
 
-//We will use this both for auth and later for execution
+//TODO change to proper filter We will use this both for auth and later for execution
 $orderUsers = $PurchaseOrderHandler->getOrderUsers(
     $inputs['id'],
     ['test'=>$test,'getLimitedInfo'=>false]

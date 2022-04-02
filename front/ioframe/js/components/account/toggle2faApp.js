@@ -18,6 +18,8 @@ Vue.component('toggle-2fa', {
                     alreadyChanging: 'Already toggling 2FA!',
                     messageFailed:'Failed to toggle 2FA!',
                     messageSucceeded:'Toggled 2FA!',
+                    toggleOn:'Toggle 2FA ON',
+                    toggleOff:'Toggle 2FA OFF',
                     responses: {
                         'WRONG_CSRF_TOKEN':'Problem sending form - try again, or refresh the page.',
                         'NO_SUPPORTED_2FA':'User has no 2FA methods available, cannot turn on!',
@@ -29,10 +31,16 @@ Vue.component('toggle-2fa', {
                 }
             }
         },
-        //Will either display result as an alert (default), or send the parsed event
-        alertResult: {
-            type: Boolean,
-            default: true
+        //Alert Options
+        alertOptions: {
+            type: Object,
+            default: function(){
+				return {
+					use:true, //Whether to use this, or send event instead
+					target:document.body, //Alert target
+					params:{} //Alert params
+				};
+			}
         },
         //App Identifier
         identifier: {
@@ -77,7 +85,7 @@ Vue.component('toggle-2fa', {
     },
     computed:{
         send:function (){
-            return 'Toggle 2FA '+(this.initialState?'off':'on');
+            return this.text[this.initialState? 'toggleOff' : 'toggleOn'];
         }
     },
     methods:{
@@ -156,8 +164,8 @@ Vue.component('toggle-2fa', {
                     message = this.test? ('Test response: '+ response) : this.text.messageFailed;
             }
             message = this.text.responses[response]? this.text.responses[response] : this.text.messageFailed;
-            if(this.alertResult)
-                alertLog(message,messageType);
+            if(this.alertOptions.use)
+                alertLog(message,messageType,this.alertOptions.target,this.alertOptions.params);
             eventHub.$emit('toggle2FAResult',{
                 response:response,
                 message:message,

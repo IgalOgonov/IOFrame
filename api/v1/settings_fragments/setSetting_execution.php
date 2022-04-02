@@ -7,5 +7,3 @@ $result = $targetSettings->setSetting(
     $params['settingValue'],
     ['test'=>$test,'targetName'=>null,'createNew'=>$params['createNew']]
 );
-
-

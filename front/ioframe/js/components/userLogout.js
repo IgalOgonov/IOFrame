@@ -11,6 +11,11 @@ Vue.component('user-logout', {
                 };
             }
         },
+        //Identifier
+        identifier: {
+            type: String,
+            default: ''
+        },
         test:{
             type: Boolean,
             default: false

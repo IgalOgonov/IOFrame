@@ -39,15 +39,26 @@ Vue.component('reset-mail', {
                 }
             }
         },
-        //Will either display result as an alert (default), or send the parsed event
-        alertResult: {
-            type: Boolean,
-            default: true
+        //Alert Options
+        alertOptions: {
+            type: Object,
+            default: function(){
+				return {
+					use:true, //Whether to use this, or send event instead
+					target:document.body, //Alert target
+					params:{} //Alert params
+				};
+			}
         },
         //If provided, will reset using this email
         email: {
             type: String,
             default: ''
+        },
+        //Selected language
+        language: {
+            type: String,
+            default: document.selectedLanguage ?? ''
         },
         //App Identifier
         identifier: {
@@ -112,6 +123,8 @@ Vue.component('reset-mail', {
             let data = new FormData();
             data.append('action', 'mailReset');
             data.append('mail', this.email? this.email : this.resetMail);
+            if(this.language)
+                data.append('language', this.language);
 
             if(this.verbose)
                 console.log('Sending mail reset request for ',this.email? this.email : this.resetMail);
@@ -174,8 +187,8 @@ Vue.component('reset-mail', {
             if(!message){
                 message = this.text.responses[response];
             }
-            if(this.alertResult)
-                alertLog(message,messageType);
+            if(this.alertOptions.use)
+                alertLog(message,messageType,this.alertOptions.target,this.alertOptions.params);
             else
                 eventHub.$emit('mailResetResult',{
                     response:response,
@@ -188,10 +201,8 @@ Vue.component('reset-mail', {
     template: `
         <div class="reset-mail">
             <div class="reset-mail-text" v-if="text.resetMail" v-text="text.resetMail"></div>
-            <div class="resend" v-if="!resetMailMessage">
-                <input v-if="!email" type="text" v-model:value="resetMail" :placeholder="text.reactivatePlaceholder?text.reactivatePlaceholder:'Email Address'">
-                <button @click.prevent="sendMailReset" v-text="text.resetMailButton?text.resetMailButton:'Request Mail Reset'"></button>
-            </div>
+            <input v-if="!resetMailMessage &&!email" type="text" v-model:value="resetMail" :placeholder="text.resetMailPlaceholder?text.resetMailPlaceholder:'Email Address'">
+            <button v-if="!resetMailMessage" @click.prevent="sendMailReset" v-text="text.resetMailButton?text.resetMailButton:'Request Mail Reset'"></button>
             <div v-else="" class="reset-reset-mail-message" v-text="resetMailMessage"></div>
         </div>
     `

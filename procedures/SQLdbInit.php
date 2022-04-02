@@ -848,6 +848,7 @@ namespace IOFrame{
              *                  to a resource. The function that requests the token can decide what to do with it on match.
              * Uses_Left    -   int, Number of uses left for the token.
              *                  For a single use token may be 1, but not all tokens are single use...
+             * Tags         -   Used for token tags
              * Expires      -   Varchar(14), UNIX timestamp of when the token expires. Every token has to expire, by nature.
              * Session_Lock -   Varchar(256), Since operations with tokens are meant to be atomic, there has to be a
              *                  way to prevent 2 sessions querying a token at the same time from "consuming" it twice
@@ -862,9 +863,11 @@ namespace IOFrame{
                                                               Token varchar(256) PRIMARY KEY NOT NULL,
                                                               Token_Action varchar(1024) NOT NULL,
                                                               Uses_Left BIGINT NOT NULL,
+                                                              Tags  varchar(1024) DEFAULT NULL,
                                                               Expires varchar(14) NOT NULL,
                                                               Session_Lock varchar(256) DEFAULT NULL,
                                                               Locked_At varchar(14) DEFAULT NULL,
+                                                              INDEX (Tags),
                                                               INDEX (Expires),
                                                               INDEX (Token_Action)
                                                               ) ENGINE=InnoDB DEFAULT CHARSET = utf8;";

@@ -139,7 +139,7 @@ Vue.component('auth-users-editor', {
                 console.log('Getting item information!');
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', 'getUsersWithActions');
             data.append('params', JSON.stringify({
                 'id':['=',this.id]

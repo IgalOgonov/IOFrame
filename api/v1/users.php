@@ -165,6 +165,7 @@
  *        p: requested password
  *        u: requested username (optional, depending on a setting)
  *        token: string, default null - if set, will try to register via an invite token (activating the account without confirmation required)
+ *        language: string, default null - if set, will try to send mails in this language
  *        Returns integer code:
  *              0 - success
  *              1 - username already in use
@@ -181,6 +182,7 @@
  *        p: user password  - required on full login
  *        userID: identifier of current device, used for temp login, or for full login using "rememberMe"
  *        sesKey: used to relog using temp login,
+ *        language: string, default null - if set, will try to send the 2FA mail/sms in this language
  *        2FAType: 2FA Method, if the user chooses to log in via 2FA. Valid methods are:
  *            'mail' - send code via email, always supported on systems with mailSettings set
  *            'app' - works when the user has a 2FA app enabled and configured
@@ -211,6 +213,7 @@
  *        code: Confirmation code, used for reset confirmation
  *        mail: user mail, used to request the reset
  *        async: Used to specify you don't want to be redirected, on confirmation.
+ *        language: string, default null - if set, will try to send mails in this language
  *        Returns integer code:
  *              On send request:
  *                  0 - All good
@@ -239,6 +242,7 @@
  *      - Sends a user a registration email, or confirms an existing registration code and activates user.
  *        --- TO REQUEST A RESET CODE ---
  *        mail: Email of the account
+ *        language: string, default null - if set, will try to send mails in this language
  *        Returns integer code:
  *                -3 activation code creation failed.
  *                -2 user does not exist or already active.
@@ -308,6 +312,7 @@
  *        tokenUses: int, default 1 - How many uses a newly created token would have. Cannot be infinite, but can be 64 bit (so basically infinite)
  *        tokenTTL: int, defaults to email activation setting (72 hours by install default) - Token TTL in seconds
  *        extraTemplateArguments: JSON encoded Object, extra arguments for the mail function - REQUIRES SEPARATE AUTH
+ *        language: string, default null - if set, will try to send mails in this language
  *        override: bool, default true, whether to override existing tokens
  *        update: bool, default false, whether to only update existing tokens
  *
@@ -466,7 +471,7 @@ switch($action){
 
     case 'addUser':
 
-        $arrExpected =["u","m","p","token"];
+        $arrExpected =["u","m","p","token","language"];
 
         require __DIR__ . '/../setExpectedInputs.php';
         require 'user_fragments/ip_check.php';
@@ -489,14 +494,10 @@ switch($action){
         else
             $inputs["log"] = 'out';
 
-        if($inputs['log']!='out')
-            if(!validateThenRefreshCSRFToken($SessionHandler))
-                exit(WRONG_CSRF_TOKEN);
-
         if($test)
             echo 'Log type: '.$inputs["log"].EOL;
 
-        $arrExpected =["userID","m","p","sesKey","2FAType","2FACode"];
+        $arrExpected =["userID","m","p","sesKey","language","2FAType","2FACode"];
 
         require __DIR__ . '/../setExpectedInputs.php';
         if($inputs['log']!='out'){
@@ -537,7 +538,7 @@ switch($action){
 
     case 'pwdReset':
 
-        $arrExpected =["id","code","mail","async"];
+        $arrExpected =["id","code","mail","async","language"];
 
         require __DIR__ . '/../setExpectedInputs.php';
         require 'user_fragments/ip_check.php';
@@ -576,7 +577,7 @@ switch($action){
 
     case 'regConfirm':
 
-        $arrExpected =["id","code","mail"];
+        $arrExpected =["id","code","mail","language"];
 
         require __DIR__ . '/../setExpectedInputs.php';
         require 'user_fragments/regConfirm_checks.php';
@@ -593,7 +594,7 @@ switch($action){
 
     case 'mailReset':
 
-        $arrExpected =["id","code","mail","async"];
+        $arrExpected =["id","code","mail","language","async"];
 
         require __DIR__ . '/../setExpectedInputs.php';
         require 'user_fragments/ip_check.php';
@@ -634,7 +635,7 @@ switch($action){
         if(!validateThenRefreshCSRFToken($SessionHandler))
             exit(WRONG_CSRF_TOKEN);
 
-        $arrExpected =["mail","extraTemplateArguments","tokenUses","token","tokenTTL","overwrite","update"];
+        $arrExpected =["mail","extraTemplateArguments","tokenUses","token","tokenTTL","language","overwrite","update"];
 
         require __DIR__ . '/../setExpectedInputs.php';
         require 'user_fragments/invite_auth.php';
@@ -679,7 +680,7 @@ switch($action){
         break;
 
     case 'changeUsername':
-        echo 'TODO Implement this action - allow configurable restrictions';
+        echo 'TODO Implement this action - add relevant setting';
         break;
 
     default:

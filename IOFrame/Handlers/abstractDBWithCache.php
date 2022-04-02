@@ -271,8 +271,9 @@ namespace IOFrame{
 
                         //Check for the column conditions in the object
                         if($columnConditions != []){
-
                             $numberOfConditions = count($columnConditions);
+                            $hasMode = false;
+                            //array_splice($columnConditions,0,0);
 
                             //Mode of operation
                             $mode = 'AND';
@@ -282,13 +283,15 @@ namespace IOFrame{
                             //Unset mode of operation indicator
                             if($columnConditions[$numberOfConditions-1] == 'OR' ||
                                 $columnConditions[$numberOfConditions-1] == 'AND'){
-                                unset($columnConditions[$numberOfConditions-1]);
+                                $hasMode = true;
                                 $numberOfConditions--;
                             }
 
                             $resultPasses = 0;
 
-                            foreach ($columnConditions as $condition) {
+                            foreach ($columnConditions as $index => $condition) {
+                                if($hasMode && ($index === $numberOfConditions-1))
+                                    continue;
                                 if(isset($cachedResult2[$condition[0]])){
                                     switch($condition[2]){
                                         case '>=':

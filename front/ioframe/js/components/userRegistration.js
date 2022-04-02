@@ -138,6 +138,16 @@ Vue.component('user-registration', {
                 }
             }
         },
+        //Selected language
+        language: {
+           type: String,
+            default: document.selectedLanguage ?? ''
+        },
+        //Identifier
+        identifier: {
+            type: String,
+            default: ''
+        },
         test:{
             type: Boolean,
             default: false
@@ -272,8 +282,10 @@ Vue.component('user-registration', {
             if(errors<1){
                 this.resp = "Posting...";
                 //Data to be sent
-                var data = new FormData();
+                let data = new FormData();
                 data.append('action', 'addUser');
+                if(this.language)
+                    data.append('captcha', this.captcha);
                 if(this.captcha)
                     data.append('captcha', this.captcha);
                 if(this.inviteToken && this.useToken)
@@ -386,6 +398,15 @@ Vue.component('user-registration', {
                         //Use AlertLog to tell the user what the result was
                         //Can be implemented differently in different apps
                         eventHub.$emit('registrationResponse',{body:response,type:respType});
+                        if(response == '0'){
+                            context.u.val = '';
+                            context.p.val = '';
+                            context.p2.val = '';
+                            context.m.val = '';
+                            for(let i in context.agreements){
+                                context.agreements[i].agree = false;
+                            }
+                        }
                 })
                 .catch(function (error) {
                     if(context.verbose)
@@ -423,10 +444,11 @@ Vue.component('user-registration', {
         }
     },
     mounted: function(){
-        document.popupHandler = new ezPopup("pop-up-tooltip");
+        if(!this.popupHandler)
+            this.popupHandler = new ezPopup("pop-up-tooltip");
         if(this.canHaveUsername)
-            document.popupHandler.initPopup('u_reg-tooltip',this.text.userNameHelp,this.customTooltips.username,this.customTooltips.activityClass);
-        document.popupHandler.initPopup('p_reg-tooltip',this.text.passwordHelp,this.customTooltips.password,this.customTooltips.activityClass);
+            this.popupHandler.initPopup(this.identifier+'u_reg-tooltip',this.text.userNameHelp,this.customTooltips.username,this.customTooltips.activityClass);
+        this.popupHandler.initPopup(this.identifier+'p_reg-tooltip',this.text.passwordHelp,this.customTooltips.password,this.customTooltips.activityClass);
         if(this.verbose)
             console.log(this.captchaOptions.siteKey,this.requireCaptcha);
         if(this.requireCaptcha && this.captchaOptions.siteKey){
@@ -445,28 +467,28 @@ Vue.component('user-registration', {
     <span class="user-registration">
         <form novalidate>
     
+        <input :class="[m.class]" :disabled="useToken && inviteMail" type="email" :id="identifier+'m_reg'" name="m" :placeholder="text.email" v-model="m.val" required>
+    
         <label v-if="canHaveUsername">
-            <input :class="[u.class]" type="text" id="u_reg" name="u" :placeholder="text.username" v-model="u.val" required>
-            <a href="#"  id="u_reg-tooltip">?</a>
+            <input :class="[u.class]" type="text" :id="identifier+'u_reg'" name="u" :placeholder="text.username" v-model="u.val" required>
+            <a href="#"  :id="identifier+'u_reg-tooltip'">?</a>
         </label>
     
         <label>
-            <input :class="[p.class]" type="password" id="p_reg" name="p" :placeholder="text.password" v-model="p.val" required>
-            <a href="#"  id="p_reg-tooltip">?</a>
+            <input :class="[p.class]" type="password" :id="identifier+'p_reg'" name="p" :placeholder="text.password" v-model="p.val" required>
+            <a href="#"  :id="identifier+'p_reg-tooltip'">?</a>
         </label>
     
-        <input :class="[p2.class]" type="password" id="p2_reg" :placeholder="text.repeatPassword" v-model="p2.val" required>
-    
-        <input :class="[m.class]" :disabled="useToken && inviteMail" type="email" id="m_reg" name="m" :placeholder="text.email" v-model="m.val" required>
+        <input :class="[p2.class]" type="password" :id="identifier+'p2_reg'" :placeholder="text.repeatPassword" v-model="p2.val" required>
     
         <label v-if="inviteToken">
             <span v-text="text.useToken"></span>
-            <input type="checkbox" id="use_token" name="use_token" v-model="useToken">
+            <input type="checkbox" :id="identifier+'use_token'" name="use_token" v-model="useToken">
         </label>
         
         <label v-if="inviteToken && useToken">
             <span v-text="text.inviteToken"></span>
-            <input type="text" id="invite_token" :value="visibleToken" disabled>
+            <input type="text" :id="identifier+'invite_token'" :value="visibleToken" disabled>
         </label>
         
         <div v-for="(options, index) in agreements" class="agreement" :class="{required:options.required}">

@@ -1362,7 +1362,7 @@ namespace IOFrame\Handlers{
          *          1 if not a single relation exists
          */
         function getOrderUsers(int $orderID, array $params = []){
-            return $this->getOrdersUsers($orderID, false, $params)[$orderID];
+            return $this->getOrdersUsers($orderID, false, $params)[$orderID]??[];
         }
 
 

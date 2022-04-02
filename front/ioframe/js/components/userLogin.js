@@ -57,6 +57,16 @@ Vue.component('user-login', {
                 };
             }
         },
+        //Selected language
+        language: {
+            type: String,
+            default: document.selectedLanguage ?? ''
+        },
+        //Identifier
+        identifier: {
+            type: String,
+            default: ''
+        },
         test:{
             type: Boolean,
             default: false
@@ -141,7 +151,7 @@ Vue.component('user-login', {
                 updateCSRFToken().then(
                     function(token){
                         let req = context.test? 'test' : 'real';
-                        var data = new FormData();
+                        let data = new FormData();
                         data.append('action', 'logUser');
                         data.append('m', context.m.val);
                         data.append('p', context.p.val);
@@ -154,6 +164,8 @@ Vue.component('user-login', {
                             data.append('2FAType', context.twoFactorAuthType);
                             data.append('2FACode', context.twoFactorAuthCode);
                         }
+                        if(context.language)
+                            data.append('language', context.language);
                         //Api url
                         let url=document.rootURI+"api\/v1\/users";
                         context.requesting = true;
@@ -295,8 +307,8 @@ Vue.component('user-login', {
         `<div class="user-login" :class="{requesting:requesting}">
             <form novalidate>
             
-                <input v-if="!loginConfirmed" :class="[m.class]" type="email" id="m_log" name="m" :placeholder="text.email" v-model="m.val" required>
-                <input v-if="!loginConfirmed":class="[p.class]" type="password" id="p_log" name="p" :placeholder="text.password" v-model="p.val" required>
+                <input v-if="!loginConfirmed" :class="[m.class]" type="email" :id="identifier+'m_log'" name="m" :placeholder="text.email" v-model="m.val" required>
+                <input v-if="!loginConfirmed":class="[p.class]" type="password" :id="identifier+'p_log'" name="p" :placeholder="text.password" v-model="p.val" required>
                 <label v-if="!loginConfirmed && hasRememberMe"> <input type="checkbox" name="rMe" v-model="rMe"> <span v-text="text.rememberMe"></span> </label>
                 
                 <div class="suggest-2fa" v-if="!loginConfirmed && suggest2FA">

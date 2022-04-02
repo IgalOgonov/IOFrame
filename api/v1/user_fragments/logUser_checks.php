@@ -32,6 +32,13 @@ if($inputs["log"]!=='out'){
     else{
         $m=$inputs["m"];
         ($inputs["log"]!= 'temp')? $p = $inputs["p"] : $sesKey = $inputs["sesKey"];
+        //Validate language
+        if(!empty($inputs['language']))
+            if(!preg_match('/'.LANGUAGE_REGEX.'/',$inputs['language'])){
+                if($test)
+                    echo 'Language must match '.LANGUAGE_REGEX.EOL;
+                exit(INPUT_VALIDATION_FAILURE);
+            }
         //Validate Username
         if(!filter_var($m, FILTER_VALIDATE_EMAIL)){
             $res=false;
@@ -47,6 +54,7 @@ if($inputs["log"]!=='out'){
                 exit(INPUT_VALIDATION_FAILURE);
             }
             if( $inputs["2FAType"]){
+                //Validate language
                 switch ($inputs["2FAType"]){
                     case 'app':
                         $regexToCheck = TWO_FACTOR_AUTH_CODE_REGEX;

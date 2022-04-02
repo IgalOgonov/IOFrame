@@ -1211,7 +1211,7 @@ function install(IOFrame\Handlers\SettingsHandler $userSettings,
             array_push($userArgs,["emailChangeTitle",'Email Change Confirmation Mail']);
             array_push($userArgs,["passwordResetTime",5]);
             array_push($userArgs,["inviteMailTemplate",4]);
-            array_push($userArgs,["inviteMailTitle",'You\'ve been invited to IOFrame Test']);
+            array_push($userArgs,["inviteMailTitle",'You\\\'ve been invited to IOFrame Test']);
             array_push($userArgs,["inviteExpires",774]);
             array_push($userArgs,["rememberMe",1]);
             array_push($userArgs,["relogWithCookies",1]);

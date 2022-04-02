@@ -33,10 +33,16 @@ Vue.component('change-mail', {
                 }
             }
         },
-        //Will either display result as an alert (default), or send the parsed event
-        alertResult: {
-            type: Boolean,
-            default: true
+        //Alert Options
+        alertOptions: {
+            type: Object,
+            default: function(){
+				return {
+					use:true, //Whether to use this, or send event instead
+					target:document.body, //Alert target
+					params:{} //Alert params
+				};
+			}
         },
         //App Identifier
         identifier: {
@@ -174,8 +180,10 @@ Vue.component('change-mail', {
                 default:
                     message = this.test? ('Test response: '+ response) : this.text.messageFailed;
             }
-            if(this.alertResult)
-                alertLog(message,messageType);
+            if(!message)
+                message = this.text.responses[response];
+            if(this.alertOptions.use)
+                alertLog(message,messageType,this.alertOptions.target,this.alertOptions.params);
 
             eventHub.$emit('mailChangeResult',{
                 newMail:this.input,
@@ -189,8 +197,7 @@ Vue.component('change-mail', {
     template: `
         <div class="change-mail">
             <h4 v-if="expires > -1" v-text="validFor" :class="success? 'positive' : (authExpires>0 ? 'warning' : 'negative')"></h4>
-            <label v-if="finished" for="mail" v-text="text.title"></label>
-            <input v-if="finished" name="mail" type="mail" v-model:value="input">
+            <input v-if="finished" name="mail" type="mail" :placeholder="text.title" v-model:value="input">
             <button v-if="finished" @click.prevent="changeMail()" v-text="text.send"></button>
         </div>
     `

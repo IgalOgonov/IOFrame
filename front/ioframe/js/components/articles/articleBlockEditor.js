@@ -414,20 +414,7 @@ Vue.component('article-block-editor', {
                     onUpdate: {
                         ignore: true
                     },
-                    parseOnGet: function(timestamp){
-                        timestamp *= 1000;
-                        let date = timestampToDate(timestamp).split('-').reverse().join('-');
-                        let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
-                        let minutes = Math.floor(timestamp%(1000 * 60 * 60)/(1000 * 60));
-                        let seconds = Math.floor(timestamp%(1000 * 60)/(1000));
-                        if(hours < 10)
-                            hours = '0'+hours;
-                        if(minutes < 10)
-                            minutes = '0'+minutes;
-                        if(seconds < 10)
-                            seconds = '0'+seconds;
-                        return date + ', ' + hours+ ':'+ minutes+ ':'+seconds;
-                    }
+                    parseOnGet: timeStampToReadableFullDate
                 },
                 updated:{
                     ignore: true,
@@ -437,20 +424,7 @@ Vue.component('article-block-editor', {
                     onUpdate: {
                         ignore: true
                     },
-                    parseOnGet: function(timestamp){
-                        timestamp *= 1000;
-                        let date = timestampToDate(timestamp).split('-').reverse().join('-');
-                        let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
-                        let minutes = Math.floor(timestamp%(1000 * 60 * 60)/(1000 * 60));
-                        let seconds = Math.floor(timestamp%(1000 * 60)/(1000));
-                        if(hours < 10)
-                            hours = '0'+hours;
-                        if(minutes < 10)
-                            minutes = '0'+minutes;
-                        if(seconds < 10)
-                            seconds = '0'+seconds;
-                        return date + ', ' + hours+ ':'+ minutes+ ':'+seconds;
-                    }
+                    parseOnGet: timeStampToReadableFullDate
                 },
             },
             currentOptions:{
@@ -757,38 +731,12 @@ Vue.component('article-block-editor', {
                         {
                             id:'created',
                             title:'Date Created',
-                            parser:function(timestamp){
-                                timestamp *= 1000;
-                                let date = timestampToDate(timestamp).split('-').reverse().join('-');
-                                let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
-                                let minutes = Math.floor(timestamp%(1000 * 60 * 60)/(1000 * 60));
-                                let seconds = Math.floor(timestamp%(1000 * 60)/(1000));
-                                if(hours < 10)
-                                    hours = '0'+hours;
-                                if(minutes < 10)
-                                    minutes = '0'+minutes;
-                                if(seconds < 10)
-                                    seconds = '0'+seconds;
-                                return date + ', ' + hours+ ':'+ minutes+ ':'+seconds;
-                            }
+                            parser:timeStampToReadableFullDate
                         },
                         {
                             id:'lastChanged',
                             title:'Last Changed',
-                            parser:function(timestamp){
-                                timestamp *= 1000;
-                                let date = timestampToDate(timestamp).split('-').reverse().join('-');
-                                let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
-                                let minutes = Math.floor(timestamp%(1000 * 60 * 60)/(1000 * 60));
-                                let seconds = Math.floor(timestamp%(1000 * 60)/(1000));
-                                if(hours < 10)
-                                    hours = '0'+hours;
-                                if(minutes < 10)
-                                    minutes = '0'+minutes;
-                                if(seconds < 10)
-                                    seconds = '0'+seconds;
-                                return date + ', ' + hours+ ':'+ minutes+ ':'+seconds;
-                            }
+                            parser:timeStampToReadableFullDate
                         }
                     ],
                     page: 0,
@@ -1038,38 +986,12 @@ Vue.component('article-block-editor', {
                         {
                             id:'created',
                             title:'Date Created',
-                            parser:function(timestamp){
-                                timestamp *= 1000;
-                                let date = timestampToDate(timestamp).split('-').reverse().join('-');
-                                let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
-                                let minutes = Math.floor(timestamp%(1000 * 60 * 60)/(1000 * 60));
-                                let seconds = Math.floor(timestamp%(1000 * 60)/(1000));
-                                if(hours < 10)
-                                    hours = '0'+hours;
-                                if(minutes < 10)
-                                    minutes = '0'+minutes;
-                                if(seconds < 10)
-                                    seconds = '0'+seconds;
-                                return date + ', ' + hours+ ':'+ minutes+ ':'+seconds;
-                            }
+                            parser:timeStampToReadableFullDate
                         },
                         {
                             id:'updated',
                             title:'Last Changed',
-                            parser:function(timestamp){
-                                timestamp *= 1000;
-                                let date = timestampToDate(timestamp).split('-').reverse().join('-');
-                                let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
-                                let minutes = Math.floor(timestamp%(1000 * 60 * 60)/(1000 * 60));
-                                let seconds = Math.floor(timestamp%(1000 * 60)/(1000));
-                                if(hours < 10)
-                                    hours = '0'+hours;
-                                if(minutes < 10)
-                                    minutes = '0'+minutes;
-                                if(seconds < 10)
-                                    seconds = '0'+seconds;
-                                return date + ', ' + hours+ ':'+ minutes+ ':'+seconds;
-                            }
+                            parser:timeStampToReadableFullDate
                         }
                     ],
                     //SearchList API (and probably the only relevant API) URL
@@ -1515,7 +1437,7 @@ Vue.component('article-block-editor', {
             }
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             let sendParams = {
                 action: 'deleteArticleBlocks',
                 articleId: this.articleId,
@@ -1553,7 +1475,7 @@ Vue.component('article-block-editor', {
             }
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', 'setArticleBlock');
             data.append('create', this.currentMode === 'create');
             if(this.test)

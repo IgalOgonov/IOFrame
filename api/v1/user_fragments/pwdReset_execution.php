@@ -11,7 +11,7 @@ if(!isset($UserHandler))
 
 //Attempts to send a mail to the user requiring password reset.
 if(isset($inputs['mail'])){
-    $result = $UserHandler->pwdResetSend($inputs['mail'],['async' => false,'test'=>$test]);
+    $result = $UserHandler->pwdResetSend($inputs['mail'],['async' => false,'language'=>$inputs['language'],'test'=>$test]);
 }
 //Checks if the info provided by the user was correct, if so authorizes the Session to reset the password for a few minutes.
 else if($inputs['id'] !== null and $inputs['code'] !== null ){

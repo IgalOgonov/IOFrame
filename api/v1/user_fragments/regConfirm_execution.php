@@ -47,7 +47,7 @@ elseif(isset($inputs['mail']) ){
         $result =  '1';
     }
     else{
-        $result = $UserHandler->accountActivation($inputs['mail'], null, ['async' => false,'test'=>$test]);
+        $result = $UserHandler->accountActivation($inputs['mail'], null, ['async' => false,'language'=>$inputs['language'],'test'=>$test]);
     }
 }
 else{

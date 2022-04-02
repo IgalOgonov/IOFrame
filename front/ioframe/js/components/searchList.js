@@ -570,7 +570,7 @@ Vue.component('search-list', {
                     this.extraParams,' limit '+this.limit+', offset '+this.limit*(this.page));
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', this.apiAction);
 
             //Add pagination

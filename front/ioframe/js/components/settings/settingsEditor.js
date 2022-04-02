@@ -112,7 +112,7 @@ Vue.component('settings-editor', {
                 console.log('Getting item information!');
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', 'getSettings');
             data.append('target', this.id);
 
@@ -151,7 +151,7 @@ Vue.component('settings-editor', {
             }
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', inputs.delete? 'unsetSetting' : 'setSetting');
             data.append('target', this.item.identifier);
             if(this.test)

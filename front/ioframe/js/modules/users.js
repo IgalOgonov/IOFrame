@@ -180,20 +180,7 @@ var users = new Vue({
                     {
                         id:'created',
                         title:'Date Created',
-                        parser:function(timestamp){
-                            timestamp *= 1000;
-                            let date = timestampToDate(timestamp).split('-').reverse().join('-');
-                            let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
-                            let minutes = Math.floor(timestamp%(1000 * 60 * 60)/(1000 * 60));
-                            let seconds = Math.floor(timestamp%(1000 * 60)/(1000));
-                            if(hours < 10)
-                                hours = '0'+hours;
-                            if(minutes < 10)
-                                minutes = '0'+minutes;
-                            if(seconds < 10)
-                                seconds = '0'+seconds;
-                            return date + ', ' + hours+ ':'+ minutes+ ':'+seconds;
-                        }
+                        parser:timeStampToReadableFullDate
                     }
                 ],
                 //SearchList API
@@ -308,22 +295,8 @@ var users = new Vue({
                         id:'expires',
                         title:'Expires',
                         parser:function(timestamp){
-                            timestamp *= 1000;
-                            let expired = timestamp < Date.now();
-                            let date = timestampToDate(timestamp).split('-').reverse().join('-');
-                            let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
-                            let minutes = Math.floor(timestamp%(1000 * 60 * 60)/(1000 * 60));
-                            let seconds = Math.floor(timestamp%(1000 * 60)/(1000));
-                            if(hours < 10)
-                                hours = '0'+hours;
-                            if(minutes < 10)
-                                minutes = '0'+minutes;
-                            if(seconds < 10)
-                                seconds = '0'+seconds;
-
-                            let result = date + ', ' + hours+ ':'+ minutes+ ':'+seconds;
-
-                            return expired ?'<span class="expired">'+result+'</span>' :result;
+                            let result = timeStampToReadableFullDate(timestamp);
+                            return timestamp * 1000 < Date.now() ?'<span class="expired">'+result+'</span>' :result;
                         }
                     },
                     {
@@ -760,7 +733,7 @@ var users = new Vue({
                         if(!this.tokenInput.token)
                             this.tokenInput.override = true;
 
-                        let api = 'api/v1/users';
+                        api = 'api/v1/users';
 
                         data.append('action',this.tokenInput.sendMail?'sendInviteMail':'createUserInvite');
 
@@ -775,6 +748,9 @@ var users = new Vue({
                         data.append('overwrite',this.tokenInput.override?'1':'0');
 
                         data.append('tokenTTL',(this.tokenInput.ttlDays*3600*24)+'');
+
+                        if(this.tokenInput.sendMail && document.selectedLanguage)
+                            data.append('language',document.selectedLanguage);
 
                         operation = 'createNew';
                         break;

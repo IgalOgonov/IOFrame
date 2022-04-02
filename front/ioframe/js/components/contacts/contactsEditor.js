@@ -211,7 +211,7 @@ Vue.component('contacts-editor', {
                 console.log('Getting item information!');
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', 'getContact');
             data.append('contactType', this.mainItem.contactType);
             data.append('id', this.mainItem.identifier);
@@ -249,7 +249,7 @@ Vue.component('contacts-editor', {
 
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', 'setContact');
             if(this.mode === 'create')
                 data.append('override','false');

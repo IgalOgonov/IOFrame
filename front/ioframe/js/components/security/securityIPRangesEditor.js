@@ -377,7 +377,7 @@ Vue.component('security-ip-ranges-editor', {
             }
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', (this.mode === 'create' ? 'addIPRange' : 'updateIPRange') );
             if(this.test)
                 data.append('req','test');

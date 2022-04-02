@@ -353,6 +353,8 @@ namespace IOFrame\Handlers{
          *      'update' => bool, default false - Whether we are only allowed to update existing contacts
          *      'override' => bool, default false -  Whether we are allowed to overwrite existing contacts
          *      'existing' => Assoc array: ['<contact name>' => <existing info as would be returned by getContact>]
+         *      'possibleTypes' => string[], default [$this->contactType] - Possible contact types (for cache deletion when multiple possible)
+         *      'setType' => string, default null - When you want to set a specific type, but dont mind what type you get
          *
          * @returns Array of the form:
          *          <identifier> => <code>
@@ -372,7 +374,9 @@ namespace IOFrame\Handlers{
             $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
             $update = isset($params['update'])? $params['update'] : false;
             $contactType = isset($params['contactType'])? $params['contactType'] : $this->contactType;
-            if(!$contactType)
+            $possibleTypes = isset($params['possibleTypes'])? $params['possibleTypes'] : [$this->contactType];
+            $setType = isset($params['setType'])? $params['setType'] : $contactType;
+            if(!$contactType && !($setType || $update))
                 throw new \Exception('Cannot set contacts without a specific type!');
             //If we are updating, then by default we allow overwriting
             if(!$update)
@@ -406,7 +410,7 @@ namespace IOFrame\Handlers{
             //Parse all existing contacts.
             foreach($inputs as $index => $inputArray){
                 $identifier = $inputArray[0];
-                $dbIdentifier = implode($keyDelimiter,[$contactType,$inputArray[0]]);
+                $dbIdentifier = $contactType ? implode($keyDelimiter,[$contactType,$inputArray[0]]) : $inputArray[0];
                 $contactInputs = isset($inputArray[1])? $inputArray[1] : [];
                 //Initiate each input
                 $contactInputs['firstName'] = isset($contactInputs['firstName'])? $contactInputs['firstName'] : null;
@@ -484,6 +488,8 @@ namespace IOFrame\Handlers{
                             else
                                 $contactToSet[$inputName] = ($existing[$dbIdentifier][$dbName] == '')? null : $existing[$dbIdentifier][$dbName];
                         }
+                        //Type also gets special treatment
+                        $contactToSet['type'] = $setType? $setType : $existing[$dbIdentifier]['Contact_Type'];
 
                         //This happens if no new info is given.
                         if($contactToSet === []){
@@ -494,6 +500,7 @@ namespace IOFrame\Handlers{
                     }
                     //If are creating a new contact,
                     else{
+                        $contactToSet['type'] = $setType;
                         $contactToSet['created'] = $currentTime;
                         $arr = ['firstName','lastName','email','phone','fax','country','state','city','street','zipCode',
                                 'companyName','companyID','contactInfo','address','extraInfo'];
@@ -527,7 +534,7 @@ namespace IOFrame\Handlers{
             $insertArray = [];
             foreach($contactsToSet as $contactToSet){
                 array_push($insertArray,[
-                    [$contactType,'STRING'],
+                    [$contactToSet['type'],'STRING'],
                     [$contactToSet['identifier'],'STRING'],
                     [$contactToSet['firstName'],'STRING'],
                     [$contactToSet['lastName'],'STRING'],
@@ -563,16 +570,19 @@ namespace IOFrame\Handlers{
 
             //If successful, set results and erase the cache
             if($res){
+                $toDelete = [];
                 foreach($identifiers as $index => $identifier){
                     if($results[$identifiers[$index]] === -1)
                         $results[$identifiers[$index]] = 0;
-                    $identifiers[$index] = $this->cacheName.$contactType.'/'.$identifiers[$index];
+                    foreach ($possibleTypes as $type){
+                        array_push($toDelete,$this->cacheName.$type.'/'.$identifiers[$index]);
+                    }
                 }
-                if(count($identifiers)>0){
+                if(count($toDelete)>0){
                     if($verbose)
-                        echo 'Deleting identifiers '.json_encode($identifiers).' from cache!'.EOL;
+                        echo 'Deleting identifiers '.json_encode($toDelete).' from cache!'.EOL;
                     if(!$test)
-                        $this->RedisHandler->call('del',[$identifiers]);
+                        $this->RedisHandler->call('del',[$toDelete]);
                 }
             }
 
@@ -594,7 +604,7 @@ namespace IOFrame\Handlers{
          *
          * @param array $identifiers
          * @param array $params
-         *
+         *      'possibleTypes' => string[], default [$this->contactType] - Possible contact types (for cache deletion when multiple possible)
          * @returns Int
          *         -1 - failed to connect to server
          *          0 - success
@@ -606,16 +616,18 @@ namespace IOFrame\Handlers{
             $test = isset($params['test'])? $params['test'] : false;
             $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
             $contactType = isset($params['contactType'])? $params['contactType'] : $this->contactType;
-            if(!$contactType)
-                throw new \Exception('Cannot set contacts without a specific type!');
+            $possibleTypes = isset($params['possibleTypes'])? $params['possibleTypes'] : [$this->contactType];
 
             $dbNames = [];
 
             foreach($identifiers as $identifier){
-                array_push($dbNames,[[$contactType,'STRING'],[$identifier,'STRING'], 'CSV']);
+                if($contactType)
+                    array_push($dbNames,[[$contactType,'STRING'],[$identifier,'STRING'], 'CSV']);
+                else
+                    array_push($dbNames,[[$identifier,'STRING']]);
             }
 
-            $columns = ['Contact_Type','Identifier','CSV'];
+            $columns = $contactType? ['Contact_Type','Identifier','CSV'] : ['Identifier'];
 
             $res = $this->SQLHandler->deleteFromTable(
                 $this->SQLHandler->getSQLPrefix().$this->tableName,
@@ -628,16 +640,17 @@ namespace IOFrame\Handlers{
             );
 
             if($res){
-                //delete the collection cache
+                $toDelete = [];
                 foreach($identifiers as $identifier){
-
-                    $identifier = implode('/',[$contactType,$identifier]);
-
+                    foreach ($possibleTypes as $type){
+                        array_push($toDelete,$this->cacheName.$type.'/'.$identifier);
+                    }
+                }
+                if(count($toDelete)>0){
                     if($verbose)
-                        echo 'Deleting '.$contactType.' cache of '.$identifier.EOL;
-
+                        echo 'Deleting identifiers '.json_encode($toDelete).' from cache!'.EOL;
                     if(!$test)
-                        $this->RedisHandler->call( 'del', [ $this->cacheName.$contactType.'/'.$identifier ] );
+                        $this->RedisHandler->call('del',[$toDelete]);
                 }
 
                 //Ok we're done

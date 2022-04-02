@@ -320,7 +320,7 @@ Vue.component('security-events-editor', {
                     console.log('Still getting item info!');
                 return;
             }
-            var data;
+            let data;
             let stuffToDelete = [];
             let stuffToSet = [];
 

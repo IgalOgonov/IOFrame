@@ -191,7 +191,7 @@ var settings = new Vue({
             if(this.test)
                 console.log('Current Operation ', this.currentOperation ,'Current input ',this.operationInput);
 
-            var data = new FormData();
+            let data = new FormData();
             var test = this.test;
             var verbose = this.verbose;
             var currentOperation = this.currentOperation;

@@ -159,7 +159,7 @@ Vue.component('media-editor', {
             }
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', (this.mediaType === 'img' ? 'updateImage' : 'updateVideo'));
             let address;
             if(this.type === 'local'){
@@ -251,7 +251,7 @@ Vue.component('media-editor', {
                 console.log('Querying API for '+this.url);
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', (this.mediaType === 'img' ? 'getGalleriesOfImage' : 'getGalleriesOfVideo'));
             let address;
             if(this.type === 'local'){

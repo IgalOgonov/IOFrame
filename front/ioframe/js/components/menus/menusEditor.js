@@ -83,20 +83,7 @@ Vue.component('menus-editor', {
                     onUpdate: {
                         ignore: true
                     },
-                    parseOnGet: function(timestamp){
-                        timestamp *= 1000;
-                        let date = timestampToDate(timestamp).split('-').reverse().join('-');
-                        let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
-                        let minutes = Math.floor(timestamp%(1000 * 60 * 60)/(1000 * 60));
-                        let seconds = Math.floor(timestamp%(1000 * 60)/(1000));
-                        if(hours < 10)
-                            hours = '0'+hours;
-                        if(minutes < 10)
-                            minutes = '0'+minutes;
-                        if(seconds < 10)
-                            seconds = '0'+seconds;
-                        return date + ', ' + hours+ ':'+ minutes+ ':'+seconds;
-                    }
+                    parseOnGet: timeStampToReadableFullDate
                 },
                 updated:{
                     ignore: this.mode === 'create',
@@ -106,20 +93,7 @@ Vue.component('menus-editor', {
                     onUpdate: {
                         ignore: true
                     },
-                    parseOnGet: function(timestamp){
-                        timestamp *= 1000;
-                        let date = timestampToDate(timestamp).split('-').reverse().join('-');
-                        let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
-                        let minutes = Math.floor(timestamp%(1000 * 60 * 60)/(1000 * 60));
-                        let seconds = Math.floor(timestamp%(1000 * 60)/(1000));
-                        if(hours < 10)
-                            hours = '0'+hours;
-                        if(minutes < 10)
-                            minutes = '0'+minutes;
-                        if(seconds < 10)
-                            seconds = '0'+seconds;
-                        return date + ', ' + hours+ ':'+ minutes+ ':'+seconds;
-                    }
+                    parseOnGet: timeStampToReadableFullDate
                 },
                 identifier:{
                     ignore:true
@@ -648,7 +622,7 @@ Vue.component('menus-editor', {
             }
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', 'setMenus');
             if(this.test)
                 data.append('req','test');
@@ -1120,7 +1094,7 @@ Vue.component('menus-editor', {
             }
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', 'setMenuItems');
             if(this.test)
                 data.append('req','test');

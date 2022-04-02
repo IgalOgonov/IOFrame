@@ -77,7 +77,7 @@ Vue.component('auth-actions-editor', {
             this.updating = true;
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', 'setActions');
             data.append('params', JSON.stringify({actions:this.items}));
             if(this.test)

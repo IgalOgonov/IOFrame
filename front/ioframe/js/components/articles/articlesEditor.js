@@ -326,20 +326,7 @@ Vue.component('articles-editor', {
                     onUpdate: {
                         ignore: true
                     },
-                    parseOnGet: function(timestamp){
-                        timestamp *= 1000;
-                        let date = timestampToDate(timestamp).split('-').reverse().join('-');
-                        let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
-                        let minutes = Math.floor(timestamp%(1000 * 60 * 60)/(1000 * 60));
-                        let seconds = Math.floor(timestamp%(1000 * 60)/(1000));
-                        if(hours < 10)
-                            hours = '0'+hours;
-                        if(minutes < 10)
-                            minutes = '0'+minutes;
-                        if(seconds < 10)
-                            seconds = '0'+seconds;
-                        return date + ', ' + hours+ ':'+ minutes+ ':'+seconds;
-                    }
+                    parseOnGet: timeStampToReadableFullDate
                 },
                 updated:{
                     ignore: this.mode === 'create',
@@ -349,20 +336,7 @@ Vue.component('articles-editor', {
                     onUpdate: {
                         ignore: true
                     },
-                    parseOnGet: function(timestamp){
-                        timestamp *= 1000;
-                        let date = timestampToDate(timestamp).split('-').reverse().join('-');
-                        let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
-                        let minutes = Math.floor(timestamp%(1000 * 60 * 60)/(1000 * 60));
-                        let seconds = Math.floor(timestamp%(1000 * 60)/(1000));
-                        if(hours < 10)
-                            hours = '0'+hours;
-                        if(minutes < 10)
-                            minutes = '0'+minutes;
-                        if(seconds < 10)
-                            seconds = '0'+seconds;
-                        return date + ', ' + hours+ ':'+ minutes+ ':'+seconds;
-                    }
+                    parseOnGet: timeStampToReadableFullDate
                 },
             },
             //Sometimes, you need to manially recompute Vue computed properties
@@ -883,7 +857,7 @@ Vue.component('articles-editor', {
             }
 
             this.initiating = true;
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', 'getArticle');
             if(this.articleId>0)
                 data.append('id', this.articleId);
@@ -921,7 +895,7 @@ Vue.component('articles-editor', {
             }
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', 'setArticle');
             data.append('create', this.currentMode === 'create' ? true : false);
             if(this.test)

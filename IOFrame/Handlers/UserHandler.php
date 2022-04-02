@@ -56,6 +56,7 @@ namespace IOFrame\Handlers{
          *              'activateToken' => string, default null - checks a token, and activates account if it allows either any activation, or activation of provided email.
          *              'tokenConsumeUses' => int, default 1 - if activateToken is provided, indicates how many uses to consume on success
          *              'considerActive' => bool, default false - if true, will consider user active no matter what
+         *              'language' =>  string, default null - if set, will search for relevant locale settings to send relevant mails
          * @returns int
          *      0 - success
          *      -2 - failed - registration not allowed!
@@ -71,6 +72,7 @@ namespace IOFrame\Handlers{
             $activateToken = isset($params['activateToken'])? $params['activateToken'] : null;
             $tokenConsumeUses = isset($params['tokenConsumeUses'])? $params['tokenConsumeUses'] : 1;
             $considerActive = isset($params['considerActive'])? $params['considerActive'] : false;
+            $language = isset($params['language'])? $params['language'] : null;
 
             //Hash the password
             $pass = $inputs["p"];
@@ -124,7 +126,8 @@ namespace IOFrame\Handlers{
             if($res !== 0)
                 return $res;
 
-            if($this->userSettings->getSetting('regConfirmMail') && !$considerActive){
+            $regConfirmSetting = $this->userSettings->getSetting('regConfirmMail_'.$language) ?? $this->userSettings->getSetting('regConfirmMail');
+            if($regConfirmSetting && !$considerActive){
                 $this->accountActivation($inputs["m"],null,['test'=>$test,'verbose'=>$verbose]);
             }
 
@@ -176,6 +179,7 @@ namespace IOFrame\Handlers{
          * @param array $params
          *              active - bool, default 0 - whether the account should be active or not on creation. Overridden by user setting regConfirmMail, or install session.
          *              rank - bool, default 9999 - User rank to set. Defaults to lowest rank (9999), highest rank is 0.
+         *              language -  string, default null - if set, will search for relevant locale settings to send relevant mails
          * @returns int description in main function
          */
         private function reg_makeUserCore(array $inputs, string $hash, array $params = []){
@@ -183,13 +187,14 @@ namespace IOFrame\Handlers{
             $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
             $active = isset($params['active'])? $params['active'] : 0;
             $rank = isset($params['rank'])? $params['rank'] : 9999;
+            $language = isset($params['language'])? $params['language'] : null;
             $query = "INSERT INTO ".$this->SQLHandler->getSQLPrefix().
                 "USERS(Username, Password, Email, Active, Auth_Rank, SessionID)
              VALUES (:Username, :Password, :Email,:Active, :Auth_Rank,:SessionID)";
             $queryBind = [];
             array_push($queryBind,[':Username', $inputs["u"]],[':Password', $hash],[':Email', $inputs["m"]]);
             //Decides whether to activate user on creation or not
-            if($this->userSettings->getSetting('regConfirmMail') ){
+            if($this->userSettings->getSetting('regConfirmMail_'.$language) ?? $this->userSettings->getSetting('regConfirmMail') ){
                 array_push($queryBind,[':Active', $active]);
             }
             else
@@ -284,7 +289,6 @@ namespace IOFrame\Handlers{
          * @param int $userID User ID
          * @param string $plaintextPassword User mail
          * @param array $params
-         *
          * @returns int 0 on success
          *              1 if userID does not exist
          */
@@ -313,6 +317,7 @@ namespace IOFrame\Handlers{
          * @param string $newEmail User mail
          * @param array $params
          *                  'keepActive'=> bool, default to user setting regConfirmMail - if not true, will deactivate an account on Email change
+         *                  'language' =>  string, default null - if set, will search for relevant locale settings to send relevant mails
          * @returns int 0 on success
          *              1 if userID does not exist
          *              2 Email already in use
@@ -320,7 +325,9 @@ namespace IOFrame\Handlers{
         function changeMail(int $userID,string $newEmail, array $params = []){
             $test = isset($params['test'])? $params['test'] : false;
             $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
-            $keepActive = isset($params['keepActive'])? $params['keepActive'] : $this->userSettings->getSetting('regConfirmMail');
+            $language = isset($params['language'])? $params['language'] : null;
+            $keepActive = isset($params['keepActive'])? $params['keepActive'] : $this->userSettings->getSetting('regConfirmMail') || ($language && $this->userSettings->getSetting('regConfirmMail_'.$language));
+
             $tname = $this->SQLHandler->getSQLPrefix().'USERS';
             $userInfo = $this->SQLHandler->selectFromTable($tname,
                 [
@@ -360,7 +367,7 @@ namespace IOFrame\Handlers{
          * @param int $uId User ID
          * @param array $params of the form
          *                          async' - bool, default true - If true, will try to send the mail asynchronously
-         *
+         *                          'language' =>  string, default null - if set, will search for relevant locale settings to send relevant mails
          * @returns int description in main function
          *              -3 activation code creation failed.
          *              -2 if user does not exist OR already active.
@@ -370,8 +377,9 @@ namespace IOFrame\Handlers{
         function accountActivation(string $uMail, int $uId = null, array $params = []){
             $test = isset($params['test'])? $params['test'] : false;
             $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
-            isset($params['async'])?
-                $async = $params['async'] : $async = true;
+            $async = isset($params['async'])? $params['async'] : true;
+            $language = isset($params['language'])? $params['language'] : null;
+
             //Find user ID if it was not provided
             if($uId === null){
                 $uId = $this->SQLHandler->selectFromTable(
@@ -400,9 +408,9 @@ namespace IOFrame\Handlers{
             ))
                 return -3;
 
-            $templateNum = $this->userSettings->getSetting('regConfirmTemplate');
             $siteName = $this->siteSettings->getSetting('siteName');
-            $title = $this->userSettings->getSetting('regConfirmTitle');
+            $templateNum = $this->userSettings->getSetting('regConfirmTemplate_'.$language) ?? $this->userSettings->getSetting('regConfirmTemplate');
+            $title = $this->userSettings->getSetting('regConfirmTitle_'.$language) ?? $this->userSettings->getSetting('regConfirmTitle');
             return $this->sendConfirmationMail($uMail,$uId,$confirmCode,$templateNum,$title,$async,['test'=>$test,'verbose'=>$verbose]) === 0? 0 : -1;
         }
 
@@ -447,6 +455,7 @@ namespace IOFrame\Handlers{
         /** Sends out a password reset mail to the user
          * @param string $uMail User mail
          * @param array $params
+         *                  'language' =>  string, default null - if set, will search for relevant locale settings to send relevant mails
          * @returns int
          *      -2 - internal server error
          *      0 - All good.
@@ -456,6 +465,7 @@ namespace IOFrame\Handlers{
         function pwdResetSend(string $uMail, array $params = []){
             $test = isset($params['test'])? $params['test'] : false;
             $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $language = isset($params['language'])? $params['language'] : null;
             isset($params['async'])?
                 $async = $params['async'] : $async = true;
 
@@ -506,19 +516,17 @@ namespace IOFrame\Handlers{
                 return -2;
 
             //Now, send the mail to the user.
-            if(!$test){
-                return $this->sendConfirmationMail(
-                    $uMail,
-                    $uId,
-                    $confirmCode,
-                    $this->userSettings->getSetting('pwdResetTemplate'),
-                    $this->userSettings->getSetting('pwdResetTitle'),
-                    $async,
-                    ['test'=>$test,'verbose'=>$verbose]
-                );
-            }
-            if($verbose)
-                echo 'Sending mail from template pwdResetTemplate to '.$uMail.EOL;
+            $templateNum = $this->userSettings->getSetting('pwdResetTemplate_'.$language) ?? $this->userSettings->getSetting('pwdResetTemplate');
+            $title = $this->userSettings->getSetting('pwdResetTitle_'.$language) ?? $this->userSettings->getSetting('pwdResetTitle');
+            return $this->sendConfirmationMail(
+                $uMail,
+                $uId,
+                $confirmCode,
+                $templateNum,
+                $title,
+                $async,
+                ['test'=>$test,'verbose'=>$verbose]
+            );
             return 0;
         }
 
@@ -543,6 +551,7 @@ namespace IOFrame\Handlers{
         /** Sends out a mail change mail to the user
          * @param string $uMail User mail
          * @param array $params
+         *                  'language' =>  string, default null - if set, will search for relevant locale settings to send relevant mails
          * @returns int
          *      -2 - internal server error
          *      0 - All good.
@@ -552,8 +561,8 @@ namespace IOFrame\Handlers{
         function mailChangeSend(string $uMail, array $params = []){
             $test = isset($params['test'])? $params['test'] : false;
             $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
-            isset($params['async'])?
-                $async = $params['async'] : $async = true;
+            $async = isset($params['async'])? $params['async'] : true;
+            $language = isset($params['language'])? $params['language'] : null;
 
             $hex_secure = false;
             $confirmCode = '';
@@ -602,18 +611,17 @@ namespace IOFrame\Handlers{
                 return -2;
 
             //Now, send the mail to the user.
-            if(!$test)
-                return $this->sendConfirmationMail(
-                    $uMail,
-                    $uId,
-                    $confirmCode,
-                    $this->userSettings->getSetting('emailChangeTemplate'),
-                    $this->userSettings->getSetting('emailChangeTitle'),
-                    $async,
-                    ['test'=>$test,'verbose'=>$verbose]
-                );
-            if($verbose)
-                echo 'Sending mail from template emailChangeTemplate to '.$uMail.EOL;
+            $templateNum = $this->userSettings->getSetting('emailChangeTemplate_'.$language) ?? $this->userSettings->getSetting('emailChangeTemplate');
+            $title = $this->userSettings->getSetting('emailChangeTitle_'.$language) ?? $this->userSettings->getSetting('emailChangeTitle');
+            return $this->sendConfirmationMail(
+                $uMail,
+                $uId,
+                $confirmCode,
+                $templateNum,
+                $title,
+                $async,
+                ['test'=>$test,'verbose'=>$verbose]
+            );
             return 0;
         }
 
@@ -748,7 +756,7 @@ namespace IOFrame\Handlers{
                 }
             }
             if($verbose)
-                echo 'Sending async email about account activation to '.$uMail.EOL;
+                echo 'Sending email about account activation to '.$uMail.EOL;
             return 0;
         }
 
@@ -1414,6 +1422,8 @@ namespace IOFrame\Handlers{
             $extraArgs = $this->userSettings->getSetting('extraUserColumns');
             if(IOFrame\Util\is_json($extraArgs))
                 $args = array_merge($args,json_decode($extraArgs,true));
+            else
+                $args = array_merge($args,explode(',',$extraArgs));
 
             foreach($args as $val){
                 $data[$val]= isset($checkRes[0][$val]) ? $checkRes[0][$val] : null;

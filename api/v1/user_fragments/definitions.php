@@ -63,6 +63,7 @@ CONST SET_INVITE_MAIL_ARGS = 'SET_INVITE_MAIL_ARGS';
 /* Input */
 //Maximum tree content length
 CONST USER_RANK_REGEX = 10000;
+CONST LANGUAGE_REGEX = '^[a-zA-Z]{0,32}$';
 CONST REGEX_REGEX = '^[\w\.\-\_ ]{1,128}$';
 CONST USER_ORDER_COLUMNS = ['Created_On', 'Email', 'Username','ID'];
 CONST PHONE_REGEX = '^\+\d{6,20}$';

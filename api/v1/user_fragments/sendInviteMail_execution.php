@@ -21,6 +21,7 @@ $params = [
     'token'=>$inputs['token'],
     'tokenUses'=>$inputs['tokenUses'],
     'tokenTTL'=>$inputs['tokenTTL'],
+    'language'=>$inputs['language'],
     'extraTemplateArguments'=>$inputs['extraTemplateArguments']
 ];
 

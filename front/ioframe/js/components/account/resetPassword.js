@@ -39,15 +39,26 @@ Vue.component('reset-password', {
                 }
             }
         },
-        //Will either display result as an alert (default), or send the parsed event
-        alertResult: {
-            type: Boolean,
-            default: true
+        //Alert Options
+        alertOptions: {
+            type: Object,
+            default: function(){
+				return {
+					use:true, //Whether to use this, or send event instead
+					target:document.body, //Alert target
+					params:{} //Alert params
+				};
+			}
         },
         //If provided, will reset using this email
         email: {
             type: String,
             default: ''
+        },
+        //Selected language
+        language: {
+            type: String,
+            default: document.selectedLanguage ?? ''
         },
         //App Identifier
         identifier: {
@@ -112,6 +123,8 @@ Vue.component('reset-password', {
             let data = new FormData();
             data.append('action', 'pwdReset');
             data.append('mail', this.email? this.email : this.resetMail);
+            if(this.language)
+                data.append('language', this.language);
 
             if(this.verbose)
                 console.log('Sending password reset request for ',this.email? this.email : this.resetMail);
@@ -174,8 +187,8 @@ Vue.component('reset-password', {
             if(!message){
                 message = this.text.responses[response];
             }
-            if(this.alertResult)
-                alertLog(message,messageType);
+            if(this.alertOptions.use)
+                alertLog(message,messageType,this.alertOptions.target,this.alertOptions.params);
             else
                 eventHub.$emit('passwordResetResult',{
                     response:response,
@@ -188,10 +201,8 @@ Vue.component('reset-password', {
     template: `
         <div class="reset-password">
             <div class="reset-password-text" v-if="text.resetPassword" v-text="text.resetPassword"></div>
-            <div class="resend" v-if="!resetPasswordMessage">
-                <input v-if="!email" type="text" v-model:value="resetMail" :placeholder="text.reactivatePlaceholder?text.reactivatePlaceholder:'Email Address'">
-                <button @click.prevent="sendPasswordReset" v-text="text.resetPasswordButton?text.resetPasswordButton:'Request Password Reset'"></button>
-            </div>
+            <input v-if="!resetPasswordMessage && !email" type="text" v-model:value="resetMail" :placeholder="text.resetPasswordPlaceholder?text.resetPasswordPlaceholder:'Email Address'">
+            <button v-if="!resetPasswordMessage" @click.prevent="sendPasswordReset" v-text="text.resetPasswordButton?text.resetPasswordButton:'Request Password Reset'"></button>
             <div v-else="" class="reset-reset-password-message" v-text="resetPasswordMessage"></div>
         </div>
     `

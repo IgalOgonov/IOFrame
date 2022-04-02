@@ -196,7 +196,7 @@ Vue.component('gallery-editor', {
 
             //Data to be sent
             let debug = {};
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', this.galleryType === 'img' ? 'setGallery' : 'setVideoGallery');
             data.append('gallery', this.gallery.identifier);
             data.append('update', true);
@@ -262,7 +262,7 @@ Vue.component('gallery-editor', {
                 console.log('Querying API for gallery '+this.gallery.identifier);
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', this.galleryType === 'img' ? 'getGallery' : 'getVideoGallery');
             data.append('gallery', this.gallery.identifier);
             //Api url

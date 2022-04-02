@@ -143,7 +143,7 @@ Vue.component('auth-groups-editor', {
                 console.log('Getting item information!');
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', 'getGroupActions');
             data.append('params', JSON.stringify({"group":["=",this.id]}));
 
@@ -169,7 +169,7 @@ Vue.component('auth-groups-editor', {
             }
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', (this.mode === 'create'? 'setGroups': 'modifyGroupActions'));
             if(this.test)
                 data.append('req','test');

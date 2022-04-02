@@ -138,7 +138,7 @@ var users = new Vue({
         getUpdateInfo: function(){
 
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', 'getVersionsInfo');
 
             if(this.verbose)

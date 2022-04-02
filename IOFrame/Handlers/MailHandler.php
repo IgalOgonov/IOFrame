@@ -304,8 +304,8 @@ namespace IOFrame\Handlers{
                 else
                     $this->mail->setFrom($this->defaultAlias);
 
-
-            $this->mail->Subject = $subject;
+            $this->mail->CharSet = 'utf-8';
+            $this->mail->Subject = iconv(mb_detect_encoding($subject, 'auto'), 'UTF-8', $subject);
             $this->mail->Body    = $body;
             $this->mail->AltBody = $altBody;
 

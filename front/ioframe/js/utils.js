@@ -531,6 +531,30 @@ function timestampToDate(timestamp){
     return realDate;
 }
 
+/*Converts a common PHP Timestamp into a date*/
+function timeStampToFullDate(timestamp){
+    timestamp -= 0;
+    timestamp += document.serverTimeDelta ?? 0;
+    timestamp *= 1000;
+    let date = timestampToDate(timestamp);
+    let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
+    let minutes = Math.floor(timestamp%(1000 * 60 * 60)/(1000 * 60));
+    let seconds = Math.floor(timestamp%(1000 * 60)/(1000));
+    if(hours < 10)
+        hours = '0'+hours;
+    if(minutes < 10)
+        minutes = '0'+minutes;
+    if(seconds < 10)
+        seconds = '0'+seconds;
+    return {date:date,hours:hours,minutes:minutes,seconds:seconds};
+}
+
+/*Converts a common PHP Timestamp into a readable date*/
+function timeStampToReadableFullDate(timestamp){
+    let obj = timeStampToFullDate(timestamp);
+    return obj.date.split('-').reverse().join('-') + ', ' + obj.hours+ ':'+ obj.minutes+ ':'+obj.seconds;
+}
+
 /** Unescape html characters
 * @credit https://stackoverflow.com/questions/1912501/unescape-html-entities-in-javascript/1912522#1912522
 * */

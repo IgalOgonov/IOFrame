@@ -9,6 +9,6 @@ if(!isset($UserHandler))
         $defaultSettingsParams
     );
 //Hash the password
-$result =  $UserHandler->regUser($inputs,['test'=>$test,'activateToken'=>$inputs['token']]);
+$result =  $UserHandler->regUser($inputs,['test'=>$test,'language'=>$inputs['language'],'activateToken'=>$inputs['token']]);
 
 ?>

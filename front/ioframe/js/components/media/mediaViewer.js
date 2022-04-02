@@ -218,7 +218,7 @@ Vue.component('media-viewer', {
                 console.log('Querying API for '+url);
             //TODO Signify we're waiting for a response
             //Data to be sent
-            var data = new FormData();
+            let data = new FormData();
             data.append('action', (this.mediaType === 'img' ? 'getImages' : 'getVideos'));
             if(url!=='')
                 data.append('address', url);

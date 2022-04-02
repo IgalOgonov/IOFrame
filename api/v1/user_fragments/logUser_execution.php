@@ -12,5 +12,5 @@ switch($inputs["log"]) {
         $result = 0;
         break;
     default:
-        $result =  $UserHandler->logIn($inputs,['test'=>$test]);
+        $result =  $UserHandler->logIn($inputs,['language'=>$inputs['language'],'test'=>$test]);
 }

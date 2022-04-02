@@ -47,3 +47,4 @@ if(!isset($params['settingValue'])){
         echo 'A setting must have a value!'.EOL;
     exit(INPUT_VALIDATION_FAILURE);
 }
+$params['settingValue'] = str_replace('\'','\\\'',$params['settingValue']);

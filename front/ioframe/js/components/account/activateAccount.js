@@ -35,21 +35,32 @@ Vue.component('activate-account', {
                         '-3':'Activation code creation failed',
                         '-2':'User already active',
                         '-1':'Mail failed to send',
-                        '0':'Mail reset mail has been sent!',
+                        '0':'Activation mail has been sent!',
                         '1':'No matching mail found in this system!',
                     }
                 }
             }
         },
-        //Will either display result as an alert (default), or send the parsed event
-        alertResult: {
-            type: Boolean,
-            default: true
+        //Alert Options
+        alertOptions: {
+            type: Object,
+            default: function(){
+				return {
+					use:true, //Whether to use this, or send event instead
+					target:document.body, //Alert target
+					params:{} //Alert params
+				};
+			}
         },
         //If provided, will reset using this email
         email: {
             type: String,
             default: ''
+        },
+        //Selected language
+        language: {
+            type: String,
+            default: document.selectedLanguage ?? ''
         },
         //App Identifier
         identifier: {
@@ -113,6 +124,8 @@ Vue.component('activate-account', {
             //Data to be sent
             let data = new FormData();
             data.append('action', 'regConfirm');
+            if(this.language)
+                data.append('language', this.language);
             data.append('mail', this.email? this.email : this.mail);
 
             if(this.verbose)
@@ -184,8 +197,8 @@ Vue.component('activate-account', {
             if(!message){
                 message = this.text.responses[response];
             }
-            if(this.alertResult)
-                alertLog(message,messageType);
+            if(this.alertOptions.use)
+                alertLog(message,messageType,this.alertOptions.target,this.alertOptions.params);
 
             eventHub.$emit('regConfirmResult',{
                 response:response,
