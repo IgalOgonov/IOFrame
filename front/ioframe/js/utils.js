@@ -550,9 +550,26 @@ function timeStampToFullDate(timestamp){
 }
 
 /*Converts a common PHP Timestamp into a readable date*/
-function timeStampToReadableFullDate(timestamp){
+function timeStampToReadableFullDate(timestamp, round = 3){
     let obj = timeStampToFullDate(timestamp);
-    return obj.date.split('-').reverse().join('-') + ', ' + obj.hours+ ':'+ obj.minutes+ ':'+obj.seconds;
+    let res = obj.date.split('-').reverse().join('-');
+    if(round > 0)
+        res += ', ' + obj.hours;
+    if(round > 1)
+        res += ':'+ obj.minutes;
+    if(round > 2)
+        res += ':'+obj.seconds;
+    return  res;
+}
+
+function timeStampToReadable(timestamp){
+    return  timeStampToReadableFullDate(timestamp,0);
+}
+function timeStampToReadableHours(timestamp){
+    return  timeStampToReadableFullDate(timestamp,1);
+}
+function timeStampToReadableMinutes(timestamp){
+    return  timeStampToReadableFullDate(timestamp,2);
 }
 
 /** Unescape html characters

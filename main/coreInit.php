@@ -170,11 +170,11 @@ if(!isset($skipCoreInit) || $skipCoreInit==false){
             unset($_COOKIE['lastRelogResult']);
             setcookie("lastRelogResult", $res, time()+(60*60*24*36500),'/','', 1, 1);
             unset($_COOKIE['sesID']);
-            setcookie("sesID", null, -1,'/');
+            setcookie("sesID", '', -1,'/');
             unset($_COOKIE['sesIV']);
-            setcookie("sesIV", null, -1,'/');
+            setcookie("sesIV", '', -1,'/');
             unset($_COOKIE['userMail']);
-            setcookie("userMail", null, -1,'/');
+            setcookie("userMail", '', -1,'/');
         }
         setcookie("lastRelog", time(), time()+(60*60*24*36500),'/','', 1, 1);
         setcookie("lastRelogResult", ($success ? 'success' : $res), time()+(60*60*24*36500),'/','', 1, 1);

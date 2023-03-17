@@ -277,7 +277,7 @@ CONST ADDRESS_MAX_LENGTH = 128;
  *          IF keys were NOT passed OR not logged in OR DB connection error- true or false, whether the user has auth or not.
  */
 function checkAuth($params){
-    $test = isset($params['test'])? $params['test'] : false;
+    $test = $params['test']?? false;
     $authRequired = isset($params['authRequired'])? $params['authRequired'] : REQUIRED_AUTH_ADMIN;
     $keys = isset($params['keys'])? $params['keys'] : [];
     $objectAuth = isset($params['objectAuth'])? $params['objectAuth'] : [];

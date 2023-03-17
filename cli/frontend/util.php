@@ -174,7 +174,7 @@ if(!defined('helperFunctions'))
  */
 function createPage(array $config ,$params = []){
 
-    $test = isset($params['test'])? $params['test'] : false;
+    $test = $params['test']?? false;
     $verbose = isset($params['verbose'])?
         $params['verbose'] : $test ?
             true : false;

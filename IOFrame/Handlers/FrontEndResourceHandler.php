@@ -92,9 +92,9 @@ namespace IOFrame\Handlers{
          *      the identifier is "test folder/test.js" (always 'address'.'name').
          *      What keeps different files in similar addresses unique is the file extension.
          */
-        protected function getFrontendResources(array $addresses = [], string $type, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+        protected function getFrontendResources(array $addresses, string $type, array $params = []){
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             //If we are getting all addresses, enforce restrictions
             if($addresses == []){
@@ -451,8 +451,8 @@ namespace IOFrame\Handlers{
          * @throws \Exception If provided type is not supported.
          */
         function moveFrontendResourceFiles(array $inputs, string $type,  array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $updateDBIfExists = isset($params['updateDBIfExists'])? $params['updateDBIfExists'] : true;
             $local = isset($params['local'])? $params['local'] : false;
             $copy = isset($params['copy'])? $params['copy'] : false;
@@ -566,8 +566,8 @@ namespace IOFrame\Handlers{
          * @throws \Exception If provided type is not supported.
          */
         function deleteFrontendResourceFiles(array $addresses, string $type,  array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $updateDBIfNotExists = isset($params['updateDBIfNotExists'])? $params['updateDBIfNotExists'] : true;
             $local = isset($params['local'])? $params['local'] : false;
             if($type === 'js')
@@ -673,8 +673,8 @@ namespace IOFrame\Handlers{
         function minifyFrontendResources( array $addresses, string $type, array $params = []){
             if(!defined('LockHandler'))
                 require 'LockHandler.php';
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             $minifyName = isset($params['minifyName'])? $params['minifyName'] : false;
 
@@ -963,8 +963,8 @@ namespace IOFrame\Handlers{
          *      Note - A COLLECTION OF ANY RESOURCES THAT ARE LOCAL WILL BE MINIFIED regardless of settings.
          */
         function getFrontendResourceCollections(array $names, string $type, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $includeGalleryInfo = isset($params['includeGalleryInfo'])? $params['includeGalleryInfo'] : false;
             $minifyToFolder = isset($params['minifyToFolder'])? $params['minifyToFolder'] : 'min';
             //Else get and minify all resources. This wont matter if names are []
@@ -1089,8 +1089,8 @@ namespace IOFrame\Handlers{
          *      1 - folder already exists
          */
         function createFolder(string $relativeAddress, string $name,  string $type,  array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(isset($params['rootFolder']))
                 $rootFolder = $params['rootFolder'];
@@ -1383,8 +1383,8 @@ namespace IOFrame\Handlers{
          *  Empty string if the compilation fails
          */
         function compileSCSS(string $address, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $checkExisting = isset($params['checkExisting'])? $params['checkExisting'] : true;
             $compileToFolder = isset($params['compileToFolder'])? $params['compileToFolder'] : '';
 

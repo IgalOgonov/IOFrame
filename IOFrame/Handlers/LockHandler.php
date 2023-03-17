@@ -206,8 +206,8 @@ namespace IOFrame\Handlers{
          *              <32 character string> - value of locked identifier on success --IF $value was NOT provided
          */
         function makeRedisMutex($key, $value = null, $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             //Set defaults
             $sec = isset($params['sec']) ? (int)$params['sec'] : 2;
             $maxWait = isset($params['maxWait']) ? (int)$params['maxWait'] : 4;
@@ -278,8 +278,8 @@ namespace IOFrame\Handlers{
          *              1 - could not release a mutex due to $value not matching current value --IF $value was NOT provided
          */
         function releaseRedisMutex($key, $value = null, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if($this->RedisHandler === null || !$this->RedisHandler->isInit)
                 return -1;

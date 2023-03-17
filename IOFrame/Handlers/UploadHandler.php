@@ -45,6 +45,7 @@ namespace IOFrame\Handlers{
          * [
          *          [
          *           'safeMode' => bool, default false - If true, will only support 'jpg','jpeg','png' files.
+         *           'acceptedFormats' => string[], default [] - specific formats to accept during safeMode, even if unsupported.
          *           'maxFileSize' => int, default 1000000 - maximum upload size in bytes.
          *           'overwrite' => bool, default false - whether overwriting existing files is allowed
          *           'imageQualityPercentage' => int, default 100 - can be 0 to 100
@@ -84,49 +85,16 @@ namespace IOFrame\Handlers{
         */
         function handleUploadedFile(array $uploadNames, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
-            $safeMode = isset($params['safeMode'])? $params['safeMode'] : false;
-
-            //Set maximum file size.
-            if(isset($params['maxFileSize']))
-                $maxFileSize = $params['maxFileSize'];
-            else{
-                if($this->siteSettings != null && $this->siteSettings->getSetting('maxUploadSize'))
-                    $maxFileSize = $this->siteSettings->getSetting('maxUploadSize');
-                else
-                    $maxFileSize = 1000000;
-            }
-
-            //Operation Mode
-            if(isset($params['overwrite']))
-                $overwrite = $params['overwrite'];
-            else
-                $overwrite = false;
-
-            //Image Quality
-            if(isset($params['imageQualityPercentage']))
-                $imageQualityPercentage = $params['imageQualityPercentage'];
-            else
-                $imageQualityPercentage = 100;
-
-            //Operation Mode
-            if(isset($params['resourceOpMode']))
-                $opMode = $params['resourceOpMode'];
-            else
-                $opMode = 'local';
-
-            //Target Path
-            if($opMode == 'local'){
-                $resourceTargetPath = isset($params['resourceTargetPath'])?
-                    $params['resourceTargetPath'] : 'front/ioframe/img/';
-            }
-
-            //Create folders if they dont exist?
-            if(isset($params['createFolders']))
-                $createFolders = $params['createFolders'];
-            else
-                $createFolders = true;
+            $test = $params['test'] ?? false;
+            $verbose = $params['verbose'] ?? $test;
+            $safeMode = $params['safeMode'] ?? false;
+            $acceptedFormats = $params['acceptedFormats'] ?? [];
+            $maxFileSize = $params['maxFileSize'] ?? ($this->siteSettings->getSetting('maxUploadSize') ?? 1000000);
+            $overwrite = $params['overwrite'] ?? false;
+            $imageQualityPercentage = $params['imageQualityPercentage'] ?? 100;
+            $opMode = $params['resourceOpMode'] ?? 'local';
+            $resourceTargetPath = $params['resourceTargetPath'] ?? 'front/ioframe/img/';
+            $createFolders = $params['createFolders'] ?? true;
 
             //Resault
             $res = [];
@@ -149,8 +117,8 @@ namespace IOFrame\Handlers{
                 //Support an array type that writes a file under a specific name.
                 //NOTE that it's on the validation layer to ensure the requested names do not overlap anything.
                 if(gettype($uploadName) === 'array'){
-                    $requestedName = isset($uploadName['requestedName'])? $uploadName['requestedName'] : '';
-                    $uploadName = isset($uploadName['uploadName'])? $uploadName['uploadName'] : '';
+                    $requestedName = $uploadName['requestedName'] ?? '';
+                    $uploadName = $uploadName['uploadName'] ?? '';
                 }
 
                 if($uploadName === ''){
@@ -183,20 +151,22 @@ namespace IOFrame\Handlers{
                 //Was there an error?
                 if(!empty($uploadedResource[ 'error' ])){
                     if($verbose)
-                        echo 'Image '.$uploadName.' was not uploaded due to an upload error.'.EOL;
+                        echo 'File '.$uploadName.' was not uploaded due to an upload error.'.EOL;
                     $res[$uploadName] = -2;
                 }
                 // Is it small enough?
                 elseif( ( $uploaded_size >= $maxFileSize )
                 ){
                     if($verbose)
-                        echo 'Image '.$uploadName.' was not uploaded. We can only accept files of size up to '.$maxFileSize.EOL;
+                        echo 'File '.$uploadName.' was not uploaded. We can only accept files of size up to '.$maxFileSize.EOL;
                     $res[$uploadName] = 1;
                 }
                 // Invalid file
                 else {
                     //Sometimes, images are named incorrectly but can still be read as their proper type
                     $detectedType = exif_imagetype($uploaded_tmp);
+
+                    //Image specific
                     $supportedTypes = [
                         IMAGETYPE_JPEG => 'image/jpeg',
                         IMAGETYPE_PNG => 'image/png',
@@ -204,30 +174,31 @@ namespace IOFrame\Handlers{
                     ];
                     if($detectedType && !empty($supportedTypes[$detectedType]))
                         $uploaded_type = $supportedTypes[$detectedType];
-                    // Strip any metadata, by re-encoding image
-                    if( $uploaded_type == 'image/jpeg' ) {
-                        if($verbose)
-                            echo 'Writing JPEG image to temp directory'.EOL;
-                        $img = imagecreatefromjpeg( $uploaded_tmp );
-                        imagejpeg( $img, $temp_file, $imageQualityPercentage);
+                    $img = null;
+                    switch ($uploaded_type){
+                        case 'image/jpeg':
+                            $img = imagecreatefromjpeg( $uploaded_tmp );
+                            imagejpeg( $img, $temp_file, $imageQualityPercentage);
+                            break;
+                        case 'image/png':
+                            $img = imagecreatefrompng( $uploaded_tmp );
+                            imagesavealpha($img, TRUE);
+                            imagepng( $img, $temp_file, 9*(1-$imageQualityPercentage/100));
+                            break;
+                        case 'image/webp':
+                            $img = imagecreatefromwebp( $uploaded_tmp);;
+                            imagewebp($img, $temp_file, $imageQualityPercentage);
+                            break;
                     }
-                    elseif( $uploaded_type == 'image/png') {
+
+                    //Anything bellow this cannot be safely uploaded (at least for now), but exceptions can be made - e.g for text files, or audio files
+                    if($img){
                         if($verbose)
-                            echo 'Writing PNG image to temp directory'.EOL;
-                        $img = imagecreatefrompng( $uploaded_tmp );
-                        imagesavealpha($img, TRUE);
-                        imagepng( $img, $temp_file, 9*(1-$imageQualityPercentage/100));
+                            echo 'Wrote '.$uploaded_type.' image to temp directory'.EOL;
                     }
-                    elseif( $uploaded_type == 'image/webp') {
+                    elseif($safeMode && !in_array($uploaded_type,$acceptedFormats)){
                         if($verbose)
-                            echo 'Writing WebP image to temp directory'.EOL;
-                        $img = imagecreatefromwebp( $uploaded_tmp);;
-                        imagewebp($img, $temp_file, $imageQualityPercentage);
-                    }
-                    //Anything bellow this cannot be safely uploaded (at least for now)
-                    elseif($safeMode){
-                        if($verbose)
-                            echo 'File '.$uploadName.' was not uploaded. Only files of types jpeg and png are accepted when safe mode is enabled.'.EOL;
+                            echo 'File '.$uploadName.' was not uploaded. Only some image file types are accepted by default, when safe mode is enabled.'.EOL;
                         $res[$uploadName] = 4;
                         continue;
                     }
@@ -237,7 +208,8 @@ namespace IOFrame\Handlers{
                         //For consistency
                         rename($uploaded_tmp,$temp_file);
                     }
-                    if(isset($img))
+                    //Cleanup
+                    if($img)
                         imagedestroy( $img );
 
                     switch($opMode){
@@ -256,7 +228,7 @@ namespace IOFrame\Handlers{
                                     $res[$uploadName] = 3;
                                     $moveFile = false;
                                     if($verbose)
-                                        echo 'Error - image already exists at '.$target_path.$target_file.'!'.EOL;
+                                        echo 'Error - file already exists at '.$target_path.$target_file.'!'.EOL;
                                 }
                                 else
                                     $moveFile= rename(
@@ -276,7 +248,7 @@ namespace IOFrame\Handlers{
                             else {
                                 // No
                                 if($verbose)
-                                    echo 'Image '.$uploadName.' was not uploaded.'.EOL;
+                                    echo 'File '.$uploadName.' was not uploaded.'.EOL;
                                 $res[$uploadName] = 2;
                             }
                             break;

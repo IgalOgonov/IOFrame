@@ -18,9 +18,11 @@ foreach(['usernameLike','emailLike'] as $param){
             echo $param.' has to match the regex pattern '.REGEX_REGEX.EOL;
         exit(INPUT_VALIDATION_FAILURE);
     }
-    $inputs[$param] = str_replace('.','\.',$inputs[$param]);
-    $inputs[$param] = str_replace('-','\-',$inputs[$param]);
-    $inputs[$param] = str_replace('_','\_',$inputs[$param]);
+    elseif($inputs[$param] !== null){
+        $inputs[$param] = str_replace('.','\.',$inputs[$param]);
+        $inputs[$param] = str_replace('-','\-',$inputs[$param]);
+        $inputs[$param] = str_replace('_','\_',$inputs[$param]);
+    }
 }
 
 //Params which can be null, true or false, but if set will become 0 or 1

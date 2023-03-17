@@ -73,8 +73,8 @@ namespace IOFrame\Handlers{
          *              <32 character string> - value of locked identifier on success
          */
         function checkAction(int $category, $identifier, int $action,int $sec,array $params){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             //Notice those statements MODIFY $params, not just extract data from them.
             $params['maxWait'] = isset($params['maxWait']) ? $params['maxWait'] : 1;
             $params['randomDelay'] = isset($params['randomDelay']) ? $params['randomDelay'] : 1000;
@@ -103,8 +103,8 @@ namespace IOFrame\Handlers{
          *               <number bigger than 0> - TTL (in seconds) until limit expires.
          */
         function checkActionEventLimit(int $category, $identifier, int $action, array $params){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $checkExpiry = isset($params['checkExpiry'])? $params['checkExpiry'] : false;
             $columnToCheck = $checkExpiry ? 'Sequence_Expires' : 'Sequence_Limited_Until';
 
@@ -177,8 +177,8 @@ namespace IOFrame\Handlers{
          *               1 - limit cleared, but extar DB call failed.
          */
         function clearActionEventLimit(int $category, $identifier, int $action, array $params){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $removeBlacklisted = isset($params['removeBlacklisted'])? $params['removeBlacklisted'] : false;
             $removeBanned = isset($params['removeBanned'])? $params['removeBanned'] : false;
             $removeSuspicious = isset($params['removeSuspicious'])? $params['removeSuspicious'] : false;

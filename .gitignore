@@ -11,3 +11,4 @@ cli/watcher-json/
 *min.css
 !vue.min.js
 !marked.min.js
+composer.phar

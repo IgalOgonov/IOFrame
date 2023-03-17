@@ -1419,7 +1419,7 @@ namespace IOFrame{
                                                               Thumbnail_Resource_Type varchar(64) DEFAULT 'img',
                                                               Thumbnail_Address varchar(512) DEFAULT NULL,
                                                               Article_Weight int NOT NULL DEFAULT 0,
-                                                              Block_Order varchar(2048) NOT NULL DEFAULT '',
+                                                              Block_Order varchar(2048) DEFAULT NULL,
                                                               Created varchar(14) NOT NULL DEFAULT 0,
                                                               Last_Updated varchar(14) NOT NULL DEFAULT 0,
                                                               FOREIGN KEY (Thumbnail_Resource_Type, Thumbnail_Address)

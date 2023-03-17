@@ -119,8 +119,8 @@ namespace IOFrame\Handlers{
             $res = [];
             //set default params
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(!isset($params['safeStr']))
                 $safeStr = true;
@@ -371,8 +371,8 @@ namespace IOFrame\Handlers{
 
             //set default params
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(!isset($params['safeStr']))
                 $safeStr = true;
@@ -734,8 +734,8 @@ namespace IOFrame\Handlers{
 
             //set default params
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(!isset($params['safeStr']))
                 $safeStr = true;
@@ -838,8 +838,8 @@ namespace IOFrame\Handlers{
          *              <id> => <deleteObject result code>.
          */
         function deleteObjects(array $inputs, $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $tableName = $this->SQLHandler->getSQLPrefix().$this->tableName.'_CACHE';
             //You must be logged in to use this handler, as it checks the caller's rank and ID.
             if(!IOFrame\Util\assertLogin())
@@ -946,8 +946,8 @@ namespace IOFrame\Handlers{
 
             //set default params
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(!isset($params['updated']))
                 $updated = 0;
@@ -1230,8 +1230,8 @@ namespace IOFrame\Handlers{
          */
         protected function checkObAddGroupAuth($groupInfo, $sesInfo, bool $toAdd, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             //Maybe it's allowed to add objects to this group
             if($toAdd){
@@ -1260,8 +1260,8 @@ namespace IOFrame\Handlers{
          * */
         protected function getObjectsFromCacheOrDB($targets, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(!isset($params['type'])){
                 if($verbose)
@@ -1393,8 +1393,8 @@ namespace IOFrame\Handlers{
          * @returns int 0 on success, 1 on failure
          * */
         function createGroups(array $groups, array $sesInfo, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(isset($params['cacheTTL']))
                 $cacheTTL = $params['cacheTTL'];
@@ -1468,8 +1468,8 @@ namespace IOFrame\Handlers{
          * @returns int 0 on success, 1 on failure
          * */
         function updateGroups(array $groups, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(isset($params['cacheTTL']))
                 $cacheTTL = $params['cacheTTL'];
@@ -1569,8 +1569,8 @@ namespace IOFrame\Handlers{
          * */
 
         function checkGroupsUpdated(array $groups, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(count($groups) == 0)
                 return [];
@@ -1648,8 +1648,8 @@ namespace IOFrame\Handlers{
             else
                 $cacheTTL = $this->cacheTTL;
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             //Array of the type <pageName> => <objectID> for all objects that need to be assigned
             $assignMaps = [];
@@ -1893,8 +1893,8 @@ namespace IOFrame\Handlers{
          * TODO - Add security, allow private or otherwise secure objects, or at least pages
          * */
         function getObjectMap(string $map, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             isset($params['time'])?
                 $time = $params['time'] : $time = 0;
             $pageArr = $this->retrieveObjectMap($map, $params);
@@ -1928,8 +1928,8 @@ namespace IOFrame\Handlers{
          * TODO - Add security, allow private or otherwise secure objects, or at least pages
          * */
         function getObjectMaps(array $pageArray, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $res = array();
             $pagesToGet = [];
             foreach($pageArray as $pageName=>$time){

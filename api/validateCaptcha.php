@@ -21,7 +21,7 @@ if($siteSettings->getSetting('capcha_site_key') && $siteSettings->getSetting('ca
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
     curl_setopt($ch, CURLOPT_DNS_CACHE_TIMEOUT, 5);
     curl_setopt($ch, CURLOPT_FRESH_CONNECT, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, implode($post,'&'));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, implode('&', $post));
     $data = curl_exec ($ch);
     curl_close ($ch);
 

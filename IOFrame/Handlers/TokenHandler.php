@@ -100,8 +100,8 @@ namespace IOFrame\Handlers{
          * */
         function lockTokens(array $tokens, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             $hex_secure = false;
             $lock = '';
@@ -154,8 +154,8 @@ namespace IOFrame\Handlers{
          * */
         protected function unlockTokens(array $tokens, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             $key = $test = isset($params['key'])? $params['key'] : null;
 
@@ -372,8 +372,8 @@ namespace IOFrame\Handlers{
                 unset($tokens['@']);
 
             //Set defaults
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $overwrite = isset($params['overwrite'])? $params['overwrite'] : true;
             $update = isset($params['update'])? $params['update'] : false;
 
@@ -516,8 +516,8 @@ namespace IOFrame\Handlers{
          *          0 - All good
          */
         function deleteTokens(array $tokens, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             $itemsToDelete = [];
 
@@ -553,8 +553,8 @@ namespace IOFrame\Handlers{
          *          0 - All good
          */
         function deleteExpiredTokens(array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $time = isset($params['time'])? $params['time'] : time();
 
             $result = $this->SQLHandler->deleteFromTable(
@@ -619,8 +619,8 @@ namespace IOFrame\Handlers{
         function consumeTokens(array $tokens ,array $params = []){
 
             //Set defaults
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             $tokenNames = [];
             $res = [];

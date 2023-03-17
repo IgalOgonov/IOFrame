@@ -28,6 +28,10 @@ namespace IOFrame{
         /** The site settings
          * */
         protected $siteSettings = null;
+        /**
+         * @var Handlers\SQLHandler|mixed
+         */
+        public $SQLHandler;
 
 
         /**
@@ -48,8 +52,8 @@ namespace IOFrame{
             else
                 $opMode = $params['opMode'];
 
-            if(isset($params['limit']))
-                $this->defaultQueryLimit = $params['limit'];
+            if(isset($params['defaultQueryLimit']))
+                $this->defaultQueryLimit = $params['defaultQueryLimit'];
 
             //Has to be set before parent construct due to SQLHandler depending on it, and Logger depending on the outcome
             $this->settings=$localSettings;
@@ -129,10 +133,10 @@ namespace IOFrame{
          * false if nothing exists, or on different error
          * */
         protected function getFromTableByKey(array $keys, $keyCol, string $tableName, array $columns = [], array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
+            $test = $params['test']?? false;
             $prependPrefix = isset($params['prependPrefix'])? $params['prependPrefix'] : true;
             $pushKeyToColumns = isset($params['pushKeyToColumns'])? $params['pushKeyToColumns'] : true;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $verbose = $params['verbose'] ?? $test;
             $fillMissingKeysWithNull = isset($params['fillMissingKeysWithNull'])? $params['fillMissingKeysWithNull'] : false;
 
             $extraConditions = isset($params['extraConditions'])? $params['extraConditions'] : [];

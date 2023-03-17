@@ -12,7 +12,7 @@ namespace IOFrame\Util{
     use Symfony\Component\HttpFoundation\Request;
     use League\OpenAPIValidation\PSR7\Exception\ValidationFailed;
 
-    define('APIManager',true);
+    define('v2APIManager',true);
     if(!defined('abstractDBWithCache'))
         require __DIR__.'/../Handlers/abstractDBWithCache.php';
 
@@ -23,7 +23,7 @@ namespace IOFrame\Util{
      * @license LGPL
      * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
      * */
-    class APIManager extends IOFrame\abstractDBWithCache
+    class v2APIManager extends IOFrame\abstractDBWithCache
     {
 
         /** @param array The openAPI spec, parsed as an associative array
@@ -184,8 +184,8 @@ namespace IOFrame\Util{
          * */
         public function initParams(array $params = [])
         {
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             if(empty($this->match))
                 $this->validateAction();
 

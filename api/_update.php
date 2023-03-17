@@ -332,6 +332,15 @@ switch($action){
             case '1.2.2.0':
             case '1.2.2.1':
                 break;
+            case '1.2.2.2':
+                array_push(
+                    $newQueries,
+                    [
+                        'ALTER TABLE '.$prefix.'ARTICLES CHANGE Block_Order Block_Order VARCHAR(2048) NULL DEFAULT NULL',
+                        'ALTER TABLE '.$prefix.'ARTICLES CHANGE Block_Order Block_Order VARCHAR(2048) NOT NULL DEFAULT \'\'',
+                    ]
+                );
+                break;
             default:
         }
 
@@ -718,6 +727,7 @@ switch($action){
                             case '1.2.1.0':
                             case '1.2.2.0':
                             case '1.2.2.1':
+                            case '1.2.2.2':
                                 break;
                             default:
                         }

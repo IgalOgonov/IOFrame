@@ -172,7 +172,7 @@ $apiSettings = new IOFrame\Handlers\SettingsHandler($baseUrl.'/localFiles/apiSet
 if(!file_exists('localFiles/_installSes') && isset($_SERVER['REMOTE_ADDR'])){
     $myFile = fopen('localFiles/_installSes', 'w+');
     fwrite($myFile,$_SERVER['REMOTE_ADDR']);
-    install($userSettings,$pageSettings,$mailSettings,$localSettings,$siteSettings,$sqlSettings,$redisSettings,$resourceSettings,$metaSettings,$apiSettings,0,$baseUrl);
+    install($userSettings,$pageSettings,$mailSettings,$localSettings,$siteSettings,$sqlSettings,$redisSettings,$resourceSettings,$metaSettings,$apiSettings,$baseUrl,0);
 }
 else{
     $myFile = fopen('localFiles/_installSes', 'r+');
@@ -187,7 +187,7 @@ else{
         $installStage = 0;
         if(isset($_REQUEST['stage']))
             $installStage = $_REQUEST['stage'];
-        install($userSettings,$pageSettings,$mailSettings,$localSettings,$siteSettings,$sqlSettings,$redisSettings,$resourceSettings,$metaSettings,$apiSettings,$installStage,$baseUrl);
+        install($userSettings,$pageSettings,$mailSettings,$localSettings,$siteSettings,$sqlSettings,$redisSettings,$resourceSettings,$metaSettings,$apiSettings,$baseUrl,$installStage);
     }
 }
 
@@ -198,7 +198,8 @@ function install(IOFrame\Handlers\SettingsHandler $userSettings,
                  IOFrame\Handlers\SettingsHandler $resourceSettings,
                  IOFrame\Handlers\SettingsHandler $metaSettings,
                  IOFrame\Handlers\SettingsHandler $apiSettings,
-                 $stage='0',$baseUrl){
+                 $baseUrl,
+                 $stage=0){
     //Echo the return button
     if($stage!=0)
         echo    '<form method="post" action="">
@@ -298,11 +299,11 @@ function install(IOFrame\Handlers\SettingsHandler $userSettings,
                             to leave it blank, OR forces it to be blank (both latter choices spawn a random username).</small><br>
                             
                     <span>Allow Testing APIs:</span>
-                    <input type="checkbox" name="allowTesting" value="0" checked><br>
+                    <input type="checkbox" name="allowTesting" value="1" checked><br>
                     <small>If this is checked, API testing will be allowed with no restrictions. DONT CHECK IN PRODUCTION (live sites)!!!</small><br>
                             
                     <span>Allow Getting Restricted Articles by Address:</span>
-                    <input type="checkbox" name="allowTesting" value="0" checked><br>
+                    <input type="checkbox" name="restrictedArticleByAddress" value="1" checked><br>
                     <small>If this is checked, users will be able to get articles with "restricted" auth with direct links (making them hidden for those without the link, in effect)</small><br>
 
                     <span>Registration Mail Confirmation:</span>

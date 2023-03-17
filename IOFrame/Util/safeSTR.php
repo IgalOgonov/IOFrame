@@ -13,7 +13,7 @@ namespace IOFrame\Util{
         $legacyMode = isset($params['legacyMode'])? $params['legacyMode'] : false;
 
         if(!$legacyMode)
-            return base64_decode($str);
+            return base64_decode($str??'');
 
         if($str === null)
             return $str;
@@ -82,7 +82,7 @@ namespace IOFrame\Util{
         $legacyMode = isset($params['legacyMode'])? $params['legacyMode'] : false;
 
         if(!$legacyMode)
-            return base64_encode($str);
+            return base64_encode($str??'');
 
         $res=$str;
         $repeats = 1;

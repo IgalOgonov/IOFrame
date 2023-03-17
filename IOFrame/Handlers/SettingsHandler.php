@@ -290,7 +290,7 @@ namespace IOFrame\Handlers{
          * */
         function updateSettings(array $params = []){
             $test = isset($params['test'])? $params['test'] : $test = false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $verbose = $params['verbose'] ?? $test;
             isset($params['mode'])?
                 $mode = $params['mode'] : $mode = null;
             //If not specified otherwise, update in default mode
@@ -345,7 +345,12 @@ namespace IOFrame\Handlers{
                 if($verbose){
                     echo 'Query to send: '.$testQuery.' at '.$updateTime.EOL;
                 }
-                $temp = $this->SQLHandler->exeQueryBindParam($testQuery, [], ['fetchAll'=>true]);
+                try{
+                    $temp = $this->SQLHandler->exeQueryBindParam($testQuery, [], ['fetchAll'=>true]);
+                }
+                catch (\Exception $e){
+                    $temp = 0;
+                }
 
                 //Used to check whether there are duplicate settings - as ell as to remove '_Last_Updated'
                 $res = [];
@@ -407,7 +412,7 @@ namespace IOFrame\Handlers{
                 return false;
             //Indicates requested everything was found
             $test = isset($params['test'])? $params['test'] : $test = false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $verbose = $params['verbose'] ?? $test;
             $res = true;
             $combined_array = [];
             foreach($this->names as $name){
@@ -459,7 +464,7 @@ namespace IOFrame\Handlers{
 
             //Ensure required params
             $test = isset($params['test'])? $params['test'] : $test = false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $verbose = $params['verbose'] ?? $test;
             if(!isset($params['settingsArray']) || !isset($params['name']) )
                 return false;
             $name = $params['name'];
@@ -496,7 +501,7 @@ namespace IOFrame\Handlers{
         function chkInit(array $params = []){
 
             $test = isset($params['test'])? $params['test'] : $test = false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $verbose = $params['verbose'] ?? $test;
             isset($params['mode'])?
                 $mode = $params['mode'] : $mode = null;
 
@@ -604,7 +609,7 @@ namespace IOFrame\Handlers{
         function setSetting(string $set, $val, array $params = []){
 
             $test = isset($params['test'])? $params['test'] : $test = false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $verbose = $params['verbose'] ?? $test;
             $backUp = isset($params['backUp'])? $params['backUp'] : $backUp = true;
             isset($params['createNew'])?
                 $createNew = $params['createNew'] : $createNew = false;
@@ -615,8 +620,7 @@ namespace IOFrame\Handlers{
             if(!$this->chkInit(['mode'=>null,'test'=>$test,'verbose'=>$verbose]))
                 return false;
             else if(!isset($this->settingsArray[$set])){
-                if($createNew);
-                else
+                if(!$createNew)
                     return -1;
             }
 
@@ -702,7 +706,7 @@ namespace IOFrame\Handlers{
         function updateMeta(string $name, array $params = []){
 
             $test = isset($params['test'])? $params['test'] : $test = false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $verbose = $params['verbose'] ?? $test;
 
             isset($params['mode'])?
                 $mode = $params['mode'] : $mode = null;
@@ -735,7 +739,7 @@ namespace IOFrame\Handlers{
          */
         function backupSettings(string $name, array $params = []){
             $test = isset($params['test'])? $params['test'] : $test = false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $verbose = $params['verbose'] ?? $test;
             if(!$test)
                 $this->FileHandler->backupFile($this->settingsURLs[$name],'settings',['maxBackup'=>10]);
             if($verbose)
@@ -749,7 +753,7 @@ namespace IOFrame\Handlers{
          * */
         function initDB(array $params = []){
             $test = isset($params['test'])? $params['test'] : $test = false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $verbose = $params['verbose'] ?? $test;
             //This can only be done in mixed mode
             if($this->opMode != SETTINGS_OP_MODE_MIXED){
                 return false;
@@ -790,7 +794,7 @@ namespace IOFrame\Handlers{
          * */
         function initLocal(array $params = []){
             $test = isset($params['test'])? $params['test'] : $test = false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $verbose = $params['verbose'] ?? $test;
             //This can only be done in mixed mode
             if($this->opMode != SETTINGS_OP_MODE_MIXED){
                 return false;
@@ -835,7 +839,7 @@ namespace IOFrame\Handlers{
          */
         function syncWithDB($params = []){
             $test = isset($params['test'])? $params['test'] : $test = false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $verbose = $params['verbose'] ?? $test;
             //Set defaults
             if(!isset($params['localToDB']))
                 $params['localToDB'] = true;

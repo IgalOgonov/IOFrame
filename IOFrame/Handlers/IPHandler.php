@@ -171,8 +171,8 @@ namespace IOFrame\Handlers{
         function checkIP(array $params = []){
             //set defaults
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(isset($params['ip']))
                 $ip = $params['ip'];
@@ -373,8 +373,8 @@ namespace IOFrame\Handlers{
          */
         function getIPs(array $inputs = [], array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $reliable = isset($params['reliable'])? $params['reliable'] : null;
             $type = isset($params['type'])? $params['type'] : null;
             $ignoreExpired = isset($params['ignoreExpired'])? $params['ignoreExpired'] : true;
@@ -497,8 +497,8 @@ namespace IOFrame\Handlers{
          */
         function getIPRanges(array $inputs = [], array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $type = isset($params['type'])? $params['type'] : null;
             $ignoreExpired = isset($params['ignoreExpired'])? $params['ignoreExpired'] : true;
             $limit = isset($params['limit'])? $params['limit'] : null;
@@ -597,8 +597,8 @@ namespace IOFrame\Handlers{
          * */
         function addIP(string $ip, bool $type , array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             isset($params['override'])?
                 $override = $params['override'] : $override = false;
@@ -640,8 +640,8 @@ namespace IOFrame\Handlers{
          * */
         function updateIP(string $ip, bool $type = null , array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             isset($params['reliable'])?
                 $reliable = $params['reliable'] : $reliable = true;
@@ -703,8 +703,8 @@ namespace IOFrame\Handlers{
          *          false - IP does not exist
          */
         function deleteIP(string $ip, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             $ip = $this->SQLHandler->selectFromTable(
                 $this->SQLHandler->getSQLPrefix().'IP_LIST',
@@ -746,8 +746,8 @@ namespace IOFrame\Handlers{
          * */
         function addIPRange(string $prefix, int $from, int $to, bool $type, int $ttl, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             isset($params['override'])?
                 $override = $params['override'] : $override = false;
@@ -791,8 +791,8 @@ namespace IOFrame\Handlers{
 
             $assignments = [];
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(isset($params['type']))
                 array_push($assignments,'IP_Type = '.(int)$params['type']);
@@ -858,8 +858,8 @@ namespace IOFrame\Handlers{
          */
         function deleteIPRange(string $prefix, int $from, int $to, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             $ip = $this->SQLHandler->selectFromTable(
                 $this->SQLHandler->getSQLPrefix().'IPV4_RANGE',
@@ -904,8 +904,8 @@ namespace IOFrame\Handlers{
          */
         function deleteExpired(array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             isset($params['range'])?
                 $range = $params['range'] : $range = null;

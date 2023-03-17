@@ -67,8 +67,8 @@ namespace IOFrame\Handlers{
          *      4 - registration would succeed, but token does not allow activation
          */
         function regUser(array $inputs, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $activateToken = isset($params['activateToken'])? $params['activateToken'] : null;
             $tokenConsumeUses = isset($params['tokenConsumeUses'])? $params['tokenConsumeUses'] : 1;
             $considerActive = isset($params['considerActive'])? $params['considerActive'] : false;
@@ -146,8 +146,8 @@ namespace IOFrame\Handlers{
          * @returns int description in main function
          */
         private function reg_checkExistingUserOrMail(array $inputs, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             try{
                 $checkRes=$this->SQLHandler->selectFromTable($this->SQLHandler->getSQLPrefix().'USERS',[['Email', $inputs["m"],'='],['Username', $inputs["u"],'='],'OR'],
                     [],['noValidate'=>true,'test'=>$test,'verbose'=>$verbose]);
@@ -183,8 +183,8 @@ namespace IOFrame\Handlers{
          * @returns int description in main function
          */
         private function reg_makeUserCore(array $inputs, string $hash, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $active = isset($params['active'])? $params['active'] : 0;
             $rank = isset($params['rank'])? $params['rank'] : 9999;
             $language = isset($params['language'])? $params['language'] : null;
@@ -224,8 +224,8 @@ namespace IOFrame\Handlers{
          * @returns int description in main function
          */
         private function reg_makeUserAuth(array $inputs, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $query = "INSERT INTO ".$this->SQLHandler->getSQLPrefix()."USERS_AUTH(ID) SELECT ID FROM ".$this->SQLHandler->getSQLPrefix()."USERS WHERE Username=:Username";
             //Add extra data
             if(!$test)
@@ -248,8 +248,8 @@ namespace IOFrame\Handlers{
          * @returns int description in main function
          */
         private function reg_makeUserExtra(array $inputs, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $active = isset($params['active'])? $params['active'] : 0;
             //Need to fetch the ID of the user we just created in order to add meta-data
 
@@ -293,8 +293,8 @@ namespace IOFrame\Handlers{
          *              1 if userID does not exist
          */
         function changePassword(int $userID,string $plaintextPassword, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $hash = password_hash($plaintextPassword, PASSWORD_DEFAULT);
             $userInfo = $this->SQLHandler->selectFromTable(
                 $this->SQLHandler->getSQLPrefix().'USERS',['ID',$userID,'='],['ID'],['test'=>$test,'verbose'=>$verbose]
@@ -323,8 +323,8 @@ namespace IOFrame\Handlers{
          *              2 Email already in use
          */
         function changeMail(int $userID,string $newEmail, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $language = isset($params['language'])? $params['language'] : null;
             $keepActive = isset($params['keepActive'])? $params['keepActive'] : $this->userSettings->getSetting('regConfirmMail') || ($language && $this->userSettings->getSetting('regConfirmMail_'.$language));
 
@@ -375,8 +375,8 @@ namespace IOFrame\Handlers{
          *              0 all good.
          */
         function accountActivation(string $uMail, int $uId = null, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $async = isset($params['async'])? $params['async'] : true;
             $language = isset($params['language'])? $params['language'] : null;
 
@@ -426,8 +426,8 @@ namespace IOFrame\Handlers{
          */
 
         function confirmRegistration(int $id, string $code, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             $res = $this->confirmCode($id,$code,'ACCOUNT_ACTIVATION',['test'=>$test,'verbose'=>$verbose]);
 
@@ -463,8 +463,8 @@ namespace IOFrame\Handlers{
          *      3 - Mail failed to send!
          */
         function pwdResetSend(string $uMail, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $language = isset($params['language'])? $params['language'] : null;
             isset($params['async'])?
                 $async = $params['async'] : $async = true;
@@ -541,8 +541,8 @@ namespace IOFrame\Handlers{
          *      3 - Confirmation code expired.
          */
         function pwdResetConfirm(int $id, string $code, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $res = $this->confirmCode($id,$code,'PASSWORD_RESET',['test'=>$test,'verbose'=>$verbose]);
             return $res;
         }
@@ -559,8 +559,8 @@ namespace IOFrame\Handlers{
          *      3 - Mail failed to send!
          */
         function mailChangeSend(string $uMail, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $async = isset($params['async'])? $params['async'] : true;
             $language = isset($params['language'])? $params['language'] : null;
 
@@ -636,8 +636,8 @@ namespace IOFrame\Handlers{
          *      3 - Confirmation code expired.
          */
         function mailChangeConfirm(int $id, string $code, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $res = $this->confirmCode($id,$code,'MAIL_CHANGE',['test'=>$test,'verbose'=>$verbose]);
             return $res;
         }
@@ -724,8 +724,8 @@ namespace IOFrame\Handlers{
         function sendConfirmationMail(
             string $uMail, int $uId, string $confirmCode, int $templateNum, string $title, bool $async, array $params = [])
         {
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             if(!defined('MailHandler'))
                 require 'MailHandler.php';
             $mail = new MailHandler($this->settings,array_merge($this->defaultSettingsParams,['verbose'=>$verbose]));
@@ -791,8 +791,8 @@ namespace IOFrame\Handlers{
          *              with possible code -3 - cannot create mail without $mail set
          */
         function createInviteTokens(array $inputs = [],array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $overwrite = isset($params['overwrite'])? $params['overwrite'] : false;
             $results = [];
             $stuffToSet = [];
@@ -841,8 +841,8 @@ namespace IOFrame\Handlers{
          *              codes 0/1 that indicate token does/doesn't exist otherwise.
          */
         function confirmInviteToken(string $token,array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $mail = isset($params['mail'])? $params['mail'] : null;
             $consume = isset($params['consume'])? $params['consume'] : 1;
             if(!defined('TokenHandler'))
@@ -882,8 +882,8 @@ namespace IOFrame\Handlers{
          *           1 - Template does not exist
          */
         function sendInviteMail(string $uMail, int $templateNum, string $title, bool $async, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             if(!defined('MailHandler'))
                 require 'MailHandler.php';
             $templateArguments = isset($params['extraTemplateArguments'])? $params['extraTemplateArguments'] : [];
@@ -942,8 +942,8 @@ namespace IOFrame\Handlers{
          *          1 - No user found.
          */
         function banUser(int $minutes, $identifier, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             //Sanitation
             if($minutes = 0 || $minutes > 1000000000)
                 $minutes = 1000000000;
@@ -986,8 +986,8 @@ namespace IOFrame\Handlers{
          *
          */
         function logOut($params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             //Set defaults
             if(!isset($params['oldSesID']))
                 $oldSesID = '';
@@ -1114,8 +1114,8 @@ namespace IOFrame\Handlers{
          *      JSON encoded array of the form {'iv'=><32-byte hex encoded string>,'sesID'=><32-byte hex encoded string>}
          */
         function logIn(array $inputs, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $overrideAuth = isset($params['overrideAuth'])? $params['overrideAuth'] : false;
             $ignoreSuspicious = isset($params['overrideAuth'])? $params['overrideAuth'] : false;
             $log = $inputs["log"];
@@ -1139,7 +1139,7 @@ namespace IOFrame\Handlers{
             if (is_array($checkRes) && count($checkRes)>0) {
 
                 //Get auth details
-                $authFullDetails = json_decode($checkRes[0]['authDetails'], true);
+                $authFullDetails = json_decode($checkRes[0]['authDetails']??'', true);
                 $TwoFactorAuth = $checkRes[0]['Two_Factor_Auth']? json_decode($checkRes[0]['Two_Factor_Auth'], true) : [];
 
                 //If user is trying to relog automatically to a device that doesn't exist - he wont be logged in.
@@ -1398,8 +1398,8 @@ namespace IOFrame\Handlers{
          *                      or completely override them
          */
         private function login_updateSessionCore(array $checkRes,array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             isset($params['override'])?
                 $override = $params['override'] : $override = false;
             //Update current session - this is how the rest of the app knows the user is logged in
@@ -1423,7 +1423,7 @@ namespace IOFrame\Handlers{
             if(IOFrame\Util\is_json($extraArgs))
                 $args = array_merge($args,json_decode($extraArgs,true));
             else
-                $args = array_merge($args,explode(',',$extraArgs));
+                $args = array_merge($args,explode(',',$extraArgs??''));
 
             foreach($args as $val){
                 $data[$val]= isset($checkRes[0][$val]) ? $checkRes[0][$val] : null;
@@ -1451,8 +1451,8 @@ namespace IOFrame\Handlers{
          * @param array $params
          */
         private function login_updateHistory(array $checkRes,array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
 
             $query = 'INSERT INTO '.$this->SQLHandler->getSQLPrefix().'LOGIN_HISTORY(Username, IP, Country, Login_Time)
@@ -1491,8 +1491,8 @@ namespace IOFrame\Handlers{
          *              Notice that "User Does Not Exist" is an acceptable condition here.
          */
         function checkUserLogin($identifier, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             $prefix = $this->SQLHandler->getSQLPrefix();
 
@@ -1607,6 +1607,7 @@ namespace IOFrame\Handlers{
         /** Returns all users
          *
          * @param array $params
+         *          'idIn' => int[], defaults to [] - Returns users with IDs in this array
          *          'idAtLeast' => int, defaults to 1 - Returns users with ID equal or greater than this
          *          'idAtMost' => int, defaults to null - if set, Returns users with ID equal or smaller than this
          *          'rankAtLeast' => int, defaults to 1 - Returns users with rank equal or greater than this
@@ -1632,8 +1633,9 @@ namespace IOFrame\Handlers{
          *              And a special meta member with the key '@' holds the child '#', which's value is the number of results without a limit.
          */
         function getUsers(array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
+            $idIn = isset($params['idIn'])? $params['idIn'] : [];
             $idAtLeast = isset($params['idAtLeast'])? $params['idAtLeast'] : 0;
             $idAtMost = isset($params['idAtMost'])? $params['idAtMost'] : null;
             $rankAtLeast = isset($params['rankAtLeast'])? $params['rankAtLeast'] : 0;
@@ -1669,6 +1671,9 @@ namespace IOFrame\Handlers{
             $conditions = [];
 
             //Create all the conditions for the db
+            if(!empty($idIn)){
+                array_push($conditions,[$usersColPrefix.'ID',array_merge($idIn,['CSV']),'IN']);
+            }
             if($idAtLeast){
                 array_push($conditions,[$usersColPrefix.'ID',$idAtLeast,'>=']);
             }
@@ -1801,8 +1806,8 @@ namespace IOFrame\Handlers{
          *           3 No new assignments
          */
         function updateUser($identifier, array $inputs, string $identifierType = 'ID', array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             //Inputs
             $username = isset($inputs['username'])? $inputs['username'] : null;
             $email = isset($inputs['email'])? $inputs['email'] : null;

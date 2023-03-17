@@ -3,6 +3,8 @@
 namespace IOFrame\Handlers{
     use IOFrame;
     use PHPMailer\PHPMailer\PHPMailer;
+    use Mailgun\Mailgun;
+
     define('MailHandler',true);
     if(!defined('abstractDBWithCache'))
         require 'abstractDBWithCache.php';
@@ -12,8 +14,12 @@ namespace IOFrame\Handlers{
      * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
      * */
     class MailHandler extends IOFrame\abstractDBWithCache{
+        //Operation mode - currently supporting 'smtp' and 'mailgun', future integrations will also go here
+        protected $mode;
         //PHP Mailer
         protected $mail;
+        //MailGun
+        protected $mailgun;
         //Loads a template to serve as the body, using sendMailTemplate
         protected $template=null;
         //Default alias to send system mails with
@@ -27,15 +33,10 @@ namespace IOFrame\Handlers{
         ){
 
             //Set defaults
-            if(!isset($params['secure']))
-                $secure = true;
-            else
-                $secure = $params['secure'];
-
-            if(!isset($params['verbose']))
-                $verbose = false;
-            else
-                $verbose = $params['verbose'];
+            $secure = $params['secure'] ?? true;
+            $verbose = $params['verbose'] ?? false;
+            $mailSettingsOverwrite = $params['mailSettingsOverwrite'] ?? [];
+            $this->mode = $params['mode'] ?? 'smtp';
 
             parent::__construct($settings,$params);
 
@@ -44,43 +45,55 @@ namespace IOFrame\Handlers{
                 $this->defaultSettingsParams
             );
 
-            $this->mail= new PHPMailer;
-            $this->mail->isSMTP(); // Set mailer to use SMTP
-            $this->mail->SMTPAuth = true;                               // Enable SMTP authentication
-            $this->mail->isHTML(true);
-            $this->updateMailSettings($secure, $verbose);
+            if($this->mode === 'smtp'){
+                $this->mail= new PHPMailer;
+                $this->mail->isSMTP(); // Set mailer to use SMTP
+                $this->mail->SMTPAuth = true;                               // Enable SMTP authentication
+                $this->mail->isHTML(true);
+                $this->updateMailSettings($mailSettingsOverwrite, $secure, $verbose);
+            }
+            elseif ($this->mode === 'mailgun'){
+                if (!$this->mailSettings->getSetting('mailgunHost') || !$this->mailSettings->getSetting('mailgunDomain') ||
+                    !$this->mailSettings->getSetting('mailgunAPIKey')
+                )
+                    throw(new \Exception('Cannot update mailgun settings - missing settings or cannot read settings file.'));
+                $this->mailgun = [
+                    'client'=>Mailgun::create($this->mailSettings->getSetting('mailgunAPIKey'), $this->mailSettings->getSetting('mailgunHost')),
+                    'domain'=>$this->mailSettings->getSetting('mailgunDomain')
+                ];
+            }
         }
 
         //An extantion of the construct function - but this has to be called before sending each mail, in case the settings
         //Changed
-        function updateMailSettings($secure, $verbose){
-
-            if (!$this->mailSettings->getSetting('mailHost') or !$this->mailSettings->getSetting('mailEncryption') or
-                !$this->mailSettings->getSetting('mailUsername') or !$this->mailSettings->getSetting('mailPassword') or
-                !$this->mailSettings->getSetting('mailPort')
-            )
-                throw(new \Exception('Cannot update mail settings - missing settings or cannot read settings file.'));
-            else {
-                $this->mail->Host = $this->mailSettings->getSetting('mailHost');                // Specify main and backup SMTP servers
-                $this->mail->SMTPSecure = $this->mailSettings->getSetting('mailEncryption');    // Enable TLS/SSL encryption
-                $this->mail->Username = $this->mailSettings->getSetting('mailUsername');        // SMTP username
-                $this->mail->Password = $this->mailSettings->getSetting('mailPassword');        // SMTP password
-                $this->mail->Port = $this->mailSettings->getSetting('mailPort');                // TCP port to connect to
-
-                $this->defaultAlias = $this->mailSettings->getSetting('defaultAlias') ? $this->mailSettings->getSetting('defaultAlias'): $this->mail->Username;
-
-                if($verbose)
-                    $this->mail->SMTPDebug = 3;
-                if(!$secure){
-                    $this->mail->SMTPOptions = array(
-                        'ssl' => array(
-                            'verify_peer' => false,
-                            'verify_peer_name' => false,
-                            'allow_self_signed' => true
-                        )
-                    );
-                }
+        function updateMailSettings($mailSettingsOverwrite, $secure, $verbose){
+            $requiredSettings = ['mailHost','mailEncryption','mailUsername','mailPassword','mailPort'];
+            $settingsArray = [];
+            foreach ($requiredSettings as $setting){
+                if(empty($mailSettingsOverwrite[$setting]) && !$this->mailSettings->getSetting($setting))
+                    throw(new \Exception('Cannot update mail settings - missing settings or cannot read settings file.'));
             }
+
+            $this->mail->Host = $mailSettingsOverwrite['mailHost'] ?? $this->mailSettings->getSetting('mailHost');                // Specify main and backup SMTP servers
+            $this->mail->SMTPSecure = $mailSettingsOverwrite['mailEncryption'] ?? $this->mailSettings->getSetting('mailEncryption');    // Enable TLS/SSL encryption
+            $this->mail->Username = $mailSettingsOverwrite['mailUsername'] ?? $this->mailSettings->getSetting('mailUsername');        // SMTP username
+            $this->mail->Password = $mailSettingsOverwrite['mailPassword'] ?? $this->mailSettings->getSetting('mailPassword');        // SMTP password
+            $this->mail->Port = $mailSettingsOverwrite['mailPort'] ?? $this->mailSettings->getSetting('mailPort');                // TCP port to connect to
+
+            $this->defaultAlias = $mailSettingsOverwrite['defaultAlias'] ?? ($this->mailSettings->getSetting('defaultAlias') ? $this->mailSettings->getSetting('defaultAlias'): $this->mail->Username);
+
+            if($verbose)
+                $this->mail->SMTPDebug = 3;
+            if(!$secure){
+                $this->mail->SMTPOptions = array(
+                    'ssl' => array(
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true
+                    )
+                );
+            }
+
         }
 
         /** Creates a security token of the length $length to be used for $mail, valid for $duration minutes after creation.
@@ -97,8 +110,8 @@ namespace IOFrame\Handlers{
          *      <string>- Security token, if successfully created or already exists.
          * */
         function createSecToken(string $mail, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $duration = isset($params['duration'])? $params['duration'] : 1;
             $length = isset($params['length'])? $params['length'] : 30;
             $override = isset($params['override'])? $params['override'] : 1;
@@ -290,74 +303,98 @@ namespace IOFrame\Handlers{
          * bccs       = array of BCC recipients
          * replies    = array of people you want to send this mail to as a reply
          * */
-        function sendMail( $addresses, $subject, $body, $mailerName =['',''], $altBody='', $attachments =[[]], $ccs=[[]], $bccs =[[]], $replies=[[]] ){
+        function sendMail( $addresses, $subject, $body, $mailerName =['',''], $altBody='', $attachments =[[]], $ccs=[[]], $bccs =[[]], $replies=[[]], $params = [] ){
 
-            //Handle who we set this as, first
-            if($mailerName[0]!='')
-                if($mailerName[1]!='')
-                    $this->mail->setFrom($mailerName[0], $mailerName[1]);
+            if($this->mode === 'smtp'){
+                //Handle who we set this as, first
+                if($mailerName[0]!='')
+                    if($mailerName[1]!='')
+                        $this->mail->setFrom($mailerName[0], $mailerName[1]);
+                    else
+                        $this->mail->setFrom($mailerName[0]);
                 else
-                    $this->mail->setFrom($mailerName[0]);
-            else
-                if($mailerName[1]!='')
-                    $this->mail->setFrom($this->defaultAlias, $mailerName[1]);
-                else
-                    $this->mail->setFrom($this->defaultAlias);
+                    if($mailerName[1]!='')
+                        $this->mail->setFrom($this->defaultAlias, $mailerName[1]);
+                    else
+                        $this->mail->setFrom($this->defaultAlias);
 
-            $this->mail->CharSet = 'utf-8';
-            $this->mail->Subject = iconv(mb_detect_encoding($subject, 'auto'), 'UTF-8', $subject);
-            $this->mail->Body    = $body;
-            $this->mail->AltBody = $altBody;
+                $this->mail->CharSet = 'utf-8';
+                $this->mail->Subject = iconv(mb_detect_encoding($subject, 'auto'), 'UTF-8', $subject);
+                $this->mail->Body    = $body;
+                $this->mail->AltBody = $altBody;
 
-            if(count($addresses)>0)
-                foreach($addresses as $key=>$value){
+                if(count($addresses)>0)
+                    foreach($addresses as $key=>$value){
+                        if(isset($value[0]))
+                            if(isset($value[1]))
+                                $this->mail->addAddress($value[0], $value[1]);
+                            else
+                                $this->mail->addAddress($value[0]);
+                    }
+                else{
+                    throw(new \Exception('Cannot send a mail with no recipients!'));
+                }
+
+                foreach($replies as $key=>$value){
                     if(isset($value[0]))
                         if(isset($value[1]))
-                            $this->mail->addAddress($value[0], $value[1]);
+                            $this->mail->addReplyTo($value[0], $value[1]);
                         else
-                            $this->mail->addAddress($value[0]);
+                            $this->mail->addReplyTo($value[0]);
                 }
-            else{
-                throw(new \Exception('Cannot send a mail with no recipients!'));
-            }
 
-            foreach($replies as $key=>$value){
-                if(isset($value[0]))
-                    if(isset($value[1]))
-                        $this->mail->addReplyTo($value[0], $value[1]);
-                    else
-                        $this->mail->addReplyTo($value[0]);
-            }
+                foreach($ccs as $key=>$value){
+                    if(isset($value[0]))
+                        if(isset($value[1]))
+                            $this->mail->addCC($value[0], $value[1]);
+                        else
+                            $this->mail->addCC($value[0]);
+                }
 
-            foreach($ccs as $key=>$value){
-                if(isset($value[0]))
-                    if(isset($value[1]))
-                        $this->mail->addCC($value[0], $value[1]);
-                    else
-                        $this->mail->addCC($value[0]);
-            }
+                foreach($bccs as $key=>$value){
+                    if(isset($value[0]))
+                        if(isset($value[1]))
+                            $this->mail->addBCC($value[0], $value[1]);
+                        else
+                            $this->mail->addBCC($value[0]);
+                }
 
-            foreach($bccs as $key=>$value){
-                if(isset($value[0]))
-                    if(isset($value[1]))
-                        $this->mail->addBCC($value[0], $value[1]);
-                    else
-                        $this->mail->addBCC($value[0]);
-            }
+                foreach($attachments as $key=>$value){
+                    if(isset($value[0]))
+                        if(isset($value[1]))
+                            $this->mail->addAttachment($value[0], $value[1]);
+                        else
+                            $this->mail->addAttachment($value[0]);
+                }
 
-            foreach($attachments as $key=>$value){
-                if(isset($value[0]))
-                    if(isset($value[1]))
-                        $this->mail->addAttachment($value[0], $value[1]);
-                    else
-                        $this->mail->addAttachment($value[0]);
+                if(!$this->mail->send()) {
+                    throw(new \Exception('Message could not be sent, Mailer Error: '. $this->mail->ErrorInfo));
+                } else {
+                    return true;
+                }
             }
+            elseif ($this->mode === 'mailgun'){
 
-            if(!$this->mail->send()) {
-                throw(new \Exception('Message could not be sent, Mailer Error: '. $this->mail->ErrorInfo));
-            } else {
+                $from = $mailerName[0]?
+                    ($mailerName[1]? $mailerName[1].' <'.$mailerName[0].'>' : $mailerName[0] ) :
+                    ($mailerName[1]? $mailerName[1].' <noreply@'.$this->mailgun['domain'].'>' : 'noreply@'.$this->mailgun['domain']);
+
+                $to = [];
+                foreach($addresses as $key=>$value){
+                    if(isset($value[0]))
+                        array_push($to,$value[0]);
+                }
+
+                $sendParams = [
+                    'from'    => $from,
+                    'to'      => $to,
+                    'subject' => iconv(mb_detect_encoding($subject, 'auto'), 'UTF-8', $subject),
+                    'html'    => $body
+                ];
+                $this->mailgun['client']->messages()->send($this->mailgun['domain'], $sendParams);
                 return true;
             }
+            return false;
 
         }
 
@@ -367,15 +404,15 @@ namespace IOFrame\Handlers{
          * $varArray should be in a JSON format, and look like: {"VAR1":"Value1", "Var2":"Value2" ...}
          * */
         function sendMailTemplate( $addresses, $subject, $template='', $varArray='', $mailerName =['',''],
-                                   $altBody='', $attachments =[[]], $ccs=[[]], $bccs =[[]], $replies=[[]] ){
+                                   $altBody='', $attachments =[[]], $ccs=[[]], $bccs =[[]], $replies=[[]], $params = []  ){
             if($template=='' and $this->template == null)
                 throw(new \Exception('You cannot send an email from a template without a template!'));
             if($template!='')
                 return $this->sendMail( $addresses, $subject, $this->fillTemplate($template,$varArray), $mailerName, $altBody,
-                    $attachments, $ccs, $bccs, $replies);
+                    $attachments, $ccs, $bccs, $replies, $params);
             else if( $this->template != null)
                 return $this->sendMail( $addresses, $subject, $this->fillTemplate($this->template,$varArray), $mailerName, $altBody,
-                    $attachments, $ccs, $bccs, $replies);
+                    $attachments, $ccs, $bccs, $replies, $params);
             else
                 return false;
         }
@@ -467,8 +504,8 @@ namespace IOFrame\Handlers{
          *      }
          */
         function getTemplates(array $templates = [], array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $createdAfter = isset($params['createdAfter'])? $params['createdAfter'] : null;
             $createdBefore = isset($params['createdBefore'])? $params['createdBefore'] : null;
             $changedAfter = isset($params['changedAfter'])? $params['changedAfter'] : null;
@@ -621,8 +658,8 @@ namespace IOFrame\Handlers{
          *          On createNew, the ID of the FIRST CREATED TEMPLATE will be returned.
          */
         function setTemplates(array $inputs, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $update = isset($params['update'])? $params['update'] : false;
             $override = isset($params['override'])? $params['override'] : true;
             $safeStr = isset($params['safeStr'])? $params['safeStr'] : true;
@@ -787,8 +824,8 @@ namespace IOFrame\Handlers{
          * Where the codes are from deleteTemplate
          */
         function  deleteTemplates(array $templates, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $checkExisting = isset($params['checkExisting'])? $params['checkExisting'] : true;
 
             $results = [];
@@ -852,6 +889,70 @@ namespace IOFrame\Handlers{
             }
 
             return $results;
+        }
+
+        /** Sends a mail(s) via external API, depending on mode
+         * @param array $inputs
+         *          {
+         *              'from':<string|string[2], either a valid email address, or a size 2 array of the form [<string, email address>,<string, sender name>]>
+         *              'to': <string|string[], mail recipient or recipients>
+         *              'cc': <string|string[], cc>
+         *              'bcc': <string|string[], bcc>
+         *              'subject': <string, subject>
+         *              'body': <string, HTML email body>
+         *              'altBody': <string, default null - text email body>
+         *          }
+         * @param array $params different params per provider
+         *          {
+         *              'mailgun':{
+         *                  'tracking':<bool, default null - disables link rewriting for messages>
+         *                  'deliverytime':<string, default null - delivery schedule>
+         *                  'tag':<string|string[], default null -  tag(s)>
+         *                  'require-tls':<string|string[], default null -  connection setting>
+         *                  'skip-verification':<string|string[], default null -  connection setting>
+         *                  'recipient-variables':<json, default null - for batch sending, allows using variables>
+         *              }
+         *          }
+         * @throws \Exception If not in a valid API mode
+         * @link https://documentation.mailgun.com/en/latest/user_manual.html#sending-via-api
+         * @returns mixed|null API result
+         *
+         */
+        function sendMailAPI(array $inputs, array $params){
+            $test = $params['test']??false;
+            $verbose = $params['verbose'] ?? $test;
+            $result = null;
+
+            switch ($this->mode){
+                case 'mailgun':
+                    $sendParams = [
+                        'from'=>gettype($inputs['from']) === 'string'? $inputs['from'] : $inputs['from'][1].' <'.$inputs['from'][0].'>',
+                        'to'=>$inputs['to'],
+                        'subject'=>$inputs['subject'],
+                        'html'=>$inputs['body'],
+                    ];
+                    foreach (['cc','bcc','altBody'] as $option)
+                        if(!empty($inputs[$option]))
+                            $sendParams[$option] = $inputs[$option];
+
+                    if(!empty($params['mailgun']) && is_array($params['mailgun'])){
+                        foreach (['tracking'=>'o:tracking','deliverytime'=>'o:deliverytime','tag'=>'o:tag','require-tls'=>'o:require-tls','testmode'=>'o:testmode',
+                                     'skip-verification'=>'o:skip-verification','recipient-variables'=>'recipient-variables'] as $input => $option)
+                            if(!empty($params['mailgun'][$input]))
+                                $sendParams[$option] = $params['mailgun'][$input];
+                    }
+
+                    if($verbose)
+                        echo 'Sending mailgun mail with domain'.$this->mailgun['domain'].'and params '.json_encode($sendParams);
+
+                    if(!$test)
+                        $result = $this->mailgun['client']->messages()->send($this->mailgun['domain'],$sendParams);
+                    break;
+                default:
+                    throw new \Exception('Cannot send mails through an API without a valid provider');
+            }
+
+            return $result;
         }
 
     }

@@ -178,8 +178,8 @@ namespace IOFrame\Handlers{
          * @return mixed Returns false if the order doesn't exist, a string of the order otherwise (or if parameter createNew is true)
          * */
         protected function getLocalOrder(array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             if(isset($params['createNew']))
                 $createNew = $params['createNew'];
             else
@@ -234,8 +234,8 @@ namespace IOFrame\Handlers{
          *
          */
         protected function updateLocalOrder(string $newOrder, $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(isset($params['createNew']))
                 $createNew = $params['createNew'];
@@ -290,8 +290,8 @@ namespace IOFrame\Handlers{
          * */
         protected function getGlobalOrder(array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(isset($params['cacheTTL']))
                 $cacheTTL = $params['cacheTTL'];
@@ -354,8 +354,8 @@ namespace IOFrame\Handlers{
          *
          */
         protected function updateGlobalOrder(string $newOrder, $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(isset($params['rowExists']))
                 $rowExists = $params['rowExists'];
@@ -429,8 +429,8 @@ namespace IOFrame\Handlers{
          *
          */
         protected function createGlobalOrder(string $newOrder, $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             //Set defaults
             if(isset($params['useCache']))
                 $useCache = $params['useCache'];
@@ -492,8 +492,8 @@ namespace IOFrame\Handlers{
         function getOrder($params = []){
 
             //Set defaults
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(isset($params['local']))
                 $local = $params['local'];
@@ -566,8 +566,8 @@ namespace IOFrame\Handlers{
          *
         */
         function pushToOrderMultiple(array $names, $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             //Set defaults
             if(isset($params['index']))
                 $index = $params['index'];
@@ -756,8 +756,8 @@ namespace IOFrame\Handlers{
          *          ['pureFunc' and no other errors] New order - CSV string.
          * */
         function removeFromOrderMultiple(array $targets, string $type, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(isset($params['local']))
                 $local = $params['local'];
@@ -958,8 +958,8 @@ namespace IOFrame\Handlers{
          * ['pureFunc'] New order - CSV string.
          * */
         function moveOrder(int $from, int $to, $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             //Set defaults
 
             if(isset($params['local']))
@@ -1086,8 +1086,8 @@ namespace IOFrame\Handlers{
          * ['pureFunc'] New order - CSV string.
          * */
         function swapOrder(int $num1,int $num2, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             //Set defaults
 
             if(isset($params['local']))

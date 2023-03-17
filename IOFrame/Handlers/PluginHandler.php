@@ -1,6 +1,8 @@
 <?php
 namespace IOFrame\Handlers{
     use IOFrame;
+    use function Webmozart\Assert\Tests\StaticAnalysis\length;
+
     define('PluginHandler',true);
     if(!defined('abstractDBWithCache'))
         require 'abstractDBWithCache.php';
@@ -241,9 +243,11 @@ namespace IOFrame\Handlers{
      * */
     class PluginHandler extends IOFrame\abstractDBWithCache{
 
-        private $FileHandler = null;
+        private $FileHandler;
 
-        private $OrderHandler = null;
+        private $OrderHandler;
+
+        public $AuthHandler;
 
         /**
          * @var Int Tells us for how long to cache stuff by default.
@@ -259,6 +263,7 @@ namespace IOFrame\Handlers{
          * @param object $settings The standard settings object
          * @param object $conn The standard DB connection object
          * */
+
         function __construct(SettingsHandler $settings, $params = []){
 
             parent::__construct($settings,$params);
@@ -402,8 +407,8 @@ namespace IOFrame\Handlers{
         */
         function getInfo(array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             isset($params['name'])?
                 $name = $params['name'] : $name = '';
@@ -464,7 +469,7 @@ namespace IOFrame\Handlers{
 
                     //Start by checking if the plugin has fullInstall, quickInstall, or both - has to have one at least, because it's legal
                     if(file_exists($fileUrl.'/fullUninstall.php')){
-                        file_exists($fileUrl.'/quickUninstall.php')                       ?
+                        file_exists($fileUrl.'/quickUninstall.php') ?
                             $res[$num]['uninstallStatus'] = PLUGIN_HAS_BOTH_UNINSTALL :
                             $res[$num]['uninstallStatus'] = PLUGIN_HAS_FULL_UNINSTALL ;
                     }
@@ -473,7 +478,7 @@ namespace IOFrame\Handlers{
                     }
                     //Same for install
                     if(file_exists($fileUrl.'/fullInstall.php')){
-                        file_exists($fileUrl.'/quickInstall.php')                       ?
+                        file_exists($fileUrl.'/quickInstall.php') ?
                             $res[$num]['installStatus'] = PLUGIN_HAS_BOTH_INSTALL :
                             $res[$num]['installStatus'] = PLUGIN_HAS_FULL_INSTALL ;
                     }
@@ -488,15 +493,15 @@ namespace IOFrame\Handlers{
                         $meta = fread($metaFile,filesize($fileUrl.'/meta.json'));
                         fclose($metaFile);
                         $meta = json_decode($meta,true);
-                        array_merge($res[$num],$meta);
+                        $res[$num] = array_merge($res[$num],$meta);
                         //open and read install options if those exist
-                        if(file_exists($fileUrl.'/'.$installOpt.'.json')){
+                        if(file_exists($fileUrl.'/'.$installOpt.'.json') && filesize($fileUrl.'/'.$installOpt.'.json')){
                             $instFile = @fopen($fileUrl.'/'.$installOpt.'.json',"r") or die("Cannot open");
                             $inst = @fread($instFile,filesize($fileUrl.'/'.$installOpt.'.json'));
                             fclose($instFile);
                         }
                         else{
-                            $inst = null;
+                            $inst = file_exists($fileUrl.'/'.$installOpt.'.json') ? '' : null;
                         }
                         //Install Options exist?
                         if($inst != null)
@@ -506,13 +511,13 @@ namespace IOFrame\Handlers{
                                     $res[$num]['installOptions'] = json_decode($inst,true);
                             }
                         //open and read uninstall options if those exist
-                        if(file_exists($fileUrl.'/'.$uninstallOpt.'.json')){
+                        if(file_exists($fileUrl.'/'.$uninstallOpt.'.json') && filesize($fileUrl.'/'.$uninstallOpt.'.json')){
                             $uninstFile = @fopen($fileUrl.'/'.$uninstallOpt.'.json',"r") or die("Cannot open");
                             $uninst = @fread($uninstFile,filesize($fileUrl.'/'.$uninstallOpt.'.json'));
                             fclose($uninstFile);
                         }
                         else{
-                            $uninst = null;
+                            $uninst = file_exists($fileUrl.'/'.$uninstallOpt.'.json') ? '' : null;
                         }
                         //Uninstall Options exist?
                         if($uninst != null)
@@ -522,13 +527,13 @@ namespace IOFrame\Handlers{
                                     $res[$num]['uninstallOptions'] = json_decode($uninst,true);
                             }
                         //Dependencies
-                        if(file_exists($fileUrl.'/dependencies.json')){
+                        if(file_exists($fileUrl.'/dependencies.json') && filesize($fileUrl.'/dependencies.json')){
                             $depFile = @fopen($fileUrl.'/dependencies.json',"r") or die("Cannot open");
                             $dep = @fread($depFile,filesize($fileUrl.'/dependencies.json'));
                             fclose($depFile);
                         }
                         else{
-                            $dep = null;
+                            $dep = file_exists($fileUrl.'/dependencies.json') ? '' : null;
                         }
                         //Dependencies exist?
                         if($dep != null)
@@ -597,8 +602,8 @@ namespace IOFrame\Handlers{
 
             //Set defaults
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(isset($params['override']))
                 $override = $params['override'];
@@ -778,8 +783,8 @@ namespace IOFrame\Handlers{
         function uninstall(string $name, $options = [], $params = []){
 
             //Set defaults
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(isset($params['override']))
                 $override = $params['override'];
@@ -978,8 +983,8 @@ namespace IOFrame\Handlers{
         function update(string $name, array $params = []){
 
             //Set defaults
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $iterationLimit = isset($params['iterationLimit'])? $params['iterationLimit'] : -1;
 
             if(isset($params['local']))
@@ -1138,13 +1143,10 @@ namespace IOFrame\Handlers{
          * 4 - failed to verify plugin is active
          * */
         function pushToOrder(string $name, $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
-            if(isset($params['verify']))
-                $verify = $params['verify'];
-            else
-                $verify = true;
+            $verify = $params['verify'] ?? true;
 
             //Verify first, if $verify == true
             if($verify == true){
@@ -1178,13 +1180,10 @@ namespace IOFrame\Handlers{
          *  removing the plugin from the order
          * */
         function removeFromOrder(string $target, string $type, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             //Set defaults
-            if(isset($params['verify']))
-                $verify = $params['verify'];
-            else
-                $verify = true;
+            $verify = $params['verify'] ?? true;
 
             $order = $this->OrderHandler->getOrder($params);
 
@@ -1229,14 +1228,11 @@ namespace IOFrame\Handlers{
          *  moving the plugin in the order
          * */
         function moveOrder(int $from, int $to, $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             //Set defaults
-            if(isset($params['verify']))
-                $verify = $params['verify'];
-            else
-                $verify = true;
-
+            $verify = $params['verify'] ?? true;
+            
             $order = $this->OrderHandler->getOrder($params);
 
             $params['order'] = is_array($order)? implode(',',$order): $order;
@@ -1307,13 +1303,10 @@ namespace IOFrame\Handlers{
          *  moving the plugin in the order
          * */
         function swapOrder(int $num1,int $num2, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             //Set defaults
-            if(isset($params['verify']))
-                $verify = $params['verify'];
-            else
-                $verify = true;
+            $verify = $params['verify'] ?? true;
 
             $order = $this->OrderHandler->getOrder($params);
 
@@ -1388,8 +1381,8 @@ namespace IOFrame\Handlers{
          * @returns bool
          * */
         function validateOptions(string $target, string $url, string $name, array $options, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $params['isFile'] = false;
             //-------Time to validate options
             if(!$this->validatePluginFile($url,$target,$params)){
@@ -1458,8 +1451,8 @@ namespace IOFrame\Handlers{
          * @returns bool
          * */
         function validatePluginFile($target, string $type,array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             isset($params['isFile'])?
                 $isFile = $params['isFile'] : $isFile = false;
             $res = false;
@@ -1601,7 +1594,7 @@ namespace IOFrame\Handlers{
                                 break;
 
                             //Name validation
-                            if(strlen($def>64)){
+                            if(strlen($def)>64){
                                 if($verbose)
                                     echo 'Name too long!'.EOL;
                                 $res = false;
@@ -1699,8 +1692,9 @@ namespace IOFrame\Handlers{
          * PLUGIN_HAS_ICON_THUMBNAIL (should be 3)- plugin has both an icon and a thumbnail.
          * */
         function ensurePublicImage(string $pName ,array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $pUrl = $this->settings->getSetting('absPathToRoot').PLUGIN_FOLDER_PATH.PLUGIN_FOLDER_NAME.$pName;   //Plugin folder
             $imgUrl = $this->settings->getSetting('absPathToRoot').PLUGIN_IMAGE_FOLDER.$pName;   //shared image folder
             $supportedFormats = ['png','jpg','bmp','gif'];                            //Supported image extentions
@@ -1714,7 +1708,7 @@ namespace IOFrame\Handlers{
             };
 
             //Validation
-            if($pName>64){
+            if(strlen($pName)>64){
                 if($verbose)
                     echo 'Name too long!'.EOL;
                 return -1;
@@ -1844,8 +1838,8 @@ namespace IOFrame\Handlers{
          * 2 - Some dependencies are not met
          * */
         function validateDependencies(string $name,$params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             isset($params['dependencyArray'])?
                 $dependencyArray = $params['dependencyArray'] : $dependencyArray = [];
             //Validate dependency array
@@ -1900,14 +1894,14 @@ namespace IOFrame\Handlers{
          * 1 - invalid input
          * */
         function populateDependencies(string $name, array $dependencies, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $url = $this->settings->getSetting('absPathToRoot').'localFiles/pluginDependencyMap/';
             if(!is_dir($url))
                 if(!mkdir($url))
                     die('Cannot create Dependency Map directory for some reason - most likely insufficient user privileges.');
             //Validate $name
-            if(strlen($name>64)){
+            if(strlen($name)>64){
                 if($verbose)
                     echo 'Name too long!'.EOL;
                 return 1;
@@ -1952,13 +1946,14 @@ namespace IOFrame\Handlers{
          * JSON of the form {<name>:{'minVersion':x[,'maxVersion':y]}} for each plugin that depends on $name (*and is active when validate==true)
          * */
         function checkDependencies(string $name, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             isset($params['validate'])?
                 $validate = $params['validate'] : $validate = true;
             $url = $this->settings->getSetting('absPathToRoot').'localFiles/pluginDependencyMap/';
+
             //Validate $name
-            if(strlen($name>64)){
+            if(strlen($name)>64){
                 if($verbose)
                     echo 'Name too long!'.EOL;
                 return 1;

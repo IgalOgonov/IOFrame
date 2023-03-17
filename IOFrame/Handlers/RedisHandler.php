@@ -16,9 +16,9 @@ namespace IOFrame\Handlers{
     class RedisHandler extends IOFrame\abstractSettings{
         /** @param bool $isInit Is true when the handler is initiated. Will be false when Redisphp isn't present.
          */
-        public $isInit = false;
+        public bool $isInit = false;
         /** @var \Redis $r A redis class as defined in Phpredis. Not to be used directly*/
-        protected $r = null;
+        protected ?\Redis $r = null;
 
         function __construct($redisSettings){
             if(!class_exists('Redis')){

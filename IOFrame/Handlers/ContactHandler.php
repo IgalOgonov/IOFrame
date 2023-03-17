@@ -138,8 +138,8 @@ namespace IOFrame\Handlers{
          *
          */
         function getContacts(array $identifiers = [], array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $extraDBFilters = isset($params['extraDBFilters'])? $params['extraDBFilters'] : [];
             $extraCacheFilters = isset($params['extraCacheFilters'])? $params['extraCacheFilters'] : [];
             $firstNameLike = isset($params['firstNameLike'])? $params['firstNameLike'] : null;
@@ -370,8 +370,8 @@ namespace IOFrame\Handlers{
          */
         function setContacts(array $inputs, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $update = isset($params['update'])? $params['update'] : false;
             $contactType = isset($params['contactType'])? $params['contactType'] : $this->contactType;
             $possibleTypes = isset($params['possibleTypes'])? $params['possibleTypes'] : [$this->contactType];
@@ -613,8 +613,8 @@ namespace IOFrame\Handlers{
          */
         function deleteContacts(array $identifiers, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $contactType = isset($params['contactType'])? $params['contactType'] : $this->contactType;
             $possibleTypes = isset($params['possibleTypes'])? $params['possibleTypes'] : [$this->contactType];
 
@@ -675,8 +675,8 @@ namespace IOFrame\Handlers{
          */
         function renameContact(string $identifier, string $newIdentifier , array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $contactType = isset($params['contactType'])? $params['contactType'] : $this->contactType;
             if(!$contactType)
                 throw new \Exception('Cannot set contacts without a specific type!');

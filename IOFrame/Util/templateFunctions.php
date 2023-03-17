@@ -41,8 +41,8 @@ namespace IOFrame\Util{
      */
     function itemFromTemplate($template, array $variables ,$params = []){
 
-        $test = isset($params['test'])? $params['test'] : false;
-        $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+        $test = $params['test']?? false;
+        $verbose = $params['verbose'] ?? $test;
 
         //First, handle all the normal variables
         foreach($variables as $variable=>$value){

@@ -109,6 +109,16 @@ namespace IOFrame{
          *                                          'inputName' => string, name of the input key relevant to this, defaults to column name
          *                                      ]
          *                                      * note that this can also be used to rename objects, not just move them.
+         *                      'lockColumns' => Assoc Array, if both "lock" and "timestamp" are sot, will try to lock relevant columns on update - key column names.
+         *                                      [
+         *                                          'lock' => string, name of columns where the lock should be
+         *                                          'timestamp' => string, name of columns where the lock timestamp should be
+         *                                          'retryAttempts' => int, default 5. How many times to try to attempt to get ownership of a locked item.
+         *                                          'retryInterval' => int, default 1000. Retry interval (in milliseconds) after each attempt to get ownership of a locked item.
+         *                                          'lockLength' => int, default 128. Length of auto-generated lock, in bytes.
+         *                                          'timeout' => int, default null. Timeout (in seconds) after which, if it was locked before, the locked row may be considered wrongfully locked.
+         *                                                       setting this to any number may result in breaking errors.
+         *                                      ],
          *                      'columnFilters' => object of objects, where each object is of the form:
          *                                      <filter name> => [
          *                                          'column' => string|array, name of relevant column, or array of columns to search for a value "IN"
@@ -133,7 +143,8 @@ namespace IOFrame{
          *                                      where each object is of the form:
          *                                      <column name> => [
          *                                          'key' => string, key under which the results will be added to '@'
-         *                                          'type' => string, either 'min'/'max' (range values), 'count' (the key doesn't matter here),
+         *                                          'differentColName' => string, different column name
+         *                                          'type' => string, either 'min'/'max' (range values), 'sum', 'count' (the key doesn't matter here),
          *                                                    'distinct' (get all distinct values) or 'distinct_multiple' (get distinct values from multiple columns)
          *                                          'columns' => array of strings, if the type is 'distinct_multiple', here you specify all relevant columns to get values from
          *                                          'function' => callable, default null - if set, will add the result of this function - a string, that is a select query - to the result via UNION.
@@ -320,8 +331,8 @@ namespace IOFrame{
             else
                 throw new \Exception('Invalid object type!');
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $fatherDetails = isset($typeArray['fatherDetails']) ? $typeArray['fatherDetails'] : [];
 
             $updateColumn = !empty($fatherDetails['updateColumn'])? $fatherDetails['updateColumn'] : 'Last_Updated';
@@ -437,6 +448,186 @@ namespace IOFrame{
             return $res;
         }
 
+        /** Tries to get a lock on items.
+         * @param int[] $itemIDs Array of arrays, representing item IDs (can be length of 1, if just 1 column is the ID)
+         * @param string $type Type of items. See the item objects at the top of the class for the parameters of each type.
+         * @param array $params
+         * @return bool|string Lock used, or false if failed to reach DB
+         *          'lock' => string, whether you want to use a specific lock - just make sure it is secure
+         * */
+        function lockItems(array $itemIDs, string $type, array $params = []){
+
+            if(in_array($type,$this->validObjectTypes))
+                $typeArray = $this->objectsDetails[$type];
+            else
+                throw new \Exception('Invalid object type!');
+
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
+            $lock = isset($params['lock'])? $params['lock'] : false;
+            $keyColumns = $typeArray['keyColumns'];
+            $lockColumns = $typeArray['lockColumns'] ?? (
+                $test ? [
+                        'lock'=>'Test_Lock',
+                        'timestamp'=>'Test_Locked_At'
+                    ]
+                    :
+                    []
+                );
+
+            if(!($lockColumns['lock'] ?? false) || !($lockColumns['timestamp'] ?? false))
+                throw new \Exception('Trying to lock items without');
+
+            if( (count($itemIDs)<1) || count($itemIDs[0])<1)
+                throw new \Exception('Invalid IDs');
+
+            $lockColumns['retryInterval'] = $params['retryInterval'] ?? ($lockColumns['retryInterval'] ?? 1000);
+            $lockColumns['lockLength'] = $params['lockLength'] ?? ($lockColumns['lockLength'] ?? 128);
+            $lockColumns['timeout'] = $params['timeout'] ?? ($lockColumns['timeout'] ?? 30);
+
+            if(!$lock){
+                $hex_secure = false;
+                while(!$hex_secure)
+                    $lock=bin2hex(openssl_random_pseudo_bytes($lockColumns['lockLength'],$hex_secure));
+            }
+
+            foreach($itemIDs as $index=>$ids){
+                foreach($ids as $index2=>$id){
+                    $itemIDs[$index][$index2] = [
+                        $id,
+                        'STRING'
+                    ];
+                }
+                array_push($itemIDs[$index],'CSV');
+            }
+            array_push($itemIDs,'CSV');
+            array_push($keyColumns,'CSV');
+            $replaceConds = [
+                $lockColumns['lock'],
+                'ISNULL'
+            ];
+            if($lockColumns['timeout']){
+                $replaceConds = [
+                    $replaceConds,
+                    [
+                        $lockColumns['timestamp'],
+                        time()+$lockColumns['timeout'],
+                        '<'
+                    ],
+                    'OR'
+                ];
+            }
+
+            $res = $this->SQLHandler->updateTable(
+                $this->SQLHandler->getSQLPrefix().$typeArray['tableName'],
+                ['Session_Lock = "'.$lock.'", Locked_At = "'.time().'"'],
+                [
+                    [
+                        $keyColumns,
+                        $itemIDs,
+                        'IN'
+                    ],
+                    $replaceConds,
+                    'AND'
+                ],
+                ['test'=>$test,'verbose'=>$verbose]
+            );
+            if(!$res){
+                if($verbose)
+                    echo 'Failed to lock items '.json_encode($itemIDs).'!'.EOL;
+                return false;
+            }
+            else{
+                if($verbose)
+                    echo 'Items '.json_encode($itemIDs).' locked with lock '.$lock.EOL;
+                return $lock;
+            }
+        }
+
+
+        /** Unlocks items locked with a specific session lock.
+         * @param string[] $itemIDs Array of order identifiers
+         * @param string $type Type of items. See the item objects at the top of the class for the parameters of each type.
+         * @param array $params Parameters of the form:
+         *              'key' - string, default null - if not NULL, will only try to unlock items that
+         *                      have a specific key. TODO Fix this - does not work properly with key for some reason
+         * @return bool true if reached DB, false if didn't reach DB
+         *
+         * */
+        function unlockItems(array $itemIDs, string $type, array $params = []){
+
+            if(in_array($type,$this->validObjectTypes))
+                $typeArray = $this->objectsDetails[$type];
+            else
+                throw new \Exception('Invalid object type!');
+
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
+            $lock = isset($params['lock'])? $params['lock'] : false;
+            $keyColumns = $typeArray['keyColumns'];
+            $lockColumns = $typeArray['lockColumns'] ?? (
+                $test ? [
+                    'lock'=>'Test_Lock',
+                    'timestamp'=>'Test_Locked_At'
+                ]
+                    :
+                    []
+                );
+
+            if(!($lockColumns['lock'] ?? false) || !($lockColumns['timestamp'] ?? false))
+                throw new \Exception('Trying to lock items without');
+
+            if( (count($itemIDs)<1) || count($itemIDs[0])<1)
+                throw new \Exception('Invalid IDs');
+
+            foreach($itemIDs as $index=>$ids){
+                foreach($ids as $index2=>$id){
+                    $itemIDs[$index][$index2] = [
+                        $id,
+                        'STRING'
+                    ];
+                }
+                if(count($itemIDs[$index]) > 1)
+                    array_push($itemIDs[$index],'CSV');
+            }
+            if(count($itemIDs) > 1)
+                array_push($itemIDs,'CSV');
+            if(count($keyColumns) > 1)
+                array_push($keyColumns,'CSV');
+            $conds = [
+                $keyColumns,
+                $itemIDs,
+                'IN'
+            ];
+            if($lock)
+                $conds = [
+                    $conds,
+                    [
+                        $lockColumns['lock'],
+                        [$lock,'STRING'],
+                        '='
+                    ],
+                    'AND'
+                ];
+
+            $res = $this->SQLHandler->updateTable(
+                $this->SQLHandler->getSQLPrefix().$typeArray['tableName'],
+                ['Session_Lock = NULL, Locked_At = NULL'],
+                $conds,
+                ['test'=>$test,'verbose'=>$verbose]
+            );
+            if(!$res){
+                if($verbose)
+                    echo 'Failed to lock items '.json_encode($itemIDs).'!'.EOL;
+                return false;
+            }
+            else{
+                if($verbose)
+                    echo 'Items '.json_encode($itemIDs).' locked with lock '.$lock.EOL;
+                return $lock;
+            }
+        }
+
         /** Get multiple items
          * @param array $items Array of objects (arrays). Each object needs to contain the keys from they type array's "keyColumns",
          *              each key pointing to the value of the desired item to get.
@@ -479,8 +670,8 @@ namespace IOFrame{
                 throw new \Exception('Invalid object type!');
 
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $hasTimeColumns = isset($params['hasTimeColumns'])? $params['hasTimeColumns'] : ($this->objectsDetails[$type]['hasTimeColumns'] ?? true);
             $getAllSubItems =  isset($params['getAllSubItems']) ? $params['getAllSubItems'] : false;
             $defaultTableToFilterColumns =  isset($params['defaultTableToFilterColumns']) ? $params['defaultTableToFilterColumns'] : false;
@@ -569,13 +760,14 @@ namespace IOFrame{
                 }
 
                 if(!empty($filterArray['function'])){
-                    $retrieveParams['useCache'] = false;
                     $cond = $filterArray['function']([
                         'filterName'=>$filterParam,
                         'SQLHandler'=>$this->SQLHandler,
                         'typeArray'=>$typeArray,
                         'params'=>$params
                     ]);
+                    if($cond)
+                        $retrieveParams['useCache'] = false;
                 }
                 elseif(isset($params[$filterParam])){
                     if(isset($filterArray['considerNull']) && ($params[$filterParam] === $filterArray['considerNull']) ){
@@ -707,7 +899,8 @@ namespace IOFrame{
                     else
                         $tableQuery .= $joinArr['on'];
                 }
-                array_push($selectionColumns,$this->SQLHandler->getSQLPrefix().$typeArray['tableName'].'.*');
+            }
+            if($columnsToGet)
                 foreach($columnsToGet as $columnToGet){
                     if(!empty($columnToGet['expression']))
                         $toGet = $columnToGet['expression'];
@@ -721,10 +914,8 @@ namespace IOFrame{
                     }
                     array_push($selectionColumns,$toGet);
                 }
-            }
-            else{
-                $selectionColumns = [];
-            }
+            if(count($selectionColumns))
+                array_push($selectionColumns,$this->SQLHandler->getSQLPrefix().$typeArray['tableName'].'.*');
 
             if($items == []){
                 $results = [];
@@ -821,13 +1012,22 @@ namespace IOFrame{
                             $selectQuery = '';
 
                             foreach($typeArray['extraToGet'] as $columnName => $arr){
+                                $differentColName = $arr['differentColName'] ?? $columnName;
                                 switch($arr['type']){
                                     case 'min':
                                     case 'max':
                                         $selectQuery .= $this->SQLHandler->selectFromTable(
                                                 $tableQuery,
                                                 $extraDBConditions,
-                                                [($arr['type'] === 'min' ? 'MIN('.$columnName.')': 'MAX('.$columnName.')').' AS Val, "'.$columnName.'" as Type'],
+                                                [($arr['type'] === 'min' ? 'MIN('.$differentColName.')': 'MAX('.$differentColName.')').' AS Val, "'.$columnName.'" as Type'],
+                                                ['justTheQuery'=>true,'test'=>false]
+                                            ).' UNION ';
+                                        break;
+                                    case 'sum':
+                                        $selectQuery .= $this->SQLHandler->selectFromTable(
+                                                $tableQuery,
+                                                $extraDBConditions,
+                                                ['SUM('.$differentColName.') AS Val, "'.$columnName.'" as Type'],
                                                 ['justTheQuery'=>true,'test'=>false]
                                             ).' UNION ';
                                         break;
@@ -843,7 +1043,7 @@ namespace IOFrame{
                                         $selectQuery .= $this->SQLHandler->selectFromTable(
                                                 $tableQuery,
                                                 $extraDBConditions,
-                                                [$columnName.' AS Val, "'.$columnName.'" as Type'],
+                                                [$differentColName.' AS Val, "'.$columnName.'" as Type'],
                                                 ['justTheQuery'=>true,'DISTINCT'=>true,'test'=>false]
                                             ).' UNION ';
                                         break;
@@ -959,11 +1159,16 @@ namespace IOFrame{
          * @param string $type Type of items. See the item objects at the top of the class for the parameters of each type.
          * @param array $params of the form:
          *              'update' - bool, whether to only update existing items. Overrides "override".
-         *              'override'/'overwrite' - bool, whether to allow overwriting existing items. Defaults to true,.
+         *              'override'/'overwrite' - bool, whether to allow overwriting existing items. Defaults to true.
+         *              'checkLock' - bool, default false. If object has lock columns, whether to only unlock columns with the same lock (still needs to lock them first)
+         *              'existingKey' - string, default false. If passed, will try to lock items with this key
+         *              'unlockWhenDone' - bool, default true. Whether to unlock the items when you're done (always false if not passing an existing key)
          *
          * @returns Array|Int, if not creating new auto-incrementing items, array of the form:
          *          <identifier> => <code>
          *          Where each identifier is the contact identifier, and possible codes are:
+         *         -4 - failed to modify items since they could not be locked
+         *         -3 - failed to modify items since one of the dependencies is missing
          *         -2 - failed to create items since one of the dependencies is missing
          *         -1 - failed to connect to db
          *          0 - success
@@ -992,15 +1197,19 @@ namespace IOFrame{
             if(isset($params['overwrite']) && !isset($params['override']))
                 $params['override'] = $params['overwrite'];
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $hasTimeColumns = isset($params['hasTimeColumns'])? $params['hasTimeColumns'] : ($this->objectsDetails[$type]['hasTimeColumns'] ?? true);
             $update = isset($params['update'])? $params['update'] : false;
             $override = $update? true : (isset($params['override'])? $params['override'] : true);
+            $checkLock = isset($params['checkLock'])? $params['checkLock'] : false;
             $autoIncrement = isset($typeArray['autoIncrement']) && $typeArray['autoIncrement'];
             $autoIncrementMainKey = !$override && !$update && $autoIncrement;
             $useCache = isset($typeArray['useCache']) ? $typeArray['useCache'] : !empty($typeArray['cacheName']);
             $keyColumns = $typeArray['keyColumns'];
+            $lockColumns = $typeArray['lockColumns'] ?? [];
+            $existingKey = $params['existingKey'] ?? null;
+            $unlockWhenDone = isset($params['unlockWhenDone']) && $existingKey ? $params['unlockWhenDone'] : true;
             $safeStrColumns = isset($typeArray['safeStrColumns']) ? $typeArray['safeStrColumns'] : [];
             $extraKeyColumns = isset($typeArray['extraKeyColumns']) ? $typeArray['extraKeyColumns'] : [];
             $groupByFirstNKeys = isset($typeArray['groupByFirstNKeys']) ? $typeArray['groupByFirstNKeys'] : 0;
@@ -1022,6 +1231,9 @@ namespace IOFrame{
             $inputsThatPassed = [];
             $onDuplicateKeyColExp = [];
             $timeNow = (string)time();
+            $useLocks = ($lockColumns['lock'] ?? false) && ($lockColumns['timestamp'] ?? false) && !$autoIncrementMainKey;
+            $lockColumns['retryAttempts'] = $lockColumns['retryAttempts'] ?? 5;
+            $lockColumns['lockLength'] = $lockColumns['lockLength'] ?? 128;
 
             foreach($typeArray['setColumns'] as $colName => $colArr){
                 if(
@@ -1065,11 +1277,49 @@ namespace IOFrame{
 
                     $results[$identifier] = -1;
                 }
-
-                if(isset($params['existing']))
+                if(isset($params['existing']) && !$useLocks)
                     $existing = $params['existing'];
-                else
+                elseif($useLocks){
+                    $tries = 0;
+                    $startingTime = time();
+                    $existing = [];
+                    if(!$existingKey){
+                        $hex_secure = false;
+                        while(!$hex_secure)
+                            $key=bin2hex(openssl_random_pseudo_bytes($lockColumns['lockLength'],$hex_secure));
+                    }
+                    else
+                        $key = $existingKey;
+                    while($tries++ < $lockColumns['retryAttempts']){
+                        //Try to lock the columns
+                        $lock = $this->lockItems($itemsToGet,$type,array_merge($params,['lock'=>$key]));
+                        //See if you got locks
+                        $gotLocks = [];
+                        $existing = $this->getItems($itemsToGet, $type, array_merge($params,['updateCache'=>false]));
+                        foreach($itemsToGet as $keyArr){
+                            $itemKey = implode('/',$keyArr);
+                            if(!empty($existing[$itemKey][$lockColumns['lock']]) && $existing[$itemKey][$lockColumns['lock']] === $lock || empty($existing[$itemKey][$lockColumns['lock']]) && $test)
+                                array_push($gotLocks,$itemKey);
+                        }
+                        if(count($gotLocks) === count($itemsToGet))
+                            break;
+                        elseif($tries === (int)$lockColumns['retryAttempts']){
+                            foreach($itemsToGet as $index=>$keyArr){
+                                $itemKey = implode('/',$keyArr);
+                                if(!in_array($itemKey,$gotLocks)){
+                                    $results[$itemKey] = -4;
+                                    unset($itemsToGet[$index]);
+                                    unset($inputs[$indexMap[$itemKey]]);
+                                }
+                            }
+                        }
+                    }
+                    if(empty($itemsToGet))
+                        return $results;
+                }
+                else{
                     $existing = $this->getItems($itemsToGet, $type, array_merge($params,['updateCache'=>false]));
+                }
             }
             else
                 $existing = [];
@@ -1104,8 +1354,11 @@ namespace IOFrame{
                 //In this case we are creating an auto-incrementing key, the address does not exist or we couldn't connect to db
                 if($autoIncrementMainKey || !is_array($existingArr)){
                     //If we could not connect to the DB, just return because it means we wont be able to connect next
-                    if(!$autoIncrementMainKey && $existingArr == -1)
+                    if(!$autoIncrementMainKey && $existingArr == -1){
+                        if($useLocks && $unlockWhenDone)
+                            $this->unlockItems($itemsToGet,$type,array_merge($params,['lock'=>$checkLock ? $key : null]));
                         return $results;
+                    }
                     else{
                         //If we are only updating, continue
                         if($update){
@@ -1152,15 +1405,17 @@ namespace IOFrame{
                             if(in_array($colName,$safeStrColumns))
                                 $val = IOFrame\Util\str2SafeStr($val);
 
-                            if($colArr['type'] === 'int')
-                                $val = (int)$val;
-                            elseif($colArr['type'] === 'bool')
-                                $val = (bool)$val;
-
                             if(isset($colArr['considerNull']) && ($val === $colArr['considerNull']) )
                                 $val = null;
                             elseif(!isset($colArr['type']) || $colArr['type'] === 'string')
                                 $val = [$val,'STRING'];
+
+                            if($val !== null){
+                                if($colArr['type'] === 'int')
+                                    $val = (int)$val;
+                                elseif($colArr['type'] === 'bool')
+                                    $val = (bool)$val;
+                            }
 
                             array_push($arrayToSet,$val);
                         }
@@ -1178,6 +1433,8 @@ namespace IOFrame{
                             }
                             else{
                                 $results = -3;
+                                if($useLocks && $unlockWhenDone)
+                                    $this->unlockItems($itemsToGet,$type,array_merge($params,['lock'=>$checkLock ? $key : null]));
                                 return $results;
                             }
                         }
@@ -1242,15 +1499,17 @@ namespace IOFrame{
                         if(in_array($colName,$safeStrColumns))
                             $val = IOFrame\Util\str2SafeStr($val);
 
-                        if($colArr['type'] === 'int')
-                            $val = (int)$val;
-                        elseif($colArr['type'] === 'bool')
-                            $val = (bool)$val;
-
                         if(isset($colArr['considerNull']) && ($val === $colArr['considerNull']) )
                             $val = null;
                         elseif(!isset($colArr['type']) || $colArr['type'] === 'string')
                             $val = [$val,'STRING'];
+
+                        if($val !== null){
+                            if($colArr['type'] === 'int')
+                                $val = (int)$val;
+                            elseif($colArr['type'] === 'bool')
+                                $val = (bool)$val;
+                        }
 
                         array_push($arrayToSet,$val);
 
@@ -1280,8 +1539,11 @@ namespace IOFrame{
             }
 
             //If we got nothing to set, return
-            if($itemsToSet==[])
+            if($itemsToSet==[]){
+                if($useLocks && $unlockWhenDone)
+                    $this->unlockItems($itemsToGet,$type,array_merge($params,['lock'=>$checkLock ? $key : null]));
                 return $results;
+            }
 
             $res = $this->SQLHandler->insertIntoTable(
                 $this->SQLHandler->getSQLPrefix().$typeArray['tableName'],
@@ -1329,16 +1591,19 @@ namespace IOFrame{
                             $results[$identifier] = -2;
                     }
                 }
-                else
-                    return $res;
+                else{
+                    $results = $res;
+                }
             }
             else{
                 //This means we either succeeded or got an error code returned
-                if($res === '23000')
-                    return -2;
+                if($res === '23000'){
+                    $results = -2;
+                }
                 //This is the code for missing dependencies
-                elseif($res === true)
-                    return -1;
+                elseif($res === true){
+                    $results =  -1;
+                }
                 else{
                     //TODO log failure
                     if(!$this->updateFathers($inputsThatPassed,$type,$params)){
@@ -1358,10 +1623,12 @@ namespace IOFrame{
                         if(!$test)
                             $this->RedisHandler->call('del',[$existingIdentifiers]);
                     }
-                    return $res;
+                    $results =  $res;
                 }
             }
 
+            if($useLocks && $unlockWhenDone)
+                $this->unlockItems($itemsToGet,$type,array_merge($params,['lock'=>$checkLock ? $key : null]));
             return $results;
         }
 
@@ -1386,8 +1653,8 @@ namespace IOFrame{
             else
                 throw new \Exception('Invalid object type!');
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $hasTimeColumns = isset($params['hasTimeColumns'])? $params['hasTimeColumns'] : ($this->objectsDetails[$type]['hasTimeColumns'] ?? true);
             $useCache = isset($typeArray['useCache']) ? $typeArray['useCache'] : !empty($typeArray['cacheName']);
             $keyColumns = isset($typeArray['extraKeyColumns']) ? array_merge($typeArray['keyColumns'],$typeArray['extraKeyColumns']) : $typeArray['keyColumns'];
@@ -1524,8 +1791,8 @@ namespace IOFrame{
             else
                 throw new \Exception('Invalid object type!');
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $useCache = isset($typeArray['useCache']) ? $typeArray['useCache'] : !empty($typeArray['cacheName']);
             $keyColumns = isset($typeArray['extraKeyColumns']) ? array_merge($typeArray['keyColumns'],$typeArray['extraKeyColumns']) : $typeArray['keyColumns'];
             $childCache = isset($typeArray['childCache']) ? $typeArray['childCache'] : [];

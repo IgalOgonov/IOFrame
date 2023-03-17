@@ -148,8 +148,8 @@ namespace IOFrame\Handlers{
          */
         function commitEventIP($eventCode, $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $weight = isset($params['weight'])? $params['weight'] : 1;
             $markOnLimit = isset($params['markOnLimit'])? $params['markOnLimit'] : true;
 
@@ -190,8 +190,8 @@ namespace IOFrame\Handlers{
          * @returns bool
          */
         function commitEventUser($eventCode, $id, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $weight = isset($params['weight'])? $params['weight'] : 1;
             $susOnLimit = isset($params['susOnLimit'])? $params['susOnLimit'] : true;
             $banOnLimit = isset($params['banOnLimit'])? $params['banOnLimit'] : false;
@@ -225,8 +225,8 @@ namespace IOFrame\Handlers{
          */
         function getRulebookCategories( array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $includeMeta = isset($params['includeMeta'])? $params['includeMeta'] : true;
 
             $res = $this->SQLHandler->selectFromTable(
@@ -304,8 +304,8 @@ namespace IOFrame\Handlers{
          */
         function getRulebookRules( array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $category = isset($params['category'])? $params['category'] : null;
             $type = isset($params['type'])? $params['type'] : null;
             $extraDBFilters = isset($params['extraDBFilters'])? $params['extraDBFilters'] : [];
@@ -426,8 +426,8 @@ namespace IOFrame\Handlers{
          *           2 rule does not exist and 'update' is true
          */
         function setRulebookRules(array $inputs, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $override = isset($params['override'])? $params['override'] : true;
             $update = isset($params['update'])? $params['update'] : false;
             $safeStr = isset($params['safeStr'])? $params['safeStr'] : true;
@@ -624,8 +624,8 @@ namespace IOFrame\Handlers{
          */
         function deleteRulebookRules(array $inputs, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             $relevantTypes = [];
             $eventTypesToDelete = [];
@@ -743,8 +743,8 @@ namespace IOFrame\Handlers{
          */
         function getEventsMeta(array $inputs = [], array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $safeStr = isset($params['safeStr'])? $params['safeStr'] : true;
 
             $retrieveParams = $params;
@@ -832,8 +832,8 @@ namespace IOFrame\Handlers{
          */
         function setEventsMeta(array $inputs, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $override = isset($params['override'])? $params['override'] : true;
             $update = isset($params['update'])? $params['update'] : false;
             $safeStr = isset($params['safeStr'])? $params['safeStr'] : true;
@@ -999,8 +999,8 @@ namespace IOFrame\Handlers{
          */
         function deleteEventsMeta(array $inputs, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             $relevantTypes = [];
             $eventTypesToDelete = [];

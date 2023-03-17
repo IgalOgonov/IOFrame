@@ -7,6 +7,94 @@ namespace IOFrame\Util{
     require_once __DIR__ . '/../../main/definitions.php';
 
 
+    /**
+    Refactor the name of the file or folder into camel case
+     * @param string $url needs to be the absolute address of the file or folder to modify
+     * @param array $params of the form:[
+     *              'delay' => int, default 0.1 - delay in seconds between opening the file (laz concurrency fix).
+     *          ]
+     */
+    function camelCase($url,array $params = []){
+
+        $test = $params['test']?? false;
+        $verbose = $params['verbose'] ?? $test;
+
+        //TODO To check for concurrency later
+        $urlArr = explode('/',$url);
+        $name = str_split(array_pop($urlArr));
+        $urlArr = join('/',$urlArr);
+        $newName = '';
+        for($i=count($name)-1; $i>=0; $i--){
+            $char = $name[$i];
+            if($i === 0)
+                $char = strtolower($char);
+            else{
+                if($name[$i-1] !== ' ')
+                    $char = strtolower($char);
+            }
+            if($char!==' ')
+                $newName .= $char;
+        }
+        $newName = strrev($newName);
+        if($verbose){
+            echo $url.PHP_EOL;
+            echo $urlArr.'/'.$newName.PHP_EOL;
+            echo '----'.PHP_EOL;
+        }
+        if(!$test)
+            rename($url,$urlArr.'/'.$newName);
+
+    }
+
+
+    /**
+     * Refactor the names of all the folders/files in a specific folder, and optionally all its subfolders, to camelCase
+     * @param string $url needs to be the absolute address of the folder to modify
+     * @param array $params Same as camelCase(), with the addition of:
+     *                  'subFolders' => bool, default false - whether to recursively modify all files in the subfolders too
+     *
+     * Example:
+     * refactorCamelCase(
+     *   'C:/wamp64/www/TestSite/test',
+     *   [
+     *     'test'=>true,
+     *     'verbose'=>true,
+     *     'subFolders'=>true,
+     *   ]
+     * )
+     *
+     *
+     */
+    function refactorCamelCase($url, array $params = []){
+        isset($params['subFolders'])?
+            $subFolders = $params['subFolders'] : $subFolders = false;
+        $dirArray = scandir($url);
+        $dirUrls = [];
+        $fileUrls = [];
+        foreach($dirArray as $key => $itemUrl){
+            if($itemUrl=='.' || $itemUrl=='..')
+                $dirArray[$key] = NULL;
+            else
+                if(is_dir ($url.'/'.$itemUrl)){
+                    array_push($dirUrls,$url.'/'.$itemUrl);
+
+                    if($subFolders){
+                        refactorCamelCase($url.'/'.$itemUrl, $params);
+                    }
+                }
+                else{
+                    array_push($fileUrls,$url.'/'.$itemUrl);
+                }
+        }
+
+        $allUrls = array_merge($dirUrls,$fileUrls);
+        if(is_array($allUrls))
+            foreach($allUrls as $itemUrl){
+                if($itemUrl)
+                    camelCase($itemUrl, $params);
+            }
+
+    }
 
     /**
     Replace a string with a different string in a single file
@@ -24,8 +112,8 @@ namespace IOFrame\Util{
      */
     function replaceInFile($url,$strRemove,$strRep, array $params = []){
 
-        $test = isset($params['test'])? $params['test'] : false;
-        $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+        $test = $params['test']?? false;
+        $verbose = $params['verbose'] ?? $test;
         $delay = isset($params['delay'])? $params['delay'] : 0.1;
 
         //Default forbidden and required file regex
@@ -61,7 +149,7 @@ namespace IOFrame\Util{
 
         $myfile = @fopen($url, "r+");
 
-        if(!$myfile) {
+        if(!$myfile || !@filesize($myfile)) {
             if($verbose)
                 echo 'Couldn\'t open '.$url.EOL;
             return;
@@ -129,7 +217,7 @@ namespace IOFrame\Util{
         }
 
         foreach($fileUrls as $fileUrl){
-            cleanseFile($fileUrl,$strRemove,$strRep, $params);
+            replaceInFile($fileUrl,$strRemove,$strRep, $params);
         }
 
         if($subFolders){
@@ -140,11 +228,10 @@ namespace IOFrame\Util{
             }
 
             foreach($folderUrls as $folderUrl){
-                cleanseFolder($folderUrl,$strRemove,$strRep, $params);
+                replaceInFile($folderUrl,$strRemove,$strRep, $params);
             }
 
         }
-
 
     }
 }

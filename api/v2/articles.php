@@ -24,7 +24,7 @@ use League\OpenAPIValidation\PSR7\SpecFinder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use IOFrame\Handlers\FileHandler;
-use IOFrame\Util\APIManager;
+use IOFrame\Util\v2APIManager;
 
 require_once __DIR__.'/../../main/coreInit.php';
 require __DIR__ . '/../apiSettingsChecks.php';
@@ -33,7 +33,7 @@ $request = Request::createFromGlobals();
 $response = new Response();
 $FileHandler = new FileHandler();
 $openAPIjson = $FileHandler->readFile($settings->getSetting('absPathToRoot').'api/v2/openapi.json');
-$APIManager = new APIManager($settings,json_decode($openAPIjson,true),array_merge($defaultSettingsParams,[
+$APIManager = new v2APIManager($settings,json_decode($openAPIjson,true),array_merge($defaultSettingsParams,[
     'request'=> null,
     'formats'=> [
         [

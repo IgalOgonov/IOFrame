@@ -117,8 +117,8 @@ namespace IOFrame{
             array $params = []
         ){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             $type = isset($params['type'])? $params['type'] : '';
 
@@ -394,7 +394,7 @@ namespace IOFrame{
 
                     if($cacheResultArrayHadError){
                         if($verbose)
-                            echo 'Item '.$indexMap[$index].' failed to pass column checks, removing from results'.EOL;
+                            echo 'Item '.($indexMap[$index]??'').' failed to pass column checks, removing from results'.EOL;
                         continue;
                     }
 
@@ -494,8 +494,8 @@ namespace IOFrame{
          *
          */
         function deleteCacheKeys(array $keys, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(count($keys) === 0)
                 return false;

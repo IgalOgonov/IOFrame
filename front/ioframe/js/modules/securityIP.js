@@ -228,7 +228,7 @@ var securityIP = new Vue({
                     {
                         id:'expires',
                         title:'Expires at',
-                        parser:function(timestamp)timeStampToReadableFullDate
+                        parser:timeStampToReadableFullDate
                     }
                 ];
                 this.filters = [

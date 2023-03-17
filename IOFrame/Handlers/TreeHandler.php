@@ -308,8 +308,8 @@ namespace IOFrame\Handlers{
          *          1 - Cannot override existing tree!
         */
         function addTrees($inputs = [], array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $res = [];
             foreach($inputs as $treeName=>$params){
                 //Set default
@@ -413,8 +413,8 @@ namespace IOFrame\Handlers{
          *          1 - Cannot override existing tree!
          * */
         function removeTrees($inputs = [], array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $res = [];
 
             foreach($inputs as $treeName=>$params){
@@ -472,8 +472,8 @@ namespace IOFrame\Handlers{
          * @return int 0
         */
         function updateNodes(array $nodeArray, string $treeName, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $res = true;
             isset($params['updateDB'])?
                 $updateDB = $params['updateDB'] : $updateDB = true;
@@ -523,8 +523,8 @@ namespace IOFrame\Handlers{
          *                      'ignorePrivate' => bool, default true - will ignore private trees (update nothing with them)
         */
         function getFromDB($treeNames = [], array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             //Set defaults
             if(!isset($params['ignorePrivate']))
                 $ignorePrivate = true;
@@ -645,8 +645,8 @@ namespace IOFrame\Handlers{
         //
         //
         function updateDB(string $treeName, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $res = true;
             //Set defaults
             if(!isset($params['override']))
@@ -826,8 +826,8 @@ namespace IOFrame\Handlers{
          *
         */
         function getFromCache($treeNames = [], array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             //Exit if we're not using cache
             if(!$this->useCache)
                 return false;
@@ -889,8 +889,8 @@ namespace IOFrame\Handlers{
             if(!$this->useCache)
                 return false;
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             //Removes the tree from cache
             if(isset($params['remove'])){
@@ -935,8 +935,8 @@ namespace IOFrame\Handlers{
          *
          */
         function getSubtreeByID(string $treeName, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             isset($params['returnType'])?
                 $returnType = $params['returnType'] : $returnType = 'euler';
             isset($params['nodeID'])?
@@ -1079,8 +1079,8 @@ namespace IOFrame\Handlers{
                 return 1;
 
             //Set defaults
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(!isset($params['childNum']))
                 $childNum = 0;
@@ -1236,8 +1236,8 @@ namespace IOFrame\Handlers{
                 return 1;
 
             //Set defaults
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(!isset($params['link']))
                 $link = false;

@@ -131,7 +131,7 @@ namespace IOFrame\Handlers{
                         ],
                         'Block_Order' => [
                             'type' => 'string',
-                            'default' => ''
+                            'default' => null
                         ],
                         'Article_Weight' => [
                             'type' => 'int',
@@ -610,8 +610,8 @@ namespace IOFrame\Handlers{
          */
         function hideArticles(array $articleIDs, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(count($articleIDs) < 1)
                 return false;
@@ -736,10 +736,9 @@ namespace IOFrame\Handlers{
             }
 
             $newOrder = count($newOrder) ? implode(',',$newOrder) : '';
-
             $setRes = $this->setItems([['Article_ID'=>$articleID,'Block_Order'=>$newOrder]],'articles',array_merge($params,['update'=>true,'override'=>true,'existing'=>$articles]));
 
-            return $setRes[$articleID];
+            return $setRes[$articleID] ?? $setRes;
         }
 
         /** Adds blocks to the article order.

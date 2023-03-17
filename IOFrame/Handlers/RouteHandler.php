@@ -21,9 +21,9 @@ namespace IOFrame\Handlers{
     class RouteHandler extends IOFrame\abstractDBWithCache
     {
 
-        private $FileHandler = null;
+        private $OrderHandler;
 
-        private $OrderHandler = null;
+        public $AuthHandler;
 
         /**
          * @var Int Tells us for how long to cache stuff by default.
@@ -39,6 +39,7 @@ namespace IOFrame\Handlers{
          * @param object $settings The standard settings object
          * @param object $conn The standard DB connection object
          * */
+
         function __construct(SettingsHandler $settings, $params = [])
         {
 
@@ -46,9 +47,6 @@ namespace IOFrame\Handlers{
 
             if (isset($params['AuthHandler']))
                 $this->AuthHandler = $params['AuthHandler'];
-
-            //Create new file handler
-            $this->FileHandler = new FileHandler();
 
             //Create new order handler
             $params['name'] = 'route';
@@ -98,8 +96,8 @@ namespace IOFrame\Handlers{
          * */
         function addRoutes(array $inputs, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(!isset($params['safeStr']))
                 $safeStr = true;
@@ -198,8 +196,8 @@ namespace IOFrame\Handlers{
          * */
         function updateRoutes(array $inputs, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(isset($params['useCache']))
                 $useCache = $params['useCache'];
@@ -316,8 +314,8 @@ namespace IOFrame\Handlers{
          * */
         function deleteRoutes(array $IDs, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(isset($params['useCache']))
                 $useCache = $params['useCache'];
@@ -459,8 +457,8 @@ namespace IOFrame\Handlers{
          */
         function activateRoutes(array $IDs, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $index = isset($params['index'])? $params['index'] : false;
 
             $this->pushToOrderMultiple($IDs,['test'=>$test,'verbose'=>$verbose, 'index'=>$index]);
@@ -491,8 +489,8 @@ namespace IOFrame\Handlers{
          * @returns int[] of the form ID => <code from disableRoute>
          */
         function disableRoutes(array $IDs, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             return $this->removeFromOrderMultiple($IDs,'name',$params);
 
@@ -509,8 +507,8 @@ namespace IOFrame\Handlers{
          */
         function getActiveRoutes(array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             $IDs = $this->getOrder($params);
 
@@ -567,8 +565,8 @@ namespace IOFrame\Handlers{
          * */
         function setMatches(array $inputs, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(isset($params['useCache']))
                 $useCache = $params['useCache'];
@@ -719,8 +717,8 @@ namespace IOFrame\Handlers{
          *          Array of the form [ <Match Name> => <code from deleteMatch()> ]
          * */
         function deleteMatches(array $matches, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(isset($params['useCache']))
                 $useCache = $params['useCache'];
@@ -799,8 +797,8 @@ namespace IOFrame\Handlers{
          * */
         function getMatches(array $matches = [], array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             if(!isset($params['safeStr']))
                 $safeStr = true;

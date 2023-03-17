@@ -24,6 +24,8 @@ class ezAlert{
     *                                                If the value is 'button', will create a button to dismiss (default).
     *                                                If the value is 'click', will be dismissible on click.
     *                  closeClass: string, default '' - will specify the name of the button that closes the class (default 'close')
+    *                  autoDismiss: int, default null - if present, will auto-dismiss the alert after int milliseconds
+    *                  autoDismissTimerClass: int, default '' - will specify the name of the line that shows the remaining time (default 'time-left')
     * */
     initAlert(target, content, params){
         if(params.allowSpec === undefined)
@@ -34,6 +36,10 @@ class ezAlert{
             params.dismissible = 'button';
         if(params.closeClass === undefined)
             params.closeClass = '';
+        if(params.autoDismiss === undefined)
+            params.autoDismiss = null;
+        if(params.autoDismissTimerClass === undefined)
+            params.autoDismissTimerClass = '';
         //If we didn't get an element, maybe we got a string that represents an object ID
         if(!this.isElement(target)){
             if(typeof(target) == 'string'){
@@ -90,6 +96,43 @@ class ezAlert{
             alertClose.style.cursor = 'pointer';
             alert.appendChild(alertClose);
             alertClose.addEventListener('click',e =>{e.target.parentNode.parentNode.removeChild(e.target.parentNode)});
+        }
+        if(params.autoDismiss){
+            let time = params.autoDismiss - 0;
+            alert.style.position = 'absolute';
+            let alertTimer = document.createElement("p");
+            alertTimer.innerHTML = '';
+            (params.autoDismissTimerClass == '')?
+                alertTimer.className = 'time-left'
+                : alertTimer.className = params.autoDismissTimerClass;
+            alertTimer.style.width = '100%';
+            alertTimer.style.position = 'absolute';
+            alertTimer.style.bottom = '0';
+            alertTimer.style.left = '0';
+            alertTimer.style.height = '3px';
+            alertTimer.style.background = 'rgba(125,125,125,0.5)';
+            alertTimer.style.animationName = 'closingWidth';
+            alertTimer.style.animationTimingFunction = 'linear';
+            alertTimer.style.borderRadius = '800';
+            alertTimer.style.animationDuration = (time+10)+'ms';
+
+            alert.appendChild(alertTimer);
+
+            alert.timeoutId = setTimeout(function(){
+               alert.parentNode.removeChild(alert);
+            },time);
+            alert.addEventListener('mouseenter',e =>{
+                clearTimeout(alert.timeoutId);
+                e.target.querySelector('.'+alertTimer.className).remove();
+            });
+
+            alert.addEventListener('mouseleave',e =>{
+                alert.appendChild(alertTimer);
+                alert.timeoutId = setTimeout(function(){
+                    alert.parentNode.removeChild(alert);
+                },time);
+            });
+
         }
         target.prepend(alert);
     };

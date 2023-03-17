@@ -7,7 +7,7 @@ if(eventHub === undefined)
 var media = new Vue({
     el: '#media',
     name:'Media',
-    mixins:[sourceURL],
+    mixins:[sourceURL,eventHubManager],
     data: {
         configObject: JSON.parse(JSON.stringify(document.siteConfig)),
         //Modes, and array of available operations in each mode
@@ -228,17 +228,18 @@ var media = new Vue({
         test:false
     },
     created:function(){
+        this.registerHub(eventHub);
         //Tells viewer to load initial target
-        eventHub.$on('select', this.selectElement);
-        eventHub.$on('requestSelection', this.selectSearchElement);
-        eventHub.$on('changeURLRequest', this.changeURLRequest);
-        eventHub.$on('viewElementsUpdated', this.updateViewElements);
-        eventHub.$on('updateViewElement', this.updateViewElement);
-        eventHub.$on('updateSearchListElement', this.updateSearchListElement);
-        eventHub.$on('imageUploadedToServer', this.updateView);
-        eventHub.$on('searchResults',this.parseSearchResults);
-        eventHub.$on('goToPage',this.goToPage);
-        eventHub.$on('resizeImages',this.resizeImages);
+        this.registerEvent('select', this.selectElement);
+        this.registerEvent('requestSelection', this.selectSearchElement);
+        this.registerEvent('changeURLRequest', this.changeURLRequest);
+        this.registerEvent('viewElementsUpdated', this.updateViewElements);
+        this.registerEvent('updateViewElement', this.updateViewElement);
+        this.registerEvent('updateSearchListElement', this.updateSearchListElement);
+        this.registerEvent('imageUploadedToServer', this.updateView);
+        this.registerEvent('searchResults',this.parseSearchResults);
+        this.registerEvent('goToPage',this.goToPage);
+        this.registerEvent('resizeImages',this.resizeImages);
 
         //Defaults
         if(this.configObject.media === undefined)
@@ -266,13 +267,10 @@ var media = new Vue({
                 case 'view':
                 case 'view-db':
                     return 'Media';
-                    break;
                 case 'edit':
                     return 'Editing '+(this.lastMode === 'view' ? 'local' : 'remote')+' media';
-                    break;
                 case 'upload':
                     return 'Uploading '+(this.lastMode === 'view' ? 'local': 'remote')+' media ' ;
-                    break;
                 default:
             }
         },
@@ -281,7 +279,6 @@ var media = new Vue({
             switch(this.currentOperation){
                 case 'move':
                     return 'Choose the folder to move the item into';
-                    break;
                 default:
                     return '';
             }
@@ -291,22 +288,16 @@ var media = new Vue({
             switch(this.currentOperation){
                 case 'move':
                     return 'Move to selected item?';
-                    break;
                 case 'copy':
                     return (this.currentMode === 'view' ? 'Choose the new filename:' : 'Choose the new identifier');
-                    break;
                 case 'delete':
                     return 'Delete selected?';
-                    break;
                 case 'rename':
                     return  (this.currentMode === 'view' ? 'Choose a new filename:' : 'Choose a new identifier:');
-                    break;
                 case 'deleteMultiple':
                     return 'Delete selected?';
-                    break;
                 case 'create':
                     return 'Choose a new the folder name:';
-                    break;
                 default:
                     return '';
             }
@@ -316,13 +307,10 @@ var media = new Vue({
             switch(this.currentOperation){
                 case 'copy':
                     return true;
-                    break;
                 case 'create':
                     return true;
-                    break;
                 case 'rename':
                     return true;
-                    break;
                 default:
                     return false;
             }
@@ -426,7 +414,7 @@ var media = new Vue({
                     if(source === destination)
                         alertLog('Cannot move to the same folder!','warning',document.querySelector('#media'));
                     else{
-                        data.append('action', this.currentMode === 'img' ? 'moveImage' : 'moveVideo');
+                        data.append('action', this.currentType === 'img' ? 'moveImage' : 'moveVideo');
                         data.append('oldAddress', source);
                         data.append('newAddress', destination);
                         data.append('copy', false);
@@ -442,7 +430,7 @@ var media = new Vue({
                         this.cancelOperation();
                         return;
                     }
-                    data.append('action', this.currentMode === 'img' ? 'moveImage' : 'moveVideo');
+                    data.append('action', this.currentType === 'img' ? 'moveImage' : 'moveVideo');
 
                     if(this.currentMode === 'view'){
                         let oldURL = this.view1.url;

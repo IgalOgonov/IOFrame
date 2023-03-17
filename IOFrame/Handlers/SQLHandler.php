@@ -29,6 +29,8 @@ namespace IOFrame\Handlers{
         /** @var IOFrame\Util\PHPQueryBuilder we use this to build our queries dynamically
          */
         public $queryBuilder;
+        public array $defaultSettingsParams;
+        public SettingsHandler $sqlSettings;
 
         /**
          * Basic construction function.
@@ -71,6 +73,7 @@ namespace IOFrame\Handlers{
 
             //Standard constructor for classes that use settings and have a DB connection
             $this->conn = IOFrame\Util\prepareCon($this->sqlSettings);
+            $this->conn->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_SILENT);
 
             //This is important - the DB handler may only use IOFrameHandler in local mode! Else you create An infinite dependency loop!
             //This overrides the default constructor
@@ -166,8 +169,8 @@ namespace IOFrame\Handlers{
 
         function selectFromTable(string $tableName, array $cond = [], array $columns = [], array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             isset($params['escapeBackslashes'])?
                 $escapeBackslashes = $params['escapeBackslashes'] : $escapeBackslashes = true;
             isset($params['useBrackets'])?
@@ -333,8 +336,8 @@ namespace IOFrame\Handlers{
         function deleteFromTable(string $tableName, array $cond = [], array $params = []){
 
             //Read $params
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             isset($params['escapeBackslashes'])?
                 $escapeBackslashes = $params['escapeBackslashes'] : $escapeBackslashes = true;
             isset($params['orderBy'])?
@@ -461,8 +464,8 @@ namespace IOFrame\Handlers{
         function insertIntoTable(string $tableName, array $columns, $values, array $params = []){
 
             //Read $params
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             isset($params['escapeBackslashes'])?
                 $escapeBackslashes = $params['escapeBackslashes'] : $escapeBackslashes = true;
             isset($params['onDuplicateKey'])?
@@ -595,8 +598,8 @@ namespace IOFrame\Handlers{
         function updateTable( $tableTarget, array $assignments, array $cond = [], array $params = []){
 
             //Read $params
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             isset($params['escapeBackslashes'])?
                 $escapeBackslashes = $params['escapeBackslashes'] : $escapeBackslashes = true;
             isset($params['orderBy'])?
@@ -724,8 +727,8 @@ namespace IOFrame\Handlers{
 
         function backupTable(string $tableName, array $columns=[], array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             isset($params['timeLimit'])?
                 $timeLimit = $params['timeLimit'] : $timeLimit = 1;
             isset($params['cond'])?
@@ -917,8 +920,8 @@ namespace IOFrame\Handlers{
          */
 
         function backupTables(array $tableNames, array $columns=[], array $timeLimits = [], array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $errors = array();
             if(!is_array($tableNames))
                 return 1;
@@ -961,8 +964,8 @@ namespace IOFrame\Handlers{
 
         function restoreTable(string $tableName, string $fileName, $params){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             isset($params['fullPath'])?
                 $fullPath = $params['fullPath'] : $fullPath = true;
 
@@ -1062,8 +1065,8 @@ namespace IOFrame\Handlers{
          * */
         function restoreLatestTable(string $tableName, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $prefix = $this->getSQLPrefix();
 
             try{
@@ -1104,8 +1107,8 @@ namespace IOFrame\Handlers{
 
         function restoreTables(array $names, array $params = []){
 
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
 
             $errors = array();
             if(!is_array($names))
@@ -1137,8 +1140,8 @@ namespace IOFrame\Handlers{
          *      1 if $names in case of illegal input format - also validates each table name, because they get echo'd.
          */
         function restoreLatestTables(array $names, array $params = []){
-            $test = isset($params['test'])? $params['test'] : false;
-            $verbose = isset($params['verbose'])? $params['verbose'] : ($test ? true : false);
+            $test = $params['test']?? false;
+            $verbose = $params['verbose'] ?? $test;
             $errors = array();
             if(!is_array($names))
                 return 1;
