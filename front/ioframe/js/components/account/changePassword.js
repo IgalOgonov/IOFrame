@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('change-password', {
     mixins: [sourceURL,eventHubManager,IOFrameCommons],
     props: {
@@ -161,6 +158,7 @@ Vue.component('change-password', {
 
             let message;
             let messageType = 'error';
+            let extraParams = {};
 
             switch (response){
                 case 'INPUT_VALIDATION_FAILURE':
@@ -170,6 +168,7 @@ Vue.component('change-password', {
                     break;
                 case '0':
                     messageType = 'success';
+                    extraParams = {autoDismiss:2000};
                     this.success = true;
                     break;
                 case '1':
@@ -185,7 +184,7 @@ Vue.component('change-password', {
             if(!message)
                 message = this.text.responses[response];
             if(this.alertOptions.use)
-                alertLog(message,messageType,this.alertOptions.target,this.alertOptions.params);
+                alertLog(message,messageType,this.alertOptions.target,{...this.alertOptions.params,...extraParams});
 
             eventHub.$emit('passwordChangeResult',{
                 newPassword:this.input,

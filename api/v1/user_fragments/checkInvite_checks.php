@@ -10,5 +10,3 @@ if($inputs['mail']!==null && !filter_var($inputs['mail'],FILTER_VALIDATE_EMAIL) 
         echo 'Illegal mail!';
     exit(INPUT_VALIDATION_FAILURE);
 }
-
-?>

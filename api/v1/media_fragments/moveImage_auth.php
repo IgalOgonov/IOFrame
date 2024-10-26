@@ -5,7 +5,7 @@ if(false){
 
 }
 //Check auth
-elseif( !( $auth->hasAction(IMAGE_MOVE_AUTH) || $auth->isAuthorized(0) ) ){
+elseif( !( $auth->hasAction(IMAGE_MOVE_AUTH) || $auth->isAuthorized() ) ){
     if($test)
         echo 'Cannot move image!'.EOL;
     exit(AUTHENTICATION_FAILURE);

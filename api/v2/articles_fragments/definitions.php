@@ -6,7 +6,7 @@ $articleSetColumnMap = [
     'title'=>'Article_Title',
     'address'=>'Article_Address',
     'language'=>'Article_Language',
-    'auth'=>'Article_View_Auth',
+    'articleAuth'=>'Article_View_Auth',
     'articleTextContent'=>'Article_Text_Content',
     'thumbnailAddress'=>'Thumbnail_Address',
     'thumbnailLocal'=>'Thumbnail_Local',
@@ -72,6 +72,10 @@ $articleResultsColumnMap = [
     'Block_Order'=>'blockOrder',
     'Creator_First_Name'=>'firstName',
     'Creator_Last_Name'=>'lastName',
+    'Tags'=>[
+        'resultName'=>'tags',
+        'type'=>'csv'
+    ],
     'Created'=>[
         'resultName'=>'created',
         'type'=>'int'
@@ -154,7 +158,7 @@ $blocksResultsColumnMap = [
     'Meta'=>[
         'resultName'=>'meta',
         'type'=>'json',
-        'validChildren'=>['caption','alt','name','height','width','autoplay','controls','loop','mute'],
+        'validChildren'=>['caption','alt','name','height','width','highlightCode','autoplay','controls','loop','mute'],
     ],
     'Other_Article_ID'=>[
         'resultName'=>'id',
@@ -219,7 +223,7 @@ $blocksResultsColumnMap = [
 $metaMap = [
     'articleTextContent' => ['subtitle','alt','caption','name'],
     'thumbnailMeta' => ['alt','caption','name'],
-    'blockMeta' => ['alt','caption','name','height','width','mute','loop','autoplay','controls','embed','center','preview','fullScreenOnClick','slider'],
+    'blockMeta' => ['alt','caption','name','height','width','mute','loop','highlightCode','autoplay','controls','embed','center','preview','fullScreenOnClick','slider'],
     'blockCollectionMeta' => ['caption'],
     'otherArticleThumbnailMeta' => ['alt','caption','name'],
 ];
@@ -262,8 +266,8 @@ CONST ADDRESS_MAX_LENGTH = 128;
  *          string[] objectAuth, defaults to [] - required object auth actions (if empty, cannot satisfy REQUIRED_AUTH_RESTRICTED)
  *          string[] actionAuth, defaults to [] - required action auth actions (if empty, cannot satisfy admin auth without levelAuth)
  *          int levelAuth, defaults to 0 - required level to be considered an admin for this operation - defaults to 0 (super admin)
- *          Array defaultSettingsParams - IOFrame default settings params, initiated at coreInit.php as $defaultSettingsParams
- *          SettingsHandler localSettings - IOFrame local settings params, initiated at coreInit.php as $settings
+ *          Array defaultSettingsParams - IOFrame default settings params, initiated at core_init.php as $defaultSettingsParams
+ *          SettingsHandler localSettings - IOFrame local settings params, initiated at core_init.php as $settings
  *          IOFrame/Handlers/AuthHandler AuthHandler, defaults to null - standard IOFrame auth handler
  *          IOFrame/Handlers/ObjectAuthHandler ObjectAuthHandler, defaults to null - standard IOFrame object auth handler
  *          IOFrame/Handlers/ArticleHandler ArticleHandler, defaults to null - standard IOFrame article handler
@@ -275,19 +279,21 @@ CONST ADDRESS_MAX_LENGTH = 128;
  *          where each key specified is a key that didn't pass the auth test, and index is self explanatory.
  *
  *          IF keys were NOT passed OR not logged in OR DB connection error- true or false, whether the user has auth or not.
+ * @throws Exception
+ * @throws Exception
  */
-function checkAuth($params){
+function checkAuth(array $params): bool|array {
     $test = $params['test']?? false;
-    $authRequired = isset($params['authRequired'])? $params['authRequired'] : REQUIRED_AUTH_ADMIN;
-    $keys = isset($params['keys'])? $params['keys'] : [];
-    $objectAuth = isset($params['objectAuth'])? $params['objectAuth'] : [];
-    $actionAuth = isset($params['actionAuth'])? $params['actionAuth'] : [];
-    $levelAuth = isset($params['levelAuth'])? $params['levelAuth'] : false;
-    $defaultSettingsParams = isset($params['defaultSettingsParams'])? $params['defaultSettingsParams'] : [];
-    $localSettings = isset($params['localSettings'])? $params['localSettings'] : null;
-    $AuthHandler = isset($params['AuthHandler'])? $params['AuthHandler'] : null;
-    $ObjectAuthHandler = isset($params['ObjectAuthHandler'])? $params['ObjectAuthHandler'] : null;
-    $ArticleHandler = isset($params['ArticleHandler'])? $params['ArticleHandler'] : null;
+    $authRequired = $params['authRequired'] ?? REQUIRED_AUTH_ADMIN;
+    $keys = $params['keys'] ?? [];
+    $objectAuth = $params['objectAuth'] ?? [];
+    $actionAuth = $params['actionAuth'] ?? [];
+    $levelAuth = $params['levelAuth'] ?? false;
+    $defaultSettingsParams = $params['defaultSettingsParams'] ?? [];
+    $localSettings = $params['localSettings'] ?? null;
+    $AuthHandler = $params['AuthHandler'] ?? null;
+    $ObjectAuthHandler = $params['ObjectAuthHandler'] ?? null;
+    $ArticleHandler = $params['ArticleHandler'] ?? null;
 
     $AuthHandlerPassed = false;
 
@@ -317,19 +323,17 @@ function checkAuth($params){
         }
     }
     if(!$areIds){
-        if(!defined('SQLHandler'))
-            require __DIR__ . '/../../IOFrame/Handlers/SQLHandler.php';
-        if(!isset($SQLHandler))
-            $SQLHandler = new \IOFrame\Handlers\SQLHandler($localSettings,$defaultSettingsParams);
+        if(!isset($SQLManager))
+            $SQLManager = new \IOFrame\Managers\SQLManager($localSettings,$defaultSettingsParams);
         $addresses = [];
         foreach($keys as $index => $keyArr){
             if(isset($keyArr['Article_Address']))
-                array_push($addresses,[$keyArr['Article_Address'],'STRING']);
+                $addresses[] = [$keyArr['Article_Address'], 'STRING'];
         }
         if(count($addresses) > 0){
-            array_push($addresses,'CSV');
-            $requiredIds = $SQLHandler->selectFromTable(
-                $SQLHandler->getSQLPrefix().'ARTICLES',
+            $addresses[] = 'CSV';
+            $requiredIds = $SQLManager->selectFromTable(
+                $SQLManager->getSQLPrefix().'ARTICLES',
                 [
                     'Article_Address',
                     $addresses,
@@ -343,14 +347,14 @@ function checkAuth($params){
             else{
                 $keys = [];
                 foreach ($requiredIds as $dbArray)
-                    array_push($keys,['Article_ID'=>$dbArray['Article_ID']]);
+                    $keys[] = ['Article_ID' => $dbArray['Article_ID']];
             }
         }
     }
 
     //The "keys" array could be empty - but then, this part just wont matter
     foreach($keys as $index => $keyArr){
-        array_push($requiredKeys,(string)($keyArr['Article_ID']));
+        $requiredKeys[] = (string)($keyArr['Article_ID']);
         $requiredKeyMap[(string)($keyArr['Article_ID'])] = $index;
     }
 
@@ -359,8 +363,6 @@ function checkAuth($params){
         if($test)
             echo 'Testing user auth against object auth of articles '.implode(',',$requiredKeys).EOL;
 
-        if(!defined('ObjectAuthHandler'))
-            require __DIR__ . '/../../IOFrame/Handlers/ObjectAuthHandler.php';
         if(!isset($ObjectAuthHandler))
             $ObjectAuthHandler = new \IOFrame\Handlers\ObjectAuthHandler($localSettings,$defaultSettingsParams);
 
@@ -387,7 +389,7 @@ function checkAuth($params){
         //Unset all keys which were
         foreach($requiredKeyMap as $requiredKey => $requiredIndex){
             if($requiredIndex != -1)
-                array_push($requiredKeys,(int)$requiredKey);
+                $requiredKeys[] = (int)$requiredKey;
         }
     }
 
@@ -397,8 +399,6 @@ function checkAuth($params){
         if($test)
             echo 'Testing user ownership of articles '.implode(',',$requiredKeys).EOL;
 
-        if(!defined('ArticleHandler'))
-            require __DIR__ . '/../../IOFrame/Handlers/ArticleHandler.php';
         if(!isset($ArticleHandler))
             $ArticleHandler = new \IOFrame\Handlers\ArticleHandler($localSettings,$defaultSettingsParams);
 
@@ -420,7 +420,7 @@ function checkAuth($params){
         //Unset all keys which were
         foreach($requiredKeyMap as $requiredKey => $requiredIndex){
             if($requiredIndex != -1)
-                array_push($requiredKeys,(int)$requiredKey);
+                $requiredKeys[] = (int)$requiredKey;
         }
     }
 
@@ -451,8 +451,7 @@ function checkAuth($params){
             if($index === -1)
                 unset($requiredKeyMap[$key]);
         }
-        $requiredKeyMap = array_splice($requiredKeyMap,0);
-        return $requiredKeyMap;
+        return array_splice($requiredKeyMap,0);
     }
     else
         return $AuthHandlerPassed;

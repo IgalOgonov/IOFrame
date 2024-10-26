@@ -1,5 +1,11 @@
 <?php
 
+$temp = \IOFrame\Util\FileSystemFunctions::fetchAllFolderAddresses(__DIR__.'/../cli',['subFolders'=>true,'returnFolders'=>true,'include'=>['\.php$']]);
+
+foreach ($temp as $url)
+    echo $url.' is '.(is_dir($url)?'dir' : (is_file($url)? 'file' : 'invalid')).EOL;
+
+
 echo 'now is '.time().'<br>';
 
 $array1 = array('blue' => 1, 'red' => 2, 'green' => 3, 'purple' => 4);
@@ -7,6 +13,7 @@ $array2 = array('blue' => 1, 'red' => 2, 'green' => 3);
 
 var_dump(array_diff_key($array1, $array2));
 
+var_dump($RedisManager->keys('_settings_*'));
 
 if(isset($_REQUEST['testJSON'])){
     $temp = '';
@@ -36,4 +43,7 @@ echo '  <form method="post" action="">
         <input type="submit" value="Submit Test Query">
         </form>';
 
-echo EOL.'Test 15 character GeraHash:'.EOL.IOFrame\Util\GeraHash(15).EOL;
+echo EOL.'Test 15 character GeraHash:'.EOL.IOFrame\Util\PureUtilFunctions::GeraHash(15).EOL;
+
+
+

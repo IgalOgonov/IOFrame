@@ -1,8 +1,8 @@
 <?php
 
 if(!isset($userSettings))
-    $userSettings = new IOFrame\Handlers\SettingsHandler(
-        $settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/userSettings/',
+    $userSettings = new \IOFrame\Handlers\SettingsHandler(
+        $settings->getSetting('absPathToRoot').'/'.\IOFrame\Handlers\SettingsHandler::SETTINGS_DIR_FROM_ROOT.'/userSettings/',
         $defaultSettingsParams
     );
 

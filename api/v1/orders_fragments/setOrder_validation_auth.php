@@ -1,6 +1,5 @@
 <?php
-if(!defined('validator'))
-    require __DIR__ . '/../../IOFrame/Util/validator.php';
+
 
 //id - only if we are updating an order
 if($action === 'updateOrder'){
@@ -20,7 +19,7 @@ if($action === 'updateOrder'){
 
 //Info
 if($inputs['orderInfo'] !== null) {
-    if (!\IOFrame\Util\is_json($inputs['orderInfo'])){
+    if (!\IOFrame\Util\PureUtilFunctions::is_json($inputs['orderInfo'])){
         if ($test)
             echo 'orderInfo must be a json object!' . EOL;
         exit(INPUT_VALIDATION_FAILURE);
@@ -29,7 +28,7 @@ if($inputs['orderInfo'] !== null) {
 
 //type
 if($inputs['orderType'] !== null) {
-    if (!\IOFrame\Util\validator::validateSQLKey($inputs['orderType'])) {
+    if (!\IOFrame\Util\ValidatorFunctions::validateSQLKey($inputs['orderType'])) {
         if ($test)
             echo 'Invalid type!' . EOL;
         exit(INPUT_VALIDATION_FAILURE);
@@ -38,7 +37,7 @@ if($inputs['orderType'] !== null) {
 
 //status
 if($inputs['orderStatus'] !== null) {
-    if (!\IOFrame\Util\validator::validateSQLKey($inputs['orderStatus'])) {
+    if (!\IOFrame\Util\ValidatorFunctions::validateSQLKey($inputs['orderStatus'])) {
         if ($test)
             echo 'Invalid status!' . EOL;
         exit(INPUT_VALIDATION_FAILURE);
@@ -48,6 +47,3 @@ if($inputs['orderStatus'] !== null) {
 
 
 
-
-
-?>

@@ -1,9 +1,6 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('media-selector', {
     name:'MediaSelector',
-    mixins:[sourceURL,eventHubManager],
+    mixins:[sourceURL,eventHubManager,searchListFilterSaver],
     props: {
         //Function to execute when we select an item. The function is this.selectFunction(<selected key>/<selected searchlist item>,this)
         //Will trigger each time we add an item in selectMultiple
@@ -82,7 +79,7 @@ Vue.component('media-selector', {
                 }
             },
             currentMode: 'view',
-            mediaURL: document.rootURI + 'api/v1/media',
+            mediaURL: document.ioframe.rootURI + 'api/v1/media',
             view: {
                 url: '',
                 target: '',
@@ -173,7 +170,7 @@ Vue.component('media-selector', {
                             this.mediaType === 'img'?
                                 function (item) {
                                     let src = item.dataType ?
-                                        (document.rootURI + 'api/v1/media?action=getDBMedia&address=' + item.identifier + '&lastChanged=' + item.lastChanged+'&resourceType=img')
+                                        (document.ioframe.rootURI + 'api/v1/media?action=getDBMedia&address=' + item.identifier + '&lastChanged=' + item.lastChanged+'&resourceType=img')
                                         :
                                         item.identifier;
                                     return '<img src="' + src + '">';
@@ -181,7 +178,7 @@ Vue.component('media-selector', {
                                 :
                                 function (item) {
                                     let src = item.dataType ?
-                                        (document.rootURI + 'api/v1/media?action=getDBMedia&address=' + item.identifier + '&lastChanged=' + item.lastChanged+'&resourceType=vid')
+                                        (document.ioframe.rootURI + 'api/v1/media?action=getDBMedia&address=' + item.identifier + '&lastChanged=' + item.lastChanged+'&resourceType=vid')
                                         :
                                         item.identifier;
                                     return '<video src="'+src+'" preload="metadata"></video>';
@@ -193,8 +190,8 @@ Vue.component('media-selector', {
                         custom: true,
                         title: 'Name',
                         parser: function (item) {
-                            if (document.selectedLanguage && (item[document.selectedLanguage + '_name'] !== undefined))
-                                return item[document.selectedLanguage + '_name'];
+                            if (document.ioframe.selectedLanguage && (item[document.ioframe.selectedLanguage + '_name'] !== undefined))
+                                return item[document.ioframe.selectedLanguage + '_name'];
                             else
                                 return item.name ? item.name : (item.dataType ? item.identifier : 'Unnamed link');
                         }
@@ -268,6 +265,7 @@ Vue.component('media-selector', {
         this.registerEvent('goToPage',this.goToPage);
         this.registerEvent('resizeImages',this.resizeImages);
         this.registerEvent('resetSelection',this.cancelOperation);
+        this._registerSearchListFilters(this.identifier+'-search',{}, {startListening:true,registerDefaultEvents:true});
 
         //Defaults
         this.currentMode = this.mode;
@@ -404,7 +402,6 @@ Vue.component('media-selector', {
                             let newURL = this.view.url;
                             if(newURL != '')
                                 newURL += '/';
-                            console.log('here '+newURL+targetFolder);
                             this.changeURL(newURL+targetFolder);
                         }
                         else
@@ -419,7 +416,6 @@ Vue.component('media-selector', {
                                 let newURL = this.view.url;
                                 if(newURL != '')
                                     newURL += '/';
-                                console.log('here '+newURL+targetFolder);
                                 this.changeURL(newURL+targetFolder);
                             }
                         }
@@ -591,7 +587,7 @@ Vue.component('media-selector', {
                     if(image.complete)
                         image.onload();
                 }
-            };
+            }
         }
     },
     mounted: function(){

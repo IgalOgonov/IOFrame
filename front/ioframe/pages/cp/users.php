@@ -6,9 +6,16 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_s
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'cp_redirect_to_login.php';
 
-array_push($CSS, 'cp.css', 'components/searchList.css', 'components/users/usersEditor.css', 'modules/users.css', 'modules/CPMenu.css');
-array_push($JS, 'ext/QRCodeGenerator/qrcodegen.js','mixins/sourceUrl.js', 'mixins/eventHubManager.js',
-    'components/searchList.js', 'components/users/usersEditor.js', 'modules/CPMenu.js', 'modules/users.js');
+array_push($CSS, 'cp.css', 'components/searchList.css', 'modules/CPMenu.css');
+$CSSPackages['CPUsersCSS'] = [
+    'items'=>['components/users/usersEditor.css', 'modules/users.css'],
+    'order'=>-1
+];
+array_push($JS,'mixins/sourceUrl.js','mixins/searchListFilterSaver.js','components/searchList.js', 'modules/CPMenu.js');
+$JSPackages['CPUsersJS'] = [
+    'items'=>['ext/QRCodeGenerator/qrcodegen.js','components/users/usersEditor.js', 'modules/users.js'],
+    'order'=>-1
+];
 
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_get_resources.php';
@@ -57,5 +64,3 @@ $frontEndResourceTemplateManager->printResources('JS');
 
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'footers_end.php';
-
-?>

@@ -8,7 +8,7 @@
  *      See standard return values at defaultInputResults.php
  *
  * Parameters:
- * "action"     - Requested action - described bellow
+ * "action"     - Requested action - described below
  * "type"   - string, each action here has an associated item type. The following types are valid:
  *                'categories','objects','actions','groups','objectUsers','objectGroups','userGroups'
  *_________________________________________________
@@ -456,14 +456,14 @@
  *_________________________________________________
  * */
 
-if(!defined('coreInit'))
-    require __DIR__ . '/../../main/coreInit.php';
+if(!defined('IOFrameMainCoreInit'))
+    require __DIR__ . '/../../main/core_init.php';
 
 require __DIR__ . '/../apiSettingsChecks.php';
 require __DIR__ . '/../defaultInputChecks.php';
 require __DIR__ . '/../defaultInputResults.php';
 require __DIR__ . '/../CSRF.php';
-require 'objectAuth_fragments/definitions.php';
+require 'object-auth_fragments/definitions.php';
 require __DIR__ . '/../../IOFrame/Handlers/ObjectAuthHandler.php';
 
 if($test)
@@ -472,7 +472,7 @@ if($test)
 if(!isset($_REQUEST["action"]))
     exit('Action not specified!');
 $action = $_REQUEST["action"];
-if(!checkApiEnabled('object-auth',$apiSettings,$_REQUEST['action']))
+if(!checkApiEnabled('object-auth',$apiSettings,$SecurityHandler,$_REQUEST['action']))
     exit(API_DISABLED);
 
 if(!isset($_REQUEST["type"]))
@@ -489,9 +489,9 @@ switch($action){
         $arrExpected =["keys","filters","orderBy","orderType","offset","limit"];
 
         require __DIR__ . '/../setExpectedInputs.php';
-        require 'objectAuth_fragments/getItems_auth.php';
-        require 'objectAuth_fragments/getItems_checks.php';
-        require 'objectAuth_fragments/getItems_execution.php';
+        require 'object-auth_fragments/getItems_auth.php';
+        require 'object-auth_fragments/getItems_checks.php';
+        require 'object-auth_fragments/getItems_execution.php';
 
         if(is_array($result))
             echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS);
@@ -501,15 +501,15 @@ switch($action){
         break;
 
     case 'setItems':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["inputs","update","override"];
 
         require __DIR__ . '/../setExpectedInputs.php';
-        require 'objectAuth_fragments/setItems_auth.php';
-        require 'objectAuth_fragments/setItems_checks.php';
-        require 'objectAuth_fragments/setItems_execution.php';
+        require 'object-auth_fragments/setItems_auth.php';
+        require 'object-auth_fragments/setItems_checks.php';
+        require 'object-auth_fragments/setItems_execution.php';
 
         if(is_array($result))
             echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_FORCE_OBJECT);
@@ -519,29 +519,29 @@ switch($action){
         break;
 
     case 'deleteItems':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["items"];
 
         require __DIR__ . '/../setExpectedInputs.php';
-        require 'objectAuth_fragments/deleteItems_auth.php';
-        require 'objectAuth_fragments/deleteItems_checks.php';
-        require 'objectAuth_fragments/deleteItems_execution.php';
+        require 'object-auth_fragments/deleteItems_auth.php';
+        require 'object-auth_fragments/deleteItems_checks.php';
+        require 'object-auth_fragments/deleteItems_execution.php';
         echo ($result === 0)?
             '0' : $result;
         break;
 
     case 'moveItems':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["items","inputs"];
 
         require __DIR__ . '/../setExpectedInputs.php';
-        require 'objectAuth_fragments/moveItems_auth.php';
-        require 'objectAuth_fragments/moveItems_checks.php';
-        require 'objectAuth_fragments/moveItems_execution.php';
+        require 'object-auth_fragments/moveItems_auth.php';
+        require 'object-auth_fragments/moveItems_checks.php';
+        require 'object-auth_fragments/moveItems_execution.php';
         echo ($result === 0)?
             '0' : $result;
         break;
@@ -550,6 +550,5 @@ switch($action){
         exit('Specified action is not recognized');
 }
 
-?>
 
 

@@ -6,7 +6,7 @@
  *  you mustn't rely on them being truly hidden from attackers.
  *
  * Parameters:
- * "action"     - Requested action - described bellow
+ * "action"     - Requested action - described below
  *_________________________________________________
  * getMenus
  *      - Gets all the menus, including their meta information. CANNOT get specific items this way
@@ -165,8 +165,8 @@
  *
  * */
 
-if(!defined('coreInit'))
-    require __DIR__ . '/../../main/coreInit.php';
+if(!defined('IOFrameMainCoreInit'))
+    require __DIR__ . '/../../main/core_init.php';
 
 require __DIR__ . '/../apiSettingsChecks.php';
 require __DIR__ . '/../defaultInputChecks.php';
@@ -181,7 +181,7 @@ $action = $_REQUEST["action"];
 if($test)
     echo 'Testing mode!'.EOL;
 
-if(!checkApiEnabled('menu',$apiSettings,$_REQUEST['action']))
+if(!checkApiEnabled('menu',$apiSettings,$SecurityHandler,$_REQUEST['action']))
     exit(API_DISABLED);
 
 //Handle inputs
@@ -206,7 +206,7 @@ switch($action){
         break;
 
     case 'setMenus':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["inputs","override","update"];
@@ -224,7 +224,7 @@ switch($action){
         break;
 
     case 'deleteMenus':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["menus"];
@@ -255,7 +255,7 @@ switch($action){
         break;
 
     case 'setMenuItems':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["identifier","inputs"];
@@ -270,7 +270,7 @@ switch($action){
         break;
 
     case 'moveMenuBranch':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["identifier","blockIdentifier","sourceAddress","targetAddress","orderIndex"];
@@ -287,5 +287,3 @@ switch($action){
     default:
         exit('Specified action is not recognized');
 }
-
-?>

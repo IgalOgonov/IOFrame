@@ -1,0 +1,20 @@
+{
+	"localSettings":{
+		"pathToRoot":"/IOFrame_CLI_Test/",
+		"dieOnPluginMismatch":1,
+		"nodeID":"ExampleNode",
+		"highScalability":0
+	},
+	"redisSettings":{
+		"redis_addr":"127.0.0.1",
+		"redis_port":"6379",
+		"redis_prefix":"test_",
+		"redis_default_persistent":1
+	},
+	"sqlSettings":{
+		"sql_server_addr":"127.0.0.1",
+		"sql_server_port":"3307",
+		"sql_db_name":"ioframe_test",
+		"sql_table_prefix":"T_"
+	}
+}

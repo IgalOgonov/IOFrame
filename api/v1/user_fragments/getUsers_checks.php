@@ -1,6 +1,5 @@
 <?php
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 
 //Validate normal integers
 foreach(['idAtLeast','idAtMost','createdBefore','createdAfter','rankAtLeast','rankAtMost','createdBefore','createdAfter','limit','offset'] as $param){
@@ -26,7 +25,7 @@ foreach(['usernameLike','emailLike'] as $param){
 }
 
 //Params which can be null, true or false, but if set will become 0 or 1
-foreach(['isActive','isBanned','isSuspicious','orderType'] as $param){
+foreach(['isActive','isBanned','isLocked','isSuspicious','orderType'] as $param){
     if($inputs[$param] !== null)
         $inputs[$param] = $inputs[$param]? 1 : 0;
 }

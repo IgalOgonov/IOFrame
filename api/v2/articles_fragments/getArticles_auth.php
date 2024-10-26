@@ -5,7 +5,7 @@ if($requiredAuth !== REQUIRED_AUTH_NONE){
     //Convert keys
     $authKeys = [];
     foreach($inputs['keys'] as $key)
-        array_push($authKeys,['Article_ID'=>$key]);
+        $authKeys[] = ['Article_ID' => $key];
     $authCheck = checkAuth([
         'test'=>$test,
         'authRequired' => $requiredAuth,
@@ -22,10 +22,7 @@ else
     $authCheck = true;
 
 if($authCheck === false){
-    die(json_encode([
-        'error'=>'Authentication',
-        'message'=>'Authentication failed'
-    ]));
+    \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON(['error'=>AUTHENTICATION_FAILURE,'message'=>'Authentication failed'],!$test);
 }
 elseif(gettype($authCheck) === 'array'){
 
@@ -41,7 +38,7 @@ elseif(gettype($authCheck) === 'array'){
 
     if(count($inputs['keys']) === 0){
         die(json_encode([
-            'error'=>'AuthenticationIndividual',
+            'error'=>AUTHENTICATION_FAILURE,
             'message'=>'Authentication failed for all of the keys!'
         ]));
     }

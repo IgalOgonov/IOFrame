@@ -1,4 +1,5 @@
-/* Resolves true on success, rejects false on failure, or resolves the list of changed objects if we updated and got new objects.
+/* TODO This is left alone until I can determine whether there is any useful code here that can be reused, as still hasn't been
+ * Resolves true on success, rejects false on failure, or resolves the list of changed objects if we updated and got new objects.
  * Parameters:
  *      'updateObjectMap' - bool, default true - whether to update the object map - by default only '@'
  *      'updateObjects' - bool, default true - whether to update the objects gotten from the object maps
@@ -7,7 +8,7 @@
 * */
 function startObjectDB( params = []){
     return new Promise(function(resolve, reject) {
-        var updateObjectMap = (params['updateObjectMap'] !== undefined)? params['updateObjectMap'] : true;
+        let updateObjectMap = (params['updateObjectMap'] !== undefined)? params['updateObjectMap'] : true;
         /*INDEXED-DB RELATED*/
         window.indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
         window.IDBKeyRange = window.IDBKeyRange || window.webkitIDBKeyRange || window.msIDBKeyRange;
@@ -20,13 +21,13 @@ function startObjectDB( params = []){
         else{
             if (typeof(Storage) === "undefined") {
                 alertLog('Local storage not enabled! Certain functions will be available to you.', 'warning');
-                var hasStorage = false;
+                let hasStorage = false;
             }
             else
                 hasStorage = true;
             //initialize the db
-            var db;
-            var request = indexedDB.open("ObjectCache",2);
+            let db;
+            let request = indexedDB.open("ObjectCache",2);
 
             request.onblocked = function(event){
                 console.log(event);
@@ -51,7 +52,7 @@ function startObjectDB( params = []){
                 db = event.target.result;
                 //ID is the index
                 try{
-                    var objectStore = db.createObjectStore("objects", { keyPath: "id" });
+                    let objectStore = db.createObjectStore("objects", { keyPath: "id" });
                     //We will often want to select a distinct group from a collection of objects, but it is obviously not unique
                     objectStore.createIndex("group", "group", { unique: false });
                 }
@@ -99,9 +100,9 @@ function startObjectDB( params = []){
  * */
 function populateObjectMap(db,params = []){
     return new Promise(function(resolve, reject){
-        var updateObjects = (params['updateObjects'] !== undefined)? params['updateObjects'] : true;
-        var extraMaps = (params['extraMaps'] !== undefined)? params['extraMaps'] : [];
-        var timenow = new Date().getTime();
+        let updateObjects = (params['updateObjects'] !== undefined)? params['updateObjects'] : true;
+        let extraMaps = (params['extraMaps'] !== undefined)? params['extraMaps'] : [];
+        let timenow = new Date().getTime();
         timenow = Math.floor(timenow/1000);
         if(localStorage.getItem("objectMap")== null)
             localStorage.setItem("objectMap",'');
@@ -116,8 +117,8 @@ function populateObjectMap(db,params = []){
                 return false;
             }
 
-            var parsedResponse = JSON.parse(res);
-            var mapsToUpdate = [];
+            let parsedResponse = JSON.parse(res);
+            let mapsToUpdate = [];
             extraMaps.forEach(function(mapName){
                 //Map doesn't exist! So we can do no caching...
                 if(parsedResponse[mapName] == 1){
@@ -166,13 +167,13 @@ function checkMappedObjects(requestedMaps = []){
     return new Promise(function(resolve, reject) {
         let storedMaps = localStorage.getItem('objectMap');
         requestedMaps.push('@');
-        var timesUpdated = [];
+        let timesUpdated = [];
         //See if our object map even exists
         IsJsonString(storedMaps)?
             storedMaps = JSON.parse(storedMaps): storedMaps == null;
 
         //Prepare to check the server for the actual objects assigned to the current map
-        var header =  {
+        let header =  {
             'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8;'
         };
         //Set parameters to send to the api
@@ -194,16 +195,16 @@ function checkMappedObjects(requestedMaps = []){
             function(token){
                 action += '&CSRF_token='+token;
                 // url
-                let url=document.pathToRoot+"api\/v1\/objects";
+                let url=document.ioframe.pathToRoot+"api\/v1\/objects";
                 //Request itself
-                var xhr = new XMLHttpRequest();
+                let xhr = new XMLHttpRequest();
                 xhr.open('GET', url+'?'+action);
                 //console.log(url+'?'+action);
                 xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
                 xhr.send(null);
                 xhr.onreadystatechange = function () {
-                    var DONE = 4; // readyState 4 means the request is done.
-                    var OK = 200; // status 200 is a successful return.
+                    let DONE = 4; // readyState 4 means the request is done.
+                    let OK = 200; // status 200 is a successful return.
                     if (xhr.readyState === DONE) {
                         if (xhr.status === OK){
                             let response = xhr.responseText;
@@ -248,8 +249,7 @@ function assignNewObjects(map, timenow, obj){
         let objectMap = localStorage.getItem('objectMap');
         (objectMap == '' || objectMap == '{}')?
             objectMap = {}  : objectMap = JSON.parse(objectMap);
-        (objectMap.hasOwnProperty(map))?
-            currMap = objectMap[map] : currMap =  {};
+        let currMap = (objectMap.hasOwnProperty(map))?objectMap[map] : {};
         currMap.timeUpdated = timenow;
         currMap.objects = obj;
         objectMap[map] = currMap;
@@ -264,7 +264,7 @@ function assignNewObjects(map, timenow, obj){
 function updateMappedObjects(maps,db){
     return new Promise(function(resolve, reject) {
 
-        var timenow = new Date().getTime();
+        let timenow = new Date().getTime();
         timenow = Math.floor(timenow/1000);
         //get the objectMap, and see which objects this maps should have
         let objectMap = JSON.parse(localStorage.getItem('objectMap'));
@@ -288,13 +288,13 @@ function updateMappedObjects(maps,db){
          */
 
         //Prepare to get what we need from the database
-        var transaction = db.transaction(["objects"], "readonly");
-        var objectStore = transaction.objectStore("objects");
+        let transaction = db.transaction(["objects"], "readonly");
+        let objectStore = transaction.objectStore("objects");
 
         //Fetch the objects
-        var objects = {};
+        let objects = {};
         objectsIDs.forEach(function(item){
-            var request = objectStore.get(item);
+            let request = objectStore.get(item);
 
             request.onsuccess = function(event) {
                 //Since the item exists on the client side, put it in the right place
@@ -333,15 +333,15 @@ function updateMappedObjects(maps,db){
                 function(token){
                     action += '&CSRF_token='+token;
                     // url
-                    let url=document.pathToRoot+"api\/v1\/objects";
+                    let url=document.ioframe.pathToRoot+"api\/v1\/objects";
                     //Request itself
-                    var xhr = new XMLHttpRequest();
+                    let xhr = new XMLHttpRequest();
                     xhr.open('GET', url+'?'+action);
                     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
                     xhr.send(null);
                     xhr.onreadystatechange = function () {
-                        var DONE = 4; // readyState 4 means the request is done.
-                        var OK = 200; // status 200 is a successful return.
+                        let DONE = 4; // readyState 4 means the request is done.
+                        let OK = 200; // status 200 is a successful return.
                         if (xhr.readyState === DONE) {
                             if (xhr.status === OK){
                                 let response = xhr.responseText;
@@ -367,16 +367,17 @@ function updateMappedObjects(maps,db){
 
 
                                 //Open DB transaction to delete outdated objects and add new ones
-                                var transaction2 = db.transaction(["objects"], "readwrite");
+                                let transaction2 = db.transaction(["objects"], "readwrite",{durability:"strict"});
 
                                 //Delete outdated objects
-                                var objectStore1 = transaction2.objectStore("objects");
+                                let objectStore1 = transaction2.objectStore("objects");
                                 //Go over the errors, delete every object whose error isn't "0"
                                 if(errorList !=[]){
+                                    let deleteOutdated;
                                     for (let key in errorList) {
                                         if (errorList.hasOwnProperty(key)) {
                                             if (errorList[key] != '0')
-                                                var deleteOutdated = objectStore1.delete(key);
+                                                deleteOutdated = objectStore1.delete(key);
                                         }
                                     }
                                     if(deleteOutdated !== undefined)
@@ -385,10 +386,10 @@ function updateMappedObjects(maps,db){
                                 }
 
                                 //Add new objects
-                                var objectStore2 = transaction2.objectStore("objects");
+                                let objectStore2 = transaction2.objectStore("objects");
                                 for (let key in objectList) {
                                     if (objectList.hasOwnProperty(key)) {
-                                        var objectStoreRequest = objectStore2.put({id:key, content:objectList[key], group:groupMap[key],
+                                        let objectStoreRequest = objectStore2.put({id:key, content:objectList[key], group:groupMap[key],
                                             canModify:false, canView:true, lastUpdated:timenow});
                                     }
                                 }

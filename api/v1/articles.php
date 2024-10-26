@@ -3,7 +3,7 @@
 /* Handles articles in IOFrame.
  *
  * Parameters:
- * "action"     - Requested action - described bellow
+ * "action"     - Requested action - described below
  *_________________________________________________
  * getArticles
  *      Gets all available articles, or specific articles. Will not get article blocks with this action.
@@ -30,6 +30,7 @@
  *                                       1/2 without specific keys and 2 with specific keys require ownership of the article,
  *                                       1 with specific keys requires ownership or relevant object auth for the articles.
  *                                       Auth 9999 is default for "hidden" items that only an admin can get, and requires auth level 0>,
+ *                      'tagsIn' => <string[]|object[], either an array tags associated with the article of the type 'default-article-tags', or objects of the form {'type': <string, tag type>, 'name': <string, tag name>}>
  *                      -- The following values require admin permission --
  *                      'authIn' => <int[], auth is one of those values>,
  *                      'weightIn' => <int[], article weight is one of those,
@@ -290,6 +291,7 @@
  *      -- The following parameters are accepted depending on type --
  *      'markdown':
  *          text: string, markdown text - *SHOULD BE URI ENCODED!* (js function encodeURIComponent)
+ *          highlightCode: bool, whether to automatically try to highlight code in the block
  *      'image':
  *      'cover':
  *          blockResourceAddress: address of the image
@@ -436,12 +438,42 @@
  *
  * Examples:
  *          action=cleanArticleBlocks&articleId=1
+ *_________________________________________________
+ * addArticleTags [CSRF protected]
+ *      Sets article tags.
+ *
+ *      params:
+ *      articleId: int, id of the article
+ *      type: string, default 'default-article-tags'- valid tag type
+ *      tags: string[] of valid tag identifiers
+ *
+ *      Returns: object where each key is of the form <article id>/<type>/<tag identifier>, and each value is an int code:
+ *                  -2 - failed to create items since one of the dependencies (tag) is missing
+ *                  -1 - failed to connect to db
+ *                   0 - success
+ *
+ * Examples:
+ *          action=addArticleTags&articleId=1&tags=["test"]
+ *_________________________________________________
+ * removeArticleTags [CSRF protected]
+ *      Removes article tags.
+ *
+ *      params:
+ *      articleId: int, id of the article
+ *      type: string, default 'default-article-tags'- valid tag type
+ *      tags: string[] of valid tag identifiers
+ *
+ *      Returns: int code
+ *              -1 db connection failure
+ *              0 success
+ *
+ * Examples:
+ *          action=removeArticleTags&articleId=1
  *
  * */
 
-if(!defined('coreInit'))
-    require __DIR__ . '/../../main/coreInit.php';
-
+if(!defined('IOFrameMainCoreInit'))
+    require __DIR__ . '/../../main/core_init.php';
 require __DIR__ . '/../apiSettingsChecks.php';
 require __DIR__ . '/../defaultInputChecks.php';
 require __DIR__ . '/../defaultInputResults.php';
@@ -456,7 +488,7 @@ if(!isset($_REQUEST["action"]))
     exit('Action not specified!');
 $action = $_REQUEST["action"];
 
-if(!checkApiEnabled('articles',$apiSettings,$_REQUEST['action']))
+if(!checkApiEnabled('articles',$apiSettings,$SecurityHandler,$_REQUEST['action']))
     exit(API_DISABLED);
 
 //TODO For everything that has checks before auth, or object auth, add rate-limiting.
@@ -465,7 +497,7 @@ switch($action){
     case 'getArticles':
 
         $arrExpected =["keys","orderBy","orderType","titleLike","languageIs","addressIn","addressLike","createdBefore","createdAfter",
-            "changedBefore","changedAfter","authAtMost","authIn","weightIn","offset","limit"];
+            "changedBefore","changedAfter","tagsIn","authAtMost","authIn","weightIn","offset","limit"];
 
         require __DIR__ . '/../setExpectedInputs.php';
         require 'articles_fragments/getArticles_checks.php';
@@ -496,7 +528,7 @@ switch($action){
         break;
 
     case 'setArticle':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["create","articleId","title","articleAddress","articleAuth","subtitle","caption","alt","name",
@@ -513,7 +545,7 @@ switch($action){
         break;
 
     case 'deleteArticles':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["articles","permanentDeletion"];
@@ -530,11 +562,11 @@ switch($action){
         break;
 
     case 'setArticleBlock':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["create","safe","articleId","blockId","orderIndex","type","text","blockResourceAddress","caption","alt","name",
-            "blockCollectionName","height","width","autoplay","controls","mute","loop","embed","center","preview","fullScreenOnClick","slider",
+            "blockCollectionName","height","width","autoplay","highlightCode","controls","mute","loop","embed","center","preview","fullScreenOnClick","slider",
             "otherArticleId"];
 
         require __DIR__ . '/../setExpectedInputs.php';
@@ -550,7 +582,7 @@ switch($action){
         break;
 
     case 'deleteArticleBlocks':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["articleId","deletionTargets","permanentDeletion"];
@@ -568,7 +600,7 @@ switch($action){
         break;
 
     case 'moveBlockInArticle':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["articleId","from","to"];
@@ -583,7 +615,7 @@ switch($action){
         break;
 
     case 'cleanArticleBlocks':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["articleId"];
@@ -600,10 +632,44 @@ switch($action){
                 '0' : $result;
         break;
 
+    case 'addArticleTags':
+        if(!validateThenRefreshCSRFToken($SessionManager))
+            exit(WRONG_CSRF_TOKEN);
+
+        $arrExpected =["articleId","type","tags"];
+
+        require __DIR__ . '/../setExpectedInputs.php';
+        require 'articles_fragments/addArticleTags_checks.php';
+        require 'articles_fragments/addArticleTags_auth.php';
+        require 'articles_fragments/addArticleTags_execution.php';
+
+        if(is_array($result))
+            echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_FORCE_OBJECT);
+        else
+            echo ($result === 0)?
+                '0' : $result;
+        break;
+
+    case 'removeArticleTags':
+        if(!validateThenRefreshCSRFToken($SessionManager))
+            exit(WRONG_CSRF_TOKEN);
+
+        $arrExpected =["articleId","type","tags"];
+
+        require __DIR__ . '/../setExpectedInputs.php';
+        require 'articles_fragments/removeArticleTags_checks.php';
+        require 'articles_fragments/removeArticleTags_auth.php';
+        require 'articles_fragments/removeArticleTags_execution.php';
+
+        if(is_array($result))
+            echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_FORCE_OBJECT);
+        else
+            echo ($result === 0)?
+                '0' : $result;
+        break;
+
     default:
         exit('Specified action is not recognized');
 }
-
-?>
 
 

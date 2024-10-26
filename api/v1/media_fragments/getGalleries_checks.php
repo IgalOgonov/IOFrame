@@ -1,6 +1,5 @@
 <?php
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 
 //Limit, max 500, min 1
 if($inputs['limit'] !== null){

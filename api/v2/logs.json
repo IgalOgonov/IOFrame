@@ -1,0 +1,2071 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "IOFrame-Core APIs",
+    "description": "IOFrame is an API-based, Fullstack PHP Framework. Logs core API",
+    "termsOfService": "",
+    "contact": {
+      "name": "Igal Ogonov",
+      "email": "igal@iosoft.io"
+    },
+    "version": "1.0"
+  },
+  "servers": [
+    {
+      "url": "%%ROOT_URL%%api/v2",
+      "description": "Relative API location from server root. Usability may vary based on the actual system."
+    }
+  ],
+  "tags": [
+    {
+      "name": "Logs API",
+      "description": "Logs and reporting"
+    }
+  ],
+  "paths": {
+    "/logs/default-channels": {
+      "get": {
+        "tags": [
+          "Logs API"
+        ],
+        "summary": "Gets all default log channels",
+        "description": "Gets all default log channels. Deletion/creation is intentionally unsupported in this API, use relevant logSetting",
+        "operationId": "log-channels-search",
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns report. The 'error' is only returned if an error has occurred, otherwise 'articles' and 'meta' are returned.",
+                  "properties": {
+                    "channels": {
+                      "description": "All default log channels",
+                      "type":"array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/logs": {
+      "get": {
+        "tags": [
+          "Logs API"
+        ],
+        "summary": "Gets logs",
+        "description": "Gets all available logs. Deletion/creation is intentionally unsupported in this API",
+        "operationId": "logs-search",
+        "parameters": [
+          {
+            "name": "onlyStatistics",
+            "in": "query",
+            "description": "Only gets the meta data, main query executed with limit 0",
+            "style": "simple",
+            "schema": {
+              "$ref": "#/components/schemas/StandardBooleanAsNumber"
+            },
+            "example": 1
+          },
+          {
+            "name": "disableExtraToGet",
+            "in": "query",
+            "description": "Disables specific meta-data. REMEMBER to URI-encode #",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "Channel",
+                  "Node",
+                  "#"
+                ]
+              }
+            },
+            "example": "Node,#"
+          },
+          {
+            "name": "getCreationStatistics",
+            "in": "query",
+            "description": "Gets extra creation statistics - specifically, how many logs of the specifically searched type were created in a specific period",
+            "style": "simple",
+            "schema": {
+              "$ref": "#/components/schemas/StandardBooleanAsNumber"
+            },
+            "example": 1
+          },
+          {
+            "name": "statisticsInterval",
+            "in": "query",
+            "description": "Interval of statistics, in seconds. From 1 hour to 1 year.",
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "minimum":3600,
+              "maximum":31536000,
+              "default": 3600
+            },
+            "example": 7200
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "SQL pagination parameter",
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "example": 25
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "SQL pagination parameter",
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "example": 25
+          },
+          {
+            "name": "orderBy",
+            "in": "query",
+            "description": "Possible columns to order by.",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "Channel",
+                  "Log_Level",
+                  "Created"
+                ]
+              }
+            },
+            "example": "channel,level"
+          },
+          {
+            "name": "orderType",
+            "in": "query",
+            "description": "Descending or ascending item order",
+            "schema": {
+              "$ref": "#/components/schemas/StandardBooleanAsNumber"
+            },
+            "example": 0
+          },
+          {
+            "name": "channelIs",
+            "in": "query",
+            "description": "Match logs from a specific channel",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex128"
+            },
+            "example":"en"
+          },
+          {
+            "name": "channelIn",
+            "in": "query",
+            "description": "Match logs from specific channels",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/components/schemas/StandardTextIdRegex128"
+              }
+            },
+            "example":"ioframe-example-channel,ioframe-default-logs"
+          },
+          {
+            "name": "nodeIs",
+            "in": "query",
+            "description": "Match logs from a specific node",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex128"
+            },
+            "example":"Node_2"
+          },
+          {
+            "name": "nodeIn",
+            "in": "query",
+            "description": "Match logs from specific nodes",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/components/schemas/StandardTextIdRegex128"
+              }
+            },
+            "example":"Node_1,Node_2"
+          },
+          {
+            "name": "createdBefore",
+            "in": "query",
+            "description": "Only show items created before this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/Timestamp"
+            },
+            "example":1700000000
+          },
+          {
+            "name": "createdAfter",
+            "in": "query",
+            "description": "Only show items created after this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/Timestamp"
+            },
+            "example":1500000000
+          },
+          {
+            "name": "levelAtLeast",
+            "in": "query",
+            "description": "Only return items of at most this level.",
+            "schema": {
+              "$ref": "#/components/schemas/LogLevelDefault100"
+            },
+            "example":100
+          },
+          {
+            "name": "levelAtMost",
+            "in": "query",
+            "description": "Only return items of at most this level.",
+            "schema": {
+              "$ref": "#/components/schemas/LogLevelDefault700"
+            },
+            "example":100
+          },
+          {
+            "name": "levelIs",
+            "in": "query",
+            "description": "Match items of a specific level",
+            "schema": {
+              "$ref": "#/components/schemas/LogLevel"
+            },
+            "example":100
+          },
+          {
+            "name": "levelIn",
+            "in": "query",
+            "description": "Match items of a specific levels",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/components/schemas/LogLevelDefault100"
+              }
+            },
+            "example":"100,250,600"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns report. The 'error' is only returned if an error has occurred, otherwise 'articles' and 'meta' are returned.",
+                  "properties": {
+                    "logs": {
+                      "description": "Log Object. key channel/level/created/node",
+                      "type": "object",
+                      "patternProperties": {
+                        "^[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,127}\\/\\d+\\/[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,127}\\/[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,63}$": {
+                          "type": "object",
+                          "properties": {
+                            "message": {
+                              "type": "string",
+                              "description": "Log message"
+                            },
+                            "context": {
+                              "type": "object",
+                              "description": "Structure depends on log"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "description": "Meta information about the requested items.",
+                      "properties":{
+                        "#":{
+                          "description": "Number of matching results",
+                          "type":"integer"
+                        },
+                        "channels":{
+                          "description": "All log channels in search result",
+                          "type":"array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "nodes":{
+                          "description": "All log nodes in search result",
+                          "type":"array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "intervals":{
+                          "description": "Object of the form <int, (creationTime / statisticsInterval)> : <int, number of events created in this period>",
+                          "type":"object"
+                        }
+                      }
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/logs/reporting-groups": {
+      "get": {
+        "tags": [
+          "Logs API"
+        ],
+        "summary": "Gets reporting groups",
+        "description": "Gets all available reporting groups - those groups include users, belong to rules, and the users are sent log reports based on the rules.",
+        "operationId": "reporting-groups-search",
+        "parameters": [
+          {
+            "name": "onlyStatistics",
+            "in": "query",
+            "description": "Only gets the meta data, main query executed with limit 0",
+            "style": "simple",
+            "schema": {
+              "$ref": "#/components/schemas/StandardBooleanAsNumber"
+            },
+            "example": 1
+          },
+          {
+            "name": "disableExtraToGet",
+            "in": "query",
+            "description": "Disables specific meta-data. REMEMBER to URI-encode #",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "#",
+                  "Group_Type"
+                ]
+              }
+            },
+            "example": "Node,#"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "SQL pagination parameter",
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "example": 25
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "SQL pagination parameter",
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "example": 25
+          },
+          {
+            "name": "orderBy",
+            "in": "query",
+            "description": "Possible columns to order by.",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "Group_Type",
+                  "ID",
+                  "User_Count",
+                  "Last_Updated",
+                  "Created"
+                ]
+              },
+              "default": ""
+            },
+            "example": "channel,level"
+          },
+          {
+            "name": "orderType",
+            "in": "query",
+            "description": "Descending or ascending item order",
+            "schema": {
+              "$ref": "#/components/schemas/StandardBooleanAsNumber"
+            },
+            "example": 0
+          },
+          {
+            "name": "typeIs",
+            "in": "query",
+            "description": "Match logs from a specific group types",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example":"tech-support"
+          },
+          {
+            "name": "typeIn",
+            "in": "query",
+            "description": "Match logs from specific group types",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/components/schemas/StandardTextIdRegex64"
+              }
+            },
+            "example":"tech-support,sre"
+          },
+          {
+            "name": "groupIs",
+            "in": "query",
+            "description": "Match logs from a specific node",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example":"tier-1"
+          },
+          {
+            "name": "groupIn",
+            "in": "query",
+            "description": "Match logs from specific nodes",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/components/schemas/StandardTextIdRegex64"
+              }
+            },
+            "example":"tier-1,tier-2"
+          },
+          {
+            "name": "createdBefore",
+            "in": "query",
+            "description": "Only show items created before this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/Timestamp"
+            },
+            "example":1700000000
+          },
+          {
+            "name": "createdAfter",
+            "in": "query",
+            "description": "Only show items created after this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/Timestamp"
+            },
+            "example":1500000000
+          },
+          {
+            "name": "changedBefore",
+            "in": "query",
+            "description": "Only show items changed before this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/Timestamp"
+            },
+            "example":1700000000
+          },
+          {
+            "name": "changedAfter",
+            "in": "query",
+            "description": "Only show items changed after this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/Timestamp"
+            },
+            "example":1500000000
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns groups. The 'error' is only returned if an error has occurred, otherwise 'groups' and 'meta' are returned.",
+                  "properties": {
+                    "groups": {
+                      "description": "Groups object. keys group-type/group-ID",
+                      "type": "object",
+                      "patternProperties": {
+                        "^[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,63}\\/[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,63}$": {
+                          "type": "object",
+                          "properties": {
+                            "created": {
+                              "$ref": "#/components/schemas/Timestamp"
+                            },
+                            "updated": {
+                              "$ref": "#/components/schemas/Timestamp"
+                            },
+                            "userCount": {
+                              "type": "number",
+                              "description": "Group ID"
+                            }
+                          },
+                          "patternProperties": {
+                            "^title(_[a-z]{2,12})?$": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "description": "Meta information about the requested items.",
+                      "properties":{
+                        "#":{
+                          "description": "Number of matching results",
+                          "type":"integer"
+                        }
+                      }
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/logs/reporting-groups/{type}/{id}": {
+      "post": {
+        "tags": [
+          "Logs API"
+        ],
+        "summary": "Create a new report group",
+        "description": "Create a new report group",
+        "operationId": "create-report-group",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "description": "Group type",
+            "style": "simple",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example": "tech-support"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Group id",
+            "style": "simple",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example": "tier-1"
+          }
+        ],
+        "requestBody": {
+          "description": "Group to create.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "patternProperties": {
+                  "^title(_[a-z]{2,12})?$": {
+                    "$ref": "#/components/schemas/DefaultTitle"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Responses to update attempts. keys group-type/group-ID",
+                  "type": "object",
+                  "patternProperties": {
+                    "^[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,63}\\/[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,63}$": {
+                      "description": "-1 - server error, 0 - success, 1/2 - item already exists/doesnt exist",
+                      "type": "integer",
+                      "enum": [-1,0,1,2]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Logs API"
+        ],
+        "summary": "Update an existing report group",
+        "description": "Update an existing report group",
+        "operationId": "update-report-group",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "description": "Group type",
+            "style": "simple",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example": "tech-support"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Group id",
+            "style": "simple",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example": "tier-1"
+          }
+        ],
+        "requestBody": {
+          "description": "Group to update.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "patternProperties": {
+                  "^title(_[a-z]{2,12})?$": {
+                    "$ref": "#/components/schemas/DefaultTitle"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Responses to update attempts. keys group-type/group-ID",
+                  "type": "object",
+                  "patternProperties": {
+                    "^[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,63}\\/[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,63}$": {
+                      "description": "-1 - server error, 0 - success, 1/2 - item already exists/doesnt exist",
+                      "type": "integer",
+                      "enum": [-1,0,1,2]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Logs API"
+        ],
+        "summary": "Delete report group",
+        "description": "Delete report group",
+        "operationId": "delete-report-group",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "description": "Group type",
+            "style": "simple",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example": "tech-support"
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Group id",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example": "tier-1,tier-2"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "description": "0 success, -1 db connection error",
+                      "type": "integer",
+                      "enum": [-1,0]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/logs/reporting-groups/{type}/{id}/users": {
+      "get": {
+        "tags": [
+          "Logs API"
+        ],
+        "summary": "Gets all users of a reporting group",
+        "description": "ets all users of a reporting group",
+        "operationId": "reporting-group-users-search",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "description": "Group type",
+            "style": "simple",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example": "tech-support"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Group id",
+            "style": "simple",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example": "tier-1"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns groups. The 'error' is only returned if an error has occurred, otherwise 'groups' and 'meta' are returned.",
+                  "properties": {
+                    "users": {
+                      "description": "Group users. keys user-ID",
+                      "type": "object",
+                      "patternProperties": {
+                        "^\\d+$": {
+                          "type": "object",
+                          "properties": {
+                            "email": {
+                              "type": "string",
+                              "description": "Email address"
+                            },
+                            "phone": {
+                              "type": "string",
+                              "description": "Phone number, INCLUDING international prefix",
+                              "example": "+972576545696"
+                            },
+                            "created": {
+                              "$ref": "#/components/schemas/Timestamp"
+                            },
+                            "updated": {
+                              "$ref": "#/components/schemas/Timestamp"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "description": "Meta information about the requested items.",
+                      "properties":{
+                        "#":{
+                          "description": "Number of matching results",
+                          "type":"integer"
+                        }
+                      }
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Logs API"
+        ],
+        "summary": "Adds new users to a group",
+        "description": "Adds new users to a group",
+        "operationId": "add-report-group-users",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "description": "Group type",
+            "style": "simple",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example": "tech-support"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Group id",
+            "style": "simple",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example": "tier-1"
+          },
+          {
+            "name": "users",
+            "description": "User IDs to add. Why in query? See Articles OpenAPI -> post/articles/{id}/tags/{type}",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "required": true,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "integer"
+              }
+            },
+            "example":"1,2,3"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns rule groups. The 'error' is only returned if an error has occurred, otherwise 'groups' and 'meta' are returned.",
+                  "properties": {
+                    "response": {
+                      "description": "Responses to update attempts. keys group-type/group-ID/userId",
+                      "type": "object",
+                      "patternProperties": {
+                        "^[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,63}\\/[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,63}\\/\\d+$": {
+                          "description": "-2 - (one of the) users or groups does not exist, -1 - server error, 0 - success, 1 - item already exists/doesnt exist",
+                          "type": "integer",
+                          "enum": [-2,-1,0,1]
+                        }
+                      }
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Logs API"
+        ],
+        "summary": "Delete report group users",
+        "description": "Delete report group users",
+        "operationId": "delete-report-group-users",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "description": "Group type",
+            "style": "simple",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example": "tech-support"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Group id",
+            "style": "simple",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example": "tier-1"
+          },
+          {
+            "name": "users",
+            "description": "User IDs to delete.",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "required": true,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "integer"
+              }
+            },
+            "example":"1,2,3"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "description": "0 success, -1 db connection error",
+                      "type": "integer",
+                      "enum": [0,1]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/logs/reporting-groups/{type}/{id}/rules": {
+      "get": {
+        "tags": [
+          "Logs API"
+        ],
+        "summary": "Gets all rules affecting this group",
+        "description": "Get report group rules",
+        "operationId": "get-report-group-rules",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "description": "Group type",
+            "style": "simple",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example": "tech-support"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Group id",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example": "tier-1,tier-2"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "SQL pagination parameter",
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "example": 25
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "SQL pagination parameter",
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "example": 25
+          },
+          {
+            "name": "onlyStatistics",
+            "in": "query",
+            "description": "Only gets the meta data, main query executed with limit 0",
+            "style": "simple",
+            "schema": {
+              "$ref": "#/components/schemas/StandardBooleanAsNumber"
+            },
+            "example": 1
+          },
+          {
+            "name": "disableExtraToGet",
+            "in": "query",
+            "description": "Disables specific meta-data. REMEMBER to URI-encode #",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "Channel",
+                  "Report_Type",
+                  "Group_Type",
+                  "Group_ID",
+                  "#"
+                ]
+              }
+            },
+            "example": "Channel,Report_Type,Group_Type,Group_ID,#"
+          },
+          {
+            "name": "orderBy",
+            "in": "query",
+            "description": "Possible columns to order by.",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "Group_ID",
+                  "Group_Type",
+                  "Last_Updated",
+                  "Created"
+                ]
+              },
+              "default": ""
+            },
+            "example": "channel,level"
+          },
+          {
+            "name": "orderType",
+            "in": "query",
+            "description": "Descending or ascending item order",
+            "schema": {
+              "$ref": "#/components/schemas/StandardBooleanAsNumber"
+            },
+            "example": 0
+          },
+          {
+            "name": "createdBefore",
+            "in": "query",
+            "description": "Only show items created before this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/Timestamp"
+            },
+            "example":1700000000
+          },
+          {
+            "name": "createdAfter",
+            "in": "query",
+            "description": "Only show items created after this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/Timestamp"
+            },
+            "example":1500000000
+          },
+          {
+            "name": "changedBefore",
+            "in": "query",
+            "description": "Only show items changed before this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/Timestamp"
+            },
+            "example":1700000000
+          },
+          {
+            "name": "changedAfter",
+            "in": "query",
+            "description": "Only show items changed after this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/Timestamp"
+            },
+            "example":1500000000
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "rules": {
+                      "description": "Rules object. keys channel/level/type",
+                      "type": "object",
+                      "patternProperties": {
+                        "^[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,127}\\/\\d+\\/[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,127}$": {
+                          "type": "object",
+                          "properties": {
+                            "created": {
+                              "$ref": "#/components/schemas/Timestamp"
+                            },
+                            "updated": {
+                              "$ref": "#/components/schemas/Timestamp"
+                            }
+                          },
+                          "patternProperties": {
+                            "^title(_[a-z]{2,12})?$": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/logs/reporting-rules": {
+      "get": {
+        "tags": [
+          "Logs API"
+        ],
+        "summary": "Gets reporting rules",
+        "description": "Gets all available reporting rules - those rules are then tied to specific groups for the purpose of reporting.",
+        "operationId": "reporting-rules-search",
+        "parameters": [
+          {
+            "name": "onlyStatistics",
+            "in": "query",
+            "description": "Only gets the meta data, main query executed with limit 0",
+            "style": "simple",
+            "schema": {
+              "$ref": "#/components/schemas/StandardBooleanAsNumber"
+            },
+            "example": 1
+          },
+          {
+            "name": "disableExtraToGet",
+            "in": "query",
+            "description": "Disables specific meta-data. REMEMBER to URI-encode #",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "Channel",
+                  "#"
+                ]
+              }
+            },
+            "example": "Channel"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "SQL pagination parameter",
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "example": 25
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "SQL pagination parameter",
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "example": 25
+          },
+          {
+            "name": "orderBy",
+            "in": "query",
+            "description": "Possible columns to order by.",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "Channel",
+                  "Log_Level",
+                  "Report_type",
+                  "Last_Updated",
+                  "Created"
+                ]
+              },
+              "default": ""
+            },
+            "example": "Channel,Log_Level"
+          },
+          {
+            "name": "orderType",
+            "in": "query",
+            "description": "Descending or ascending item order",
+            "schema": {
+              "$ref": "#/components/schemas/StandardBooleanAsNumber"
+            },
+            "example": 0
+          },
+          {
+            "name": "reportTypeIs",
+            "in": "query",
+            "description": "Match logs from a specific report types",
+            "schema": {
+              "$ref": "#/components/schemas/ValidReportTypes"
+            },
+            "example":"tech-support"
+          },
+          {
+            "name": "reportTypeIn",
+            "in": "query",
+            "description": "Match logs from specific report types",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/components/schemas/ValidReportTypes"
+              }
+            },
+            "example":"tech-support,sre"
+          },
+          {
+            "name": "channelIs",
+            "in": "query",
+            "description": "Match logs from a specific channel",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex128"
+            },
+            "example":"en"
+          },
+          {
+            "name": "channelIn",
+            "in": "query",
+            "description": "Match logs from specific channels",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/components/schemas/StandardTextIdRegex128"
+              }
+            },
+            "example":"ioframe-example-channel,ioframe-default-logs"
+          },
+          {
+            "name": "levelAtLeast",
+            "in": "query",
+            "description": "Only return items of at most this level.",
+            "schema": {
+              "$ref": "#/components/schemas/LogLevelDefault100"
+            },
+            "example":100
+          },
+          {
+            "name": "levelAtMost",
+            "in": "query",
+            "description": "Only return items of at most this level.",
+            "schema": {
+              "$ref": "#/components/schemas/LogLevelDefault700"
+            },
+            "example":100
+          },
+          {
+            "name": "levelIs",
+            "in": "query",
+            "description": "Match items of a specific level",
+            "schema": {
+              "$ref": "#/components/schemas/LogLevel"
+            },
+            "example":100
+          },
+          {
+            "name": "levelIn",
+            "in": "query",
+            "description": "Match items of a specific levels",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/components/schemas/LogLevelDefault100"
+              }
+            },
+            "example":"100,250,600"
+          },
+          {
+            "name": "createdBefore",
+            "in": "query",
+            "description": "Only show items created before this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/Timestamp"
+            },
+            "example":1700000000
+          },
+          {
+            "name": "createdAfter",
+            "in": "query",
+            "description": "Only show items created after this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/Timestamp"
+            },
+            "example":1500000000
+          },
+          {
+            "name": "changedBefore",
+            "in": "query",
+            "description": "Only show items changed before this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/Timestamp"
+            },
+            "example":1700000000
+          },
+          {
+            "name": "changedAfter",
+            "in": "query",
+            "description": "Only show items changed after this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/Timestamp"
+            },
+            "example":1500000000
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns rules. The 'error' is only returned if an error has occurred, otherwise 'rules' and 'meta' are returned.",
+                  "properties": {
+                    "rules": {
+                      "description": "Rules object. keys channel/level/type",
+                      "type": "object",
+                      "patternProperties": {
+                        "^[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,127}\\/\\d+\\/[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,127}$": {
+                          "type": "object",
+                          "properties": {
+                            "created": {
+                              "$ref": "#/components/schemas/Timestamp"
+                            },
+                            "updated": {
+                              "$ref": "#/components/schemas/Timestamp"
+                            }
+                          },
+                          "patternProperties": {
+                            "^title(_[a-z]{2,12})?$": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "description": "Meta information about the requested items.",
+                      "properties":{
+                        "#":{
+                          "description": "Number of matching results",
+                          "type":"integer"
+                        },
+                        "channels":{
+                          "description": "Unique channels",
+                          "type":"array",
+                          "items": {
+                            "$ref": "#/components/schemas/StandardTextIdRegex128"
+                          }
+                        }
+                      }
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/logs/reporting-rules/{channel}/{level}/{reportType}": {
+      "put": {
+        "tags": [
+          "Logs API"
+        ],
+        "summary": "Creates reporting rules",
+        "description": "Creates reporting rules",
+        "operationId": "add-reporting-rules",
+        "parameters": [
+          {
+            "name": "channel",
+            "in": "path",
+            "description": "Log channel",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example":"tech-support"
+          },
+          {
+            "name": "level",
+            "in": "path",
+            "description": "Log level",
+            "schema": {
+              "$ref": "#/components/schemas/LogLevel"
+            },
+            "example":100
+          },
+          {
+            "name": "reportType",
+            "in": "path",
+            "description": "Type of report",
+            "schema": {
+              "$ref": "#/components/schemas/ValidReportTypes"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Titles",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "patternProperties": {
+                  "^title(_[a-z]{2,12})?$": {
+                    "$ref": "#/components/schemas/DefaultTitle"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Responses to update attempts. keys channel/level/reportType",
+                  "type": "object",
+                  "patternProperties": {
+                    "^[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,127}\\/\\d+\\/[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,127}$": {
+                      "description": "-1 - server error, 0 - success, 1/2 - item already exists/doesnt exist",
+                      "type": "integer",
+                      "enum": [-1,0,1,2]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Logs API"
+        ],
+        "summary": "Updates reporting rules",
+        "description": "Updates reporting rules",
+        "operationId": "update-reporting-rules",
+        "parameters": [
+          {
+            "name": "channel",
+            "in": "path",
+            "description": "Log channel",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example":"tech-support"
+          },
+          {
+            "name": "level",
+            "in": "path",
+            "description": "Log level",
+            "schema": {
+              "$ref": "#/components/schemas/LogLevel"
+            },
+            "example":100
+          },
+          {
+            "name": "reportType",
+            "in": "path",
+            "description": "Type of report",
+            "schema": {
+              "$ref": "#/components/schemas/ValidReportTypes"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Titles",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "patternProperties": {
+                  "^title(_[a-z]{2,12})?$": {
+                    "$ref": "#/components/schemas/DefaultTitle"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Responses to update attempts. keys channel/level/reportType",
+                  "type": "object",
+                  "patternProperties": {
+                    "^[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,127}\\/\\d+\\/[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,127}$": {
+                      "description": "-1 - server error, 0 - success, 1/2 - item already exists/doesnt exist",
+                      "type": "integer",
+                      "enum": [-1,0,1,2]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Logs API"
+        ],
+        "summary": "Delete report rules",
+        "description": "Delete report rules",
+        "operationId": "delete-report-rules",
+        "parameters": [
+          {
+            "name": "channel",
+            "in": "path",
+            "description": "Log channel",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example":"tech-support"
+          },
+          {
+            "name": "level",
+            "in": "path",
+            "description": "Log level",
+            "schema": {
+              "$ref": "#/components/schemas/LogLevel"
+            },
+            "example":100
+          },
+          {
+            "name": "reportType",
+            "in": "path",
+            "description": "Type of report",
+            "schema": {
+              "$ref": "#/components/schemas/ValidReportTypes"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "description": "0 success, -1 db connection error",
+                      "type": "integer",
+                      "enum": [0,1]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/logs/reporting-rules/{channel}/{level}/{reportType}/groups": {
+      "get": {
+        "tags": [
+          "Logs API"
+        ],
+        "summary": "Get report rule groups",
+        "description": "Get report rule groups",
+        "operationId": "get-report-rule-groups",
+        "parameters": [
+          {
+            "name": "channel",
+            "in": "path",
+            "description": "Log channel",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example":"tech-support"
+          },
+          {
+            "name": "level",
+            "in": "path",
+            "description": "Log level",
+            "schema": {
+              "$ref": "#/components/schemas/LogLevel"
+            },
+            "example":100
+          },
+          {
+            "name": "reportType",
+            "in": "path",
+            "description": "Type of report",
+            "schema": {
+              "$ref": "#/components/schemas/ValidReportTypes"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns rule groups. The 'error' is only returned if an error has occurred, otherwise 'groups' and 'meta' are returned.",
+                  "properties": {
+                    "groups": {
+                      "description": "Groups object. keys channel/level/type/group-type/group-ID",
+                      "type": "object",
+                      "patternProperties": {
+                        "^[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,127}\\/\\d+\\/[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,127}\\/[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,63}\\/[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,63}$": {
+                          "type": "object",
+                          "properties": {
+                            "created": {
+                              "$ref": "#/components/schemas/Timestamp"
+                            },
+                            "updated": {
+                              "$ref": "#/components/schemas/Timestamp"
+                            }
+                          },
+                          "patternProperties": {
+                            "^title(_[a-z]{2,12})?$": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "description": "Meta information about the requested items.",
+                      "properties":{
+                        "#":{
+                          "description": "Number of matching results",
+                          "type":"integer"
+                        }
+                      }
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Logs API"
+        ],
+        "summary": "Add new groups to report rule",
+        "description": "Add new groups report rule",
+        "operationId": "add-report-rule-groups",
+        "parameters": [
+          {
+            "name": "channel",
+            "in": "path",
+            "description": "Log channel",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example":"tech-support"
+          },
+          {
+            "name": "level",
+            "in": "path",
+            "description": "Log level",
+            "schema": {
+              "$ref": "#/components/schemas/LogLevel"
+            },
+            "example":100
+          },
+          {
+            "name": "reportType",
+            "in": "path",
+            "description": "Type of report",
+            "schema": {
+              "$ref": "#/components/schemas/ValidReportTypes"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Groups to create.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "required": ["groups"],
+                "properties": {
+                  "groups": {
+                    "description": "Groups of the form {type:'type', id:'id'}. \n This is NOT a proper validation. Additional validation required after OpenAPI",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns rule groups. The 'error' is only returned if an error has occurred, otherwise 'groups' and 'meta' are returned.",
+                  "properties": {
+                    "response": {
+                      "description": "Responses to update attempts. keys channel/level/type/group-type/group-ID",
+                      "type": "object",
+                      "patternProperties": {
+                        "^[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,127}\\/\\d+\\/[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,127}\\/[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,63}\\/[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,63}$": {
+                          "description": "-2 rule or group does not exist, -1 - server error, 0 - success, 1 - item already exists/doesnt exist",
+                          "type": "integer",
+                          "enum": [-2,-1,0,1]
+                        }
+                      }
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Logs API"
+        ],
+        "summary": "Deletes groups from report rule",
+        "description": "Deletes groups from report rule",
+        "operationId": "remove-report-rule-groups",
+        "parameters": [
+          {
+            "name": "channel",
+            "in": "path",
+            "description": "Log channel",
+            "schema": {
+              "$ref": "#/components/schemas/StandardTextIdRegex64"
+            },
+            "example":"tech-support"
+          },
+          {
+            "name": "level",
+            "in": "path",
+            "description": "Log level",
+            "schema": {
+              "$ref": "#/components/schemas/LogLevel"
+            },
+            "example":100
+          },
+          {
+            "name": "reportType",
+            "in": "path",
+            "description": "Type of report",
+            "schema": {
+              "$ref": "#/components/schemas/ValidReportTypes"
+            }
+          },
+          {
+            "name": "groups",
+            "description": "Groups of the form {type:'type', id:'id'}",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Groups of the form {type:'type', id:'id'}. \n This is NOT a proper validation. Additional validation required after OpenAPI"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns rule groups. The 'error' is only returned if an error has occurred, otherwise 'groups' and 'meta' are returned.",
+                  "properties": {
+                    "response": {
+                      "description": "-1 on server error, 0 on success",
+                      "type": "integer",
+                      "enum": [-1,0]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RegexRegex":{
+        "type": "string",
+        "description": "Podcast publisher name.",
+        "example": "Planet Broadcasting",
+        "pattern":"^[\\w\\-\\.\\_ ]{1,128}$"
+      },
+      "StandardTextIdRegex128":{
+        "type": "string",
+        "description": "Node name regex",
+        "example": "Main_Node_1",
+        "pattern":"^[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,127}$"
+      },
+      "StandardTextIdRegex64":{
+        "type": "string",
+        "description": "Node name regex",
+        "example": "Main_Node_1",
+        "pattern":"^[a-zA-Z0-9][\\w\\-\\.\\_ ]{0,63}$"
+      },
+      "DefaultTitle": {
+        "type": "string",
+        "pattern":"^.{1,512}$"
+      },
+      "StandardBooleanAsNumber":{
+        "type": "integer",
+        "description": "0 or 1",
+        "example": 1,
+        "enum":[0,1]
+      },
+      "StandardBooleanAsNumberDefaultTrue":{
+        "type": "integer",
+        "description": "0 or 1",
+        "example": 1,
+        "default": 1,
+        "enum":[0,1]
+      },
+      "ValidReportTypes":{
+        "description": "Valid report types",
+        "type": "string",
+        "example": "email",
+        "enum":["email","sms"]
+      },
+      "LogLevel":{
+        "description": "Valid log levels - despite the official range, we allow the full range from 200 to 700.",
+        "type": "integer",
+        "enum": [100,200,250,300,350,400,450,500,550,600,650,700]
+      },
+      "LogLevelDefault100":{
+        "description": "Valid log levels - despite the official range, we allow the full range from 200 to 700.",
+        "type": "integer",
+        "enum": [100,200,250,300,350,400,450,500,550,600,650,700],
+        "default": 100
+      },
+      "LogLevelDefault700":{
+        "description": "Valid log levels - despite the official range, we allow the full range from 200 to 700.",
+        "type": "integer",
+        "enum": [100,200,250,300,350,400,450,500,550,600,650,700],
+        "default": 700
+      },
+      "Timestamp":{
+        "description": "UNIX Timestamp",
+        "type": "integer",
+        "minimum": 0,
+        "example": 1600000000
+      },
+      "TimestampDefault0":{
+        "description": "UNIX Timestamp",
+        "type": "integer",
+        "minimum": 0,
+        "default": 0,
+        "example": 1600000000
+      },
+      "EmptyArrayIfNoResults":{
+        "type": "array",
+        "description": "Empty array not encoded as JSON",
+        "example": "[]"
+      },
+      "GenericApiError":{
+        "type": "object",
+        "description": "Errors range from client input, to lack of authorization, to server errors, to many other reasons.\n This is property is returned if something went wrong.",
+        "properties": {
+          "code":{
+            "type":"string",
+            "description": "Error code. Typically related to the stage and cause of the error.",
+            "example":"RATE_LIMIT_REACHED"
+          },
+          "info":{
+            "description": "Extra info about the error. Depends on the context - for example, if the error code was INPUT_VALIDATION_FAILURE, this may be the name of the invalid input. For RATE_LIMIT_REACHED, this may be the number of seconds until you can repeat the action. Such context based specifics should be documented in the more in-depth API documnatation.",
+            "example":"3600"
+          }
+        }
+      }
+    },
+    "responses": {
+    },
+    "parameters": {
+    },
+    "headers": {
+    }
+  }
+}

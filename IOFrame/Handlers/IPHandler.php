@@ -1,9 +1,6 @@
 <?php
 namespace IOFrame\Handlers{
-    use IOFrame;
-    define('IPHandler',true);
-    if(!defined('abstractDBWithCache'))
-        require 'abstractDBWithCache.php';
+    define('IOFrameHandlersIPHandler',true);
 
     /** This handler is used in order to manage the IP Blacklist/Whitelist.
      * Lets say, for examples in this comment, our example IP is 102.43.196.23
@@ -33,52 +30,46 @@ namespace IOFrame\Handlers{
      *
      * TODO - Add IPV6 Range support
      * TODO - Create integration with a faster tool when one becomes available
-     * TODO - Rewrite part of the IP check function as a C++ extension and add support for it
+     * TODO - Rewrite part of the IP check function as a C++ extension and add support for it (yeah, not happening)
      * @author Igal Ogonov <igal1333@hotmail.com>
-     * @license LGPL
      * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
      */
 
-    class IPHandler extends IOFrame\abstractDBWithCache
+    class IPHandler extends \IOFrame\Abstract\DBWithCache
     {
 
         /** @var bool $useCache Specifies whether we should be using cache */
-        protected $useCache = false;
+        protected bool $useCache = false;
 
         /** @var bool $isTrueIP Whether the IP might be spoofed, or at the least the endpoint is controlled by the client.
          * */
-        public $isTrueIP;
+        public bool $isTrueIP;
 
-        /** @var string $directIP Whether the IP is the direct client IP, or is only behind the expectedProxy (local setting)
+        /** @var string $directIP IP that is the direct client IP, or is only behind the expectedProxy (local setting)
          * */
-        public $directIP;
+        public string $directIP;
 
-        /** @var string $directIP Whether the IP is the direct client IP, or is only behind the expectedProxy (local setting)
+        /** @var string $fullIP Full client IP
          * */
-        public $fullIP;
+        public string $fullIP;
 
         /** @var bool $checkRangeByDefault Whether to check range by default. Is true only if the relevant setting exists.
          * */
-        public $checkRangeByDefault = false;
+        public bool $checkRangeByDefault = false;
 
         function __construct(SettingsHandler $localSettings, $params = []){
-            parent::__construct($localSettings,$params);
+            parent::__construct($localSettings,array_merge($params,['logChannel'=>\IOFrame\Definitions::LOG_GENERAL_SECURITY_CHANNEL]));
 
             if(isset($params['siteSettings']))
                 $this->siteSettings = $params['siteSettings'];
             else
-                $this->siteSettings = new SettingsHandler(
-                    $localSettings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/siteSettings/',
+                $this->siteSettings = new \IOFrame\Handlers\SettingsHandler(
+                    $localSettings->getSetting('absPathToRoot').'/'.\IOFrame\Handlers\SettingsHandler::SETTINGS_DIR_FROM_ROOT.'/siteSettings/',
                     $this->defaultSettingsParams
                 );
 
             if($this->siteSettings->getSetting('checkRangeByDefault') !== null)
                 $this->checkRangeByDefault = $this->siteSettings->getSetting('checkRangeByDefault');
-
-            if($this->RedisHandler!=null && $this->RedisHandler->isInit)
-                $this->useCache = true;
-            else
-                $this->useCache = false;
 
             //Extracts the IP from the client
             $res = $this->extractClientIP();
@@ -96,14 +87,13 @@ namespace IOFrame\Handlers{
          *          'fullIP'    => The full CSV list of IPs - INCLUDING the expectedProxy
          *          'isTrueIP' =>full IP array, and whether we may be sure
         */
-        function extractClientIP(array $trustedProxies = []){
+        function extractClientIP(array $trustedProxies = []): array {
             $directIP = '';
             $fullIP = '';
-            $isTrueIP = false;
 
             //Obviously in this case, we can do nothing
             if (!isset ($_SERVER['REMOTE_ADDR'])) {
-                return ['directIP' =>$directIP, 'fullIP'=>$fullIP, 'isTrueIP'=>$isTrueIP];
+                return ['directIP' =>$directIP, 'fullIP'=>$fullIP, 'isTrueIP'=> false];
             }
 
             //Get the expected proxy IP list
@@ -120,7 +110,7 @@ namespace IOFrame\Handlers{
             }
             elseif(!empty($_SERVER["HTTP_CLIENT_IP"])){
                 $fullIP .= $_SERVER["HTTP_CLIENT_IP"];
-            };
+            }
             if($fullIP !== '')
                 $fullIP.= ',';
             $fullIP .= $_SERVER["REMOTE_ADDR"];
@@ -137,8 +127,7 @@ namespace IOFrame\Handlers{
             //Just in case we've reached the true user IP
             if(filter_var($fullIP, FILTER_VALIDATE_IP)){
                 $directIP = $fullIP;
-                $isTrueIP = true;
-                return ['directIP' =>$directIP, 'fullIP'=>$fullIP, 'isTrueIP'=>$isTrueIP];
+                return ['directIP' =>$directIP, 'fullIP'=>$fullIP, 'isTrueIP'=> true];
             }
 
             //Get the last IP in the IP chain AFTER you cut trusted proxies
@@ -151,14 +140,10 @@ namespace IOFrame\Handlers{
                     break;
             }
 
-            //If the last IP is the only one left, it means everything before it was a trusted/expected proxy
-            if(count($IPArray) == 1)
-                $isTrueIP = true;
-
             //This IP is 100% under the client's control. Anything else can't be relied on.
             $directIP = $IPArray[count($IPArray)-1];
 
-            return ['directIP' =>$directIP, 'fullIP'=>$fullIP, 'isTrueIP'=>$isTrueIP];
+            return ['directIP' =>$directIP, 'fullIP'=>$fullIP, 'isTrueIP'=>count($IPArray) == 1];
         }
 
         /**
@@ -166,34 +151,26 @@ namespace IOFrame\Handlers{
          * @param array $params of the form 'ip' => string representing user IP. Defaults to $this->directIP
          *                                  'checkRange' => whether to check range list too. Defaults to false
          *                                  'blacklisted' => Whether to check for blacklisted (default) or whitelisted IPs.
-         * @returns bool
+         * @returns bool|null
          */
-        function checkIP(array $params = []){
+        function checkIP(array $params = []): ?bool {
             //set defaults
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
+            $useCache = $params['useCache'] ?? $this->defaultSettingsParams['useCache'];
 
-            if(isset($params['ip']))
-                $ip = $params['ip'];
-            else
-                $ip = $this->directIP;
+            $ip = $params['ip'] ?? $this->directIP;
 
-            if(isset($params['checkRange']))
-                $checkRange = $params['checkRange'];
-            else
-                $checkRange = $this->checkRangeByDefault;
+            $checkRange = $params['checkRange'] ?? $this->checkRangeByDefault;
 
-            if(isset($params['blacklisted']))
-                $blacklisted = $params['blacklisted'];
-            else
-                $blacklisted = true;
+            $blacklisted = $params['blacklisted'] ?? true;
 
 
             //First, check the cache for the IP if we're using cache
-            if($this->useCache){
+            if($useCache){
 
-                $cachedRes = $this->RedisHandler->call('get','_IP_'.$ip);
+                $cachedRes = $this->RedisManager->call('get','_IP_'.$ip);
 
                 //Build a 2x2 truth table to understand this return statement -
                 //$cachedRes is 1 if the IP is whitelisted, 0 if blacklisted, false if IP isn't in cache
@@ -202,8 +179,8 @@ namespace IOFrame\Handlers{
             }
 
             //Table names
-            $t_list = $this->SQLHandler->getSQLPrefix()."IP_LIST";
-            $t_range = $this->SQLHandler->getSQLPrefix()."IPV4_RANGE";
+            $t_list = $this->SQLManager->getSQLPrefix()."IP_LIST";
+            $t_range = $this->SQLManager->getSQLPrefix()."IPV4_RANGE";
 
             //Check whether we are given a valid IPV4
             if(preg_match('/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/',$ip))
@@ -216,7 +193,7 @@ namespace IOFrame\Handlers{
                 $prefix = 0;
 
             //The check query depends on whether we're checking the range table or not
-            $query = $this->SQLHandler->selectFromTable(
+            $query = $this->SQLManager->selectFromTable(
                 $t_list,
                 [
                     ['IP',$ip,'='],
@@ -250,7 +227,7 @@ namespace IOFrame\Handlers{
                                 break;
                         }
 
-                        $query .= ' UNION '.$this->SQLHandler->selectFromTable(
+                        $query .= ' UNION '.$this->SQLManager->selectFromTable(
                                 $t_range,
                                 [
                                     ['Prefix',[$prefix,'STRING'],'='],
@@ -270,7 +247,17 @@ namespace IOFrame\Handlers{
 
             $resArray = [];
 
-            $res = $this->SQLHandler->exeQueryBindParam($query,[],['fetchAll'=>true]);
+            try {
+                $res = $this->SQLManager->exeQueryBindParam($query,[],['fetchAll'=>true]);
+            }
+            catch (\Exception $e){
+                $this->logger->error('Could not get IPs from table, exception '.$e->getMessage(),['query'=>$query,'trace'=>$e->getTrace()]);
+                return null;
+            }
+            if(!is_array($res)){
+                $this->logger->error('Could not get IPs from table',['query'=>$query]);
+                return null;
+            }
 
             foreach($res as $k=>$v){
                 //For $verbose convenience
@@ -317,20 +304,16 @@ namespace IOFrame\Handlers{
             }
 
             if($verbose){
-                echo 'Hits:';
-                var_dump($res);
+                echo 'Hits: '.json_encode($res).EOL;
+                echo 'Final Results: '.json_encode($resArray).EOL;
             }
 
-            if($verbose){
-                echo 'Final Results:';
-                var_dump($resArray);
-            }
             for($i=0; $i<5; $i++){
                 if(isset($resArray[$i])){
                     //If the level is 0 (aka we got it from the IP list), and it's not in the cache, put it into the cache
-                    if($i==0 && $this->useCache){
+                    if($i==0 && $useCache){
                         if(!$test)
-                            $this->RedisHandler->call('setEx',['_IP_'.$ip,$resArray[$i]['expires']-time(),$resArray[$i]['type']]);
+                            $this->RedisManager->call('setEx',['_IP_'.$ip,$resArray[$i]['expires']-time(),$resArray[$i]['type']]);
                         if($verbose)
                             echo 'Setting cache '.'_IP_'.$ip.' to '.$resArray[$i]['type'].' for '.($resArray[$i]['expires']-time()).EOL;
                     }
@@ -371,16 +354,16 @@ namespace IOFrame\Handlers{
          *              ]
          *          ]
          */
-        function getIPs(array $inputs = [], array $params = []){
+        function getIPs(array $inputs = [], array $params = []): array {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
-            $reliable = isset($params['reliable'])? $params['reliable'] : null;
-            $type = isset($params['type'])? $params['type'] : null;
-            $ignoreExpired = isset($params['ignoreExpired'])? $params['ignoreExpired'] : true;
-            $safeStr = isset($params['safeStr'])? $params['safeStr'] : true;
-            $limit = isset($params['limit'])? $params['limit'] : null;
-            $offset = isset($params['offset'])? $params['offset'] : null;
+            $reliable = $params['reliable'] ?? null;
+            $type = $params['type'] ?? null;
+            $ignoreExpired = !isset($params['ignoreExpired']) || $params['ignoreExpired'];
+            $safeStr = !isset($params['safeStr']) || $params['safeStr'];
+            $limit = $params['limit'] ?? null;
+            $offset = $params['offset'] ?? null;
 
             $retrieveParams = array_merge($params,['limit'=>$limit,'offset'=>$offset]);
             $extraDBConditions = [];
@@ -392,45 +375,45 @@ namespace IOFrame\Handlers{
 
             if($reliable!== null){
                 $cond = ['Is_Reliable',$reliable,'='];
-                array_push($extraCacheConditions,$cond);
-                array_push($extraDBConditions,$cond);
+                $extraCacheConditions[] = $cond;
+                $extraDBConditions[] = $cond;
             }
             if($type!== null){
                 $cond = ['IP_Type',$type,'='];
-                array_push($extraCacheConditions,$cond);
-                array_push($extraDBConditions,$cond);
+                $extraCacheConditions[] = $cond;
+                $extraDBConditions[] = $cond;
             }
             if($ignoreExpired){
                 $cond = ['Expires',time(),'>'];
-                array_push($extraCacheConditions,$cond);
-                array_push($extraDBConditions,$cond);
+                $extraCacheConditions[] = $cond;
+                $extraDBConditions[] = $cond;
             }
 
             if($extraCacheConditions!=[]){
-                array_push($extraCacheConditions,'AND');
+                $extraCacheConditions[] = 'AND';
                 $retrieveParams['columnConditions'] = $extraCacheConditions;
             }
             if($extraDBConditions!=[]){
-                array_push($extraDBConditions,'AND');
+                $extraDBConditions[] = 'AND';
                 $retrieveParams['extraConditions'] = $extraDBConditions;
             }
 
             if($inputs == []){
                 $results = [];
 
-                $res = $this->SQLHandler->selectFromTable(
-                    $this->SQLHandler->getSQLPrefix().'IP_LIST',
+                $res = $this->SQLManager->selectFromTable(
+                    $this->SQLManager->getSQLPrefix().'IP_LIST',
                     $extraDBConditions,
                     $columns,
                     $retrieveParams
                 );
 
                 if(is_array($res)){
-                    $count = $this->SQLHandler->selectFromTable(
-                        $this->SQLHandler->getSQLPrefix().'IP_LIST',
+                    $count = $this->SQLManager->selectFromTable(
+                        $this->SQLManager->getSQLPrefix().'IP_LIST',
                         $extraDBConditions,
                         ['COUNT(*)'],
-                        array_merge($retrieveParams,['limit'=>0])
+                        array_merge($retrieveParams,['limit'=>null])
                     );
 
                     $results['@'] = array('#' => $count[0][0]);
@@ -440,7 +423,7 @@ namespace IOFrame\Handlers{
                         for($i = 0; $i<$resCount/2; $i++)
                             unset($resultArray[$i]);
                         if($safeStr && $resultArray['Meta'] !== null)
-                            $resultArray['Meta'] = IOFrame\Util\safeStr2Str($resultArray['Meta']);
+                            $resultArray['Meta'] = \IOFrame\Util\SafeSTRFunctions::safeStr2Str($resultArray['Meta']);
                         $results[$resultArray['IP']] = $resultArray;
                     }
                 }
@@ -457,7 +440,7 @@ namespace IOFrame\Handlers{
                 if($safeStr){
                     foreach($results as $identifier => $arr)
                         if(is_array($arr))
-                            $results[$identifier]['Meta'] = IOFrame\Util\safeStr2Str($results[$identifier]['Meta']);
+                            $results[$identifier]['Meta'] = \IOFrame\Util\SafeSTRFunctions::safeStr2Str($arr['Meta']);
                 }
             }
 
@@ -495,14 +478,14 @@ namespace IOFrame\Handlers{
          *              ]
          *          ]
          */
-        function getIPRanges(array $inputs = [], array $params = []){
+        function getIPRanges(array $inputs = [], array $params = []): array {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
-            $type = isset($params['type'])? $params['type'] : null;
-            $ignoreExpired = isset($params['ignoreExpired'])? $params['ignoreExpired'] : true;
-            $limit = isset($params['limit'])? $params['limit'] : null;
-            $offset = isset($params['offset'])? $params['offset'] : null;
+            $type = $params['type'] ?? null;
+            $ignoreExpired = !isset($params['ignoreExpired']) || $params['ignoreExpired'];
+            $limit = $params['limit'] ?? null;
+            $offset = $params['offset'] ?? null;
 
             $retrieveParams = array_merge($params,['limit'=>$limit,'offset'=>$offset]);
             $extraDBConditions = [];
@@ -513,39 +496,39 @@ namespace IOFrame\Handlers{
 
             if($type!== null){
                 $cond = ['IP_Type',$type,'='];
-                array_push($extraCacheConditions,$cond);
-                array_push($extraDBConditions,$cond);
+                $extraCacheConditions[] = $cond;
+                $extraDBConditions[] = $cond;
             }
             if($ignoreExpired){
                 $cond = ['Expires',time(),'>'];
-                array_push($extraCacheConditions,$cond);
-                array_push($extraDBConditions,$cond);
+                $extraCacheConditions[] = $cond;
+                $extraDBConditions[] = $cond;
             }
 
             if($extraCacheConditions!=[]){
-                array_push($extraCacheConditions,'AND');
+                $extraCacheConditions[] = 'AND';
                 $retrieveParams['columnConditions'] = $extraCacheConditions;
             }
             if($extraDBConditions!=[]){
-                array_push($extraDBConditions,'AND');
+                $extraDBConditions[] = 'AND';
                 $retrieveParams['extraConditions'] = $extraDBConditions;
             }
 
             if($inputs == []){
                 $results = [];
 
-                $res = $this->SQLHandler->selectFromTable(
-                    $this->SQLHandler->getSQLPrefix().'IPV4_RANGE',
+                $res = $this->SQLManager->selectFromTable(
+                    $this->SQLManager->getSQLPrefix().'IPV4_RANGE',
                     $extraDBConditions,
                     $columns,
                     $retrieveParams
                 );
                 if(is_array($res)){
-                    $count = $this->SQLHandler->selectFromTable(
-                        $this->SQLHandler->getSQLPrefix().'IPV4_RANGE',
+                    $count = $this->SQLManager->selectFromTable(
+                        $this->SQLManager->getSQLPrefix().'IPV4_RANGE',
                         $extraDBConditions,
                         ['COUNT(*)'],
-                        array_merge($retrieveParams,['limit'=>0])
+                        array_merge($retrieveParams,['limit'=>null])
                     );
 
                     $results['@'] = array('#' => $count[0][0]);
@@ -561,11 +544,11 @@ namespace IOFrame\Handlers{
             else{
                 $stuffToGet = [];
                 foreach($inputs as $input){
-                    array_push($stuffToGet,[
+                    $stuffToGet[] = [
                         $input['prefix'],
                         $input['from'],
                         $input['to'],
-                    ]);
+                    ];
                 }
 
                 $results = $this->getFromCacheOrDB(
@@ -595,10 +578,11 @@ namespace IOFrame\Handlers{
          *          true - Success
          *          false - $override is false and an IP already exists
          * */
-        function addIP(string $ip, bool $type , array $params = []){
+        function addIP(string $ip, bool $type , array $params = []): array|bool|int|string|null {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
+            $useCache = $params['useCache'] ?? $this->defaultSettingsParams['useCache'];
 
             isset($params['override'])?
                 $override = $params['override'] : $override = false;
@@ -611,17 +595,20 @@ namespace IOFrame\Handlers{
 
             $expires = time()+ ( ($ttl!==0)? $ttl : 1000000000 );
 
-            $res = $this->SQLHandler->insertIntoTable(
-                $this->SQLHandler->getSQLPrefix().'IP_LIST',
+            $res = $this->SQLManager->insertIntoTable(
+                $this->SQLManager->getSQLPrefix().'IP_LIST',
                 ['IP_Type','Is_Reliable','IP','Expires'],
-                [[(int)$type,$reliable,[$ip,'STRING'], (int)$expires]],
+                [[(int)$type,$reliable,[$ip,'STRING'], $expires]],
                 ['onDuplicateKey'=>$override,'test'=>$test,'verbose'=>$verbose]
             );
             if($res){
                 if($verbose)
                     echo 'Deleting IP '.$ip.' from cache!'.EOL;
-                if(!$test)
-                    $this->RedisHandler->call('del',[[$ip]]);
+                if(!$test && $useCache)
+                    $this->RedisManager->call('del',[[$ip]]);
+            }
+            else{
+                $this->logger->error('Could not add IP',['ip'=>$ip,'type'=>$type,'params'=>$params]);
             }
 
             return $res;
@@ -642,31 +629,30 @@ namespace IOFrame\Handlers{
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
+            $useCache = $params['useCache'] ?? $this->defaultSettingsParams['useCache'];
 
-            isset($params['reliable'])?
-                $reliable = $params['reliable'] : $reliable = true;
+            $reliable = $params['reliable'] ?? true;
 
-            isset($params['ttl'])?
-                $ttl = (int)$params['ttl'] : $ttl = null;
+            $ttl = isset($params['ttl'])? (int)$params['ttl'] : null;
 
             $assignments = [];
 
             if($type !== null)
-                array_push($assignments,'IP_Type = '.(int)$type);
+                $assignments[] = 'IP_Type = ' . (int)$type;
 
             if($ttl !== null){
                 $expires = time()+ ( ($ttl!==0)? $ttl : 1000000000 );
-                array_push($assignments,'Expires = '.$expires);
+                $assignments[] = 'Expires = ' . $expires;
             }
 
-            if($reliable !== null)
-                array_push($assignments,'Is_Reliable = '.($reliable?'TRUE':'FALSE'));
+            if(!$reliable)
+                $assignments[] = 'Is_Reliable = ' . ($reliable ? 'TRUE' : 'FALSE');
 
             if($assignments == [])
                 return false;
 
-            $ip = $this->SQLHandler->selectFromTable(
-                $this->SQLHandler->getSQLPrefix().'IP_LIST',
+            $ip = $this->SQLManager->selectFromTable(
+                $this->SQLManager->getSQLPrefix().'IP_LIST',
                 ['IP',[$ip,'STRING'],'=']
                 ,
                 [],
@@ -676,8 +662,8 @@ namespace IOFrame\Handlers{
             if(!is_array($ip) || count($ip) == 0)
                 return false;
 
-            $res = $this->SQLHandler->updateTable(
-                $this->SQLHandler->getSQLPrefix().'IP_LIST',
+            $res = $this->SQLManager->updateTable(
+                $this->SQLManager->getSQLPrefix().'IP_LIST',
                 $assignments,
                 ['IP',[$ip[0]['IP'],'STRING'],'='],
                 ['test'=>$test,'verbose'=>$verbose]
@@ -686,9 +672,11 @@ namespace IOFrame\Handlers{
             if($res){
                 if($verbose)
                     echo 'Deleting IP '.$ip[0]['IP'].' from cache!'.EOL;
-                if(!$test)
-                    $this->RedisHandler->call('del',[[$ip[0]['IP']]]);
+                if(!$test && $useCache)
+                    $this->RedisManager->call('del',[[$ip[0]['IP']]]);
             }
+            else
+                $this->logger->error('Could not update IP',['ip'=>$ip,'type'=>$type,'params'=>$params]);
 
             return $res;
 
@@ -698,16 +686,15 @@ namespace IOFrame\Handlers{
          * @param string $ip IP to delete, represented in a string
          * @param array $params
          *
-         * @returns bool
-         *          true - Success
-         *          false - IP does not exist
+         * @return array|bool|int|mixed|string|string[]
          */
         function deleteIP(string $ip, array $params = []){
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
+            $useCache = $params['useCache'] ?? $this->defaultSettingsParams['useCache'];
 
-            $ip = $this->SQLHandler->selectFromTable(
-                $this->SQLHandler->getSQLPrefix().'IP_LIST',
+            $ip = $this->SQLManager->selectFromTable(
+                $this->SQLManager->getSQLPrefix().'IP_LIST',
                 ['IP',[$ip,'STRING'],'='],
                 [],
                 ['test'=>$test,'verbose'=>$verbose]
@@ -716,8 +703,8 @@ namespace IOFrame\Handlers{
             if(!is_array($ip) || count($ip) == 0)
                 return false;
 
-            $res = $this->SQLHandler->deleteFromTable(
-                $this->SQLHandler->getSQLPrefix().'IP_LIST',
+            $res = $this->SQLManager->deleteFromTable(
+                $this->SQLManager->getSQLPrefix().'IP_LIST',
                 ['IP',[$ip[0]['IP'],'STRING'],'='],
                 ['test'=>$test,'verbose'=>$verbose]
             );
@@ -725,9 +712,11 @@ namespace IOFrame\Handlers{
             if($res){
                 if($verbose)
                     echo 'Deleting IP '.$ip[0]['IP'].' from cache!'.EOL;
-                if(!$test)
-                    $this->RedisHandler->call('del',[[$ip[0]['IP']]]);
+                if(!$test && $useCache)
+                    $this->RedisManager->call('del',[[$ip[0]['IP']]]);
             }
+            else
+                $this->logger->error('Could not delete IP',['ip'=>$ip,'params'=>$params]);
 
             return $res;
         }
@@ -744,18 +733,19 @@ namespace IOFrame\Handlers{
          *
          * @returns bool true on success, false if override is false and IP exists
          * */
-        function addIPRange(string $prefix, int $from, int $to, bool $type, int $ttl, array $params = []){
+        function addIPRange(string $prefix, int $from, int $to, bool $type, int $ttl, array $params = []): array|bool|int|string|null {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
+            $useCache = $params['useCache'] ?? $this->defaultSettingsParams['useCache'];
 
             isset($params['override'])?
                 $override = $params['override'] : $override = false;
 
             $expires =  time()+ ( ($ttl!==0)? $ttl : 1000000000 );
 
-            $res = $this->SQLHandler->insertIntoTable(
-                $this->SQLHandler->getSQLPrefix().'IPV4_RANGE',
+            $res = $this->SQLManager->insertIntoTable(
+                $this->SQLManager->getSQLPrefix().'IPV4_RANGE',
                 ['IP_Type','Prefix','IP_From','IP_To','Expires'],
                 [[(int)$type,[$prefix,'STRING'], $from, $to, $expires]],
                 ['onDuplicateKey'=>$override,'test'=>$test,'verbose'=>$verbose]
@@ -764,9 +754,11 @@ namespace IOFrame\Handlers{
             if($res){
                 if($verbose)
                     echo 'Deleting IP '.$prefix.'/'.$from.'/'.$to.' from cache!'.EOL;
-                if(!$test)
-                    $this->RedisHandler->call('del',[[$prefix.'/'.$from.'/'.$to]]);
+                if(!$test && $useCache)
+                    $this->RedisManager->call('del',[[$prefix.'/'.$from.'/'.$to]]);
             }
+            else
+                $this->logger->error('Could not add IP range',['prefix'=>$prefix,'from'=>$from,$to=>'to','type'=>$type,'ttl'=>$ttl,'override'=>$override]);
 
             return $res;
         }
@@ -787,32 +779,33 @@ namespace IOFrame\Handlers{
          * @returns bool
          *
          * */
-        function updateIPRange(string $prefix, int $from, int $to, $params = []){
+        function updateIPRange(string $prefix, int $from, int $to, array $params = []){
 
             $assignments = [];
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
+            $useCache = $params['useCache'] ?? $this->defaultSettingsParams['useCache'];
 
             if(isset($params['type']))
-                array_push($assignments,'IP_Type = '.(int)$params['type']);
+                $assignments[] = 'IP_Type = ' . (int)$params['type'];
 
             if(isset($params['ttl'])){
                 $expires =  time()+ ( ($params['ttl']!==0)? $params['ttl'] : 1000000000 );
-                array_push($assignments,'Expires = '.$expires);
+                $assignments[] = 'Expires = ' . $expires;
             }
 
             if(isset($params['from']))
-                array_push($assignments,'IP_From = '.$params['from']);
+                $assignments[] = 'IP_From = ' . $params['from'];
 
             if(isset($params['to']))
-                array_push($assignments,'IP_To = '.$params['to']);
+                $assignments[] = 'IP_To = ' . $params['to'];
 
             if($assignments == [])
                 return false;
 
-            $ip = $this->SQLHandler->selectFromTable(
-                $this->SQLHandler->getSQLPrefix().'IPV4_RANGE',
+            $ip = $this->SQLManager->selectFromTable(
+                $this->SQLManager->getSQLPrefix().'IPV4_RANGE',
                 [
                     ['Prefix',$prefix,'='],
                     ['IP_From',$from,'='],
@@ -826,8 +819,8 @@ namespace IOFrame\Handlers{
             if(!is_array($ip) || count($ip) == 0)
                 return false;
 
-            $res = $this->SQLHandler->updateTable(
-                $this->SQLHandler->getSQLPrefix().'IPV4_RANGE',
+            $res = $this->SQLManager->updateTable(
+                $this->SQLManager->getSQLPrefix().'IPV4_RANGE',
                 $assignments,
                 [
                     ['Prefix',$prefix,'='],
@@ -841,28 +834,31 @@ namespace IOFrame\Handlers{
             if($res){
                 if($verbose)
                     echo 'Deleting IP '.$prefix.'/'.$from.'/'.$to.' from cache!'.EOL;
-                if(!$test)
-                    $this->RedisHandler->call('del',[[$prefix.'/'.$from.'/'.$to]]);
+                if(!$test && $useCache)
+                    $this->RedisManager->call('del',[[$prefix.'/'.$from.'/'.$to]]);
             }
+            else
+                $this->logger->error('Could not update IP range',['prefix'=>$prefix,'from'=>$from,$to=>'to']);
 
             return $res;
 
         }
 
         /** Deletes an ip range from the list
-         * @param string $prefix        IPV4 Prefix ('','xxx','xxx.xxx','xxx.xxx.xxx')
-         * @param int $from             Range (0-255)
-         * @param int $to               Range (0-255)
+         * @param string $prefix IPV4 Prefix ('','xxx','xxx.xxx','xxx.xxx.xxx')
+         * @param int $from Range (0-255)
+         * @param int $to Range (0-255)
          * @param array $params
-         * @returns bool
+         * @return array|bool|int|mixed|string|string[]
          */
         function deleteIPRange(string $prefix, int $from, int $to, array $params = []){
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
+            $useCache = $params['useCache'] ?? $this->defaultSettingsParams['useCache'];
 
-            $ip = $this->SQLHandler->selectFromTable(
-                $this->SQLHandler->getSQLPrefix().'IPV4_RANGE',
+            $ip = $this->SQLManager->selectFromTable(
+                $this->SQLManager->getSQLPrefix().'IPV4_RANGE',
                 [
                     ['Prefix',$prefix,'='],
                     ['IP_From',$from,'='],
@@ -876,8 +872,8 @@ namespace IOFrame\Handlers{
             if(!is_array($ip) || count($ip) == 0)
                 return false;
 
-            $res = $this->SQLHandler->deleteFromTable(
-                $this->SQLHandler->getSQLPrefix().'IPV4_RANGE',
+            $res = $this->SQLManager->deleteFromTable(
+                $this->SQLManager->getSQLPrefix().'IPV4_RANGE',
                 [
                     ['Prefix',$prefix,'='],
                     ['IP_From',$from,'='],
@@ -890,9 +886,11 @@ namespace IOFrame\Handlers{
             if($res){
                 if($verbose)
                     echo 'Deleting IP '.$prefix.'/'.$from.'/'.$to.' from cache!'.EOL;
-                if(!$test)
-                    $this->RedisHandler->call('del',[[$prefix.'/'.$from.'/'.$to]]);
+                if(!$test && $useCache)
+                    $this->RedisManager->call('del',[[$prefix.'/'.$from.'/'.$to]]);
             }
+            else
+                $this->logger->error('Could not delete IP range',['prefix'=>$prefix,'from'=>$from,$to=>'to']);
 
             return $res;
         }
@@ -906,19 +904,22 @@ namespace IOFrame\Handlers{
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
-
-            isset($params['range'])?
-                $range = $params['range'] : $range = null;
+            $range = $params['range'] ?? null;
 
             $tname = $range?
-                $this->SQLHandler->getSQLPrefix().'IPV4_RANGE' : $this->SQLHandler->getSQLPrefix().'IP_LIST' ;
+                $this->SQLManager->getSQLPrefix().'IPV4_RANGE' : $this->SQLManager->getSQLPrefix().'IP_LIST' ;
 
 
-            return $this->SQLHandler->deleteFromTable(
+            $res = $this->SQLManager->deleteFromTable(
                 $tname,
                 [['Expires',time(),'<=']],
                 $params
             );
+
+            if(!$res)
+                $this->logger->error('Could not delete expired IPs ',['isRange'=>$range]);
+
+            return $res;
         }
 
     }

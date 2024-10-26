@@ -1,9 +1,7 @@
 <?php
 
-use RobThree\Auth\TwoFactorAuth;
-
 $inputs['id'] = json_decode($_SESSION['details'],true)['ID'];
-$inputs['require2FA'] = $inputs['require2FA'] === null? true : (bool)$inputs['require2FA'];
+$inputs['require2FA'] = $inputs['require2FA'] === null || (bool)$inputs['require2FA'];
 
 if(!filter_var($inputs['code'],FILTER_VALIDATE_INT) || $inputs['code'] < 100000 || $inputs['code'] > 999999){
     if($test)
@@ -13,8 +11,8 @@ if(!filter_var($inputs['code'],FILTER_VALIDATE_INT) || $inputs['code'] < 100000 
 $inputs['code'] = (string)$inputs['code'];
 
 if(!$test && empty($_SESSION['TEMP_2FASecret'])){
-    if($test)
-        echo 'Session secret not set! Try requesting 2FA again.'.EOL;
+    /*if($test)
+        echo 'Session secret not set! Try requesting 2FA again.'.EOL;*/
     exit(INPUT_VALIDATION_FAILURE);
 }
 

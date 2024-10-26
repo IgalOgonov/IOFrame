@@ -1,6 +1,5 @@
 <?php
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 
 
 if(!$inputs['remote'])
@@ -9,7 +8,7 @@ else
     $inputs['remote'] = true;
 
 //Addresses
-if($inputs['addresses'] === null || !IOFrame\Util\is_json($inputs['addresses'])){
+if($inputs['addresses'] === null || !\IOFrame\Util\PureUtilFunctions::is_json($inputs['addresses'])){
     if($test)
         echo 'Addresses need to be set!'.EOL;
     exit(INPUT_VALIDATION_FAILURE);
@@ -24,7 +23,7 @@ if(count($inputs['addresses'])<1){
 }
 
 foreach($inputs['addresses'] as $index => $address){
-    $valid = \IOFrame\Util\validator::validateRelativeFilePath($address);
+    $valid = \IOFrame\Util\ValidatorFunctions::validateRelativeFilePath($address);
     if($inputs['remote'])
         $valid = $valid || filter_var($address,FILTER_VALIDATE_URL);
     if(!$valid){

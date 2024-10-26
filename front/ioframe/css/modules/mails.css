@@ -1,86 +1,24 @@
-#mails {
-    margin: 50px;
+#mails[dir="rtl"]{
+    text-align: right;
 }
+/* Inputs */
 
-#mails h2 {
-    margin-bottom: 50px;
+/* Search List */
+#mails .search-list .search-results > * > :first-child {
+    flex: 5;
+    font-weight: 800;
 }
-#mails .delete{
-    color: red;
-    text-decoration: underline;
-    cursor: pointer;
-    font-weight: bold;
-    margin-bottom: 20px;
+#mails .search-list .search-results > * > * {
+    min-width: 150px;
 }
-#mails .actions button{
-    font-weight: bold;
-    padding: 5px 10px;
+#mails .search-list .search-item {
+    transition: 0.5s;
 }
-#mails .actions button{
-    margin-bottom: 20px;
+#mails .search-list .search-item:hover,
+#mails .search-list .search-item.selected {
+    background: var(--main-color-3);
 }
-#mails .container {
-    display: flex;
-    flex-direction: column;
-}
-#mails .templates{
-    margin-right: 50px;
-}
-#mails .title {
-    font-size: 1.3em;
-    color: black;
-    font-weight: bold;
-    cursor: pointer;
-    padding: 5px;
-    border: 1px solid transparent;
-    transition: 0.2s ease-in-out;
-}
-#mails .edit{
-    display: flex;
-    flex-direction: column;
-    padding: 5px 10px;
-    margin: 10px 0px;
-    border: 1px var(--secondary-color-4) solid;
-    background: var(--main-color-2);
-}
-#mails .title:hover,
-#mails .title.selected {
-    color: rgb(9, 19, 64);
-    background-color: var(--main-color-2);
-    border: 1px var(--secondary-color-4) solid;
-}
-#mails textarea{
-    margin: 20px;
-    margin-left: 0;
-    margin-top: 0;
-    border: 2px solid var(--secondary-color-8);
-}
-#mails input,
-#mails .preview,
-#mails textarea{
-    margin: 10px;
-    padding: 10px;
-    min-width: 800px;
-    border: 1px var(--secondary-color-4) solid;
-}
-#mails .preview{
-    background: white;
-}
-#mails input{
-    height: 30px;
-}
-#mails .edit button{
-    font-size: 1.1em;
-    height: 40px;
-    width: 100px;
-    margin: 0;
-}
-#mails .actions{
-    margin-bottom: 10px;
-    display: flex;
-    justify-content: space-between;
-    flex-direction: column;
-}
-#mails .title:not(:last-child) {
-    margin-bottom: 20px;
+#mails .search-list .search-results > .search-titles {
+    font-size: 1.125em;
+    background: none;
 }

@@ -1,5 +1,5 @@
 /* Allows monitoring the specific app/component for window size and scrolling changes, and modifying specific dynamic
-* elements that are dependant on it.
+* elements that are dependent on it.
 * */
 const dynamicElements = {
     data: function(){
@@ -40,26 +40,7 @@ const dynamicElements = {
         }
     },
     created: function(){
-        for(let i in this.dynamicElementState){
-            if(i === '@'){
-                this.dynamicElementState[i].timerName = makeid(20,'')+(this.identifier? this.identifier+'-':'')+'throttle-timer';
-                continue;
-            }
-            if(this.dynamicElementState[i].state === undefined)
-                Vue.set(this.dynamicElementState[i],'state',{});
-            if(this.dynamicElementState[i].state.classes === undefined)
-                Vue.set(this.dynamicElementState[i].state,'classes',[]);
-            if(this.dynamicElementState[i].condition === undefined)
-                Vue.set(this.dynamicElementState[i],'condition',function(){
-                    return -1;
-                });
-            if(this.dynamicElementState[i].activate === undefined)
-                Vue.set(this.dynamicElementState[i],'activate',function(){
-                });
-            if(this.dynamicElementState[i].deactivate === undefined)
-                Vue.set(this.dynamicElementState[i],'deactivate',function(){
-                });
-        }
+        this.initiateDynamicElements();
     },
     mounted:function(){
         //Add scroll listener
@@ -89,6 +70,28 @@ const dynamicElements = {
         }
     },
     methods:{
+        initiateDynamicElements: function (){
+            for(let i in this.dynamicElementState){
+                if(i === '@'){
+                    this.dynamicElementState[i].timerName = makeid(20,'')+(this.identifier? this.identifier+'-':'')+'throttle-timer';
+                    continue;
+                }
+                if(this.dynamicElementState[i].state === undefined)
+                    Vue.set(this.dynamicElementState[i],'state',{});
+                if(this.dynamicElementState[i].state.classes === undefined)
+                    Vue.set(this.dynamicElementState[i].state,'classes',[]);
+                if(this.dynamicElementState[i].condition === undefined)
+                    Vue.set(this.dynamicElementState[i],'condition',function(){
+                        return -1;
+                    });
+                if(this.dynamicElementState[i].activate === undefined)
+                    Vue.set(this.dynamicElementState[i],'activate',function(){
+                    });
+                if(this.dynamicElementState[i].deactivate === undefined)
+                    Vue.set(this.dynamicElementState[i],'deactivate',function(){
+                    });
+            }
+        },
         //Checks dynamic elements for changes, and activates their functions if need be
         throttledCheckDynamicElements: function(){
             throttle(this.checkDynamicElements,this.dynamicElementState['@'].throttle,this.dynamicElementState['@'].timerName)();
@@ -108,7 +111,7 @@ const dynamicElements = {
                 let elementIdentifier = null;
                 for(let j in element.classList){
                     if(typeof element.classList[j] === 'string' && element.classList[j].startsWith('element-identifier-')){
-                        let internalIdentifier = element.classList[j].substr('element-identifier-'.length);
+                        let internalIdentifier = element.classList[j].substring('element-identifier-'.length);
                         if(state[internalIdentifier]){
                             elementParams = state[internalIdentifier];
                             elementIdentifier = internalIdentifier;

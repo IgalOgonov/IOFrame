@@ -1,9 +1,8 @@
 <?php
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 
 //Validate username
-if($inputs['username'] !== null && !\IOFrame\Util\validator::validateUsername($inputs['username'])){
+if($inputs['username'] !== null && !\IOFrame\Util\ValidatorFunctions::validateUsername($inputs['username'])){
     if($test)
         echo 'Username illegal!'.EOL;
     exit(INPUT_VALIDATION_FAILURE);
@@ -24,12 +23,8 @@ if($inputs['phone'] !== null){
     }
 }
 
-//Parse active
-if($inputs['active'] !== null)
-    $inputs['active'] = $inputs['active']? 1 : 0;
-
 //Validate normal integers
-foreach(['id','created','bannedDate','suspiciousDate'] as $param){
+foreach(['id','created','bannedDate','lockedDate','suspiciousDate','active'] as $param){
     if($inputs[$param] !== null && !( $inputs[$param] === 0 || filter_var($inputs[$param], FILTER_VALIDATE_INT) ) ){
         if($test)
             echo $param.' has to be an integer!'.EOL;

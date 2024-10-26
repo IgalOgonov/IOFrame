@@ -42,10 +42,8 @@ html[dir="rtl"] .article-block > .controls{
     border-right: 0px;
 }
 .article-block > .controls > button:first-of-type{
-    border-radius: 5px 0px 0px 5px;
 }
 .article-block > .controls > button:last-of-type{
-    border-radius: 0px 5px 5px 0px;
 }
 .article-block > .controls > button.reset{
     filter: brightness(95%);
@@ -60,7 +58,6 @@ html[dir="rtl"] .article-block > .controls{
 .article-block.create{
     margin: 20px 0px;
     padding: 5px;
-    border-radius: 5px;
     background: var(--main-color-4);
 }
 .article-block.edit > form,
@@ -139,7 +136,7 @@ html[dir="rtl"] .article-block > .controls{
 }
 .article-block.edit form > .selector-container.article-selector > .selector-sub-container > .search-list .search-item {
     flex-direction: column;
-    max-width: calc(100vw - 100px);
+    max-width: calc(100vw - 30px);
 }
 .article-block.edit form > .selector-container.article-selector > .selector-sub-container > .search-list .search-item .search-item-title {
     display: inherit !important;
@@ -188,7 +185,6 @@ html[dir="rtl"] .article-block > .controls{
 .article-block.edit form > .selector-container.image-selector .media-selector {
     background: var(--main-color-3);
     border: 1px var(--main-color-5) solid;
-    border-radius: 0px 0px 5px 5px;
     overflow-y: auto;
     max-width: 90vw;
     max-height: 85vh;
@@ -198,16 +194,15 @@ html[dir="rtl"] .article-block > .controls{
 .article-block.edit form > .selector-container > .selector-sub-container{
     position: fixed;
     top: 5vh;
+    right: 10px;
     width: calc(100vw - 275px);
     box-shadow: 0px 0px 6px var(--dark-1);
-    border-radius: 5px;
     z-index: 1;
 }
 /*Control buttons*/
 .article-block.edit form > .selector-container > .selector-sub-container > .control-buttons {
     background: var(--main-color-2);
     text-align: end;
-    border-radius: 5px 5px 0px 0px;
 }
 .article-block.edit form > .selector-container > .selector-sub-container > .control-buttons img{
     cursor: pointer;
@@ -237,7 +232,7 @@ html[dir="rtl"] .article-block > .controls{
     align-items: center;
     font-size: 0.8em;
     margin: 5px 0px;
-    color: var(--secondary-color-5);
+    color: var(--main-color-8);
 }
 
 /*Markdown*/
@@ -246,12 +241,6 @@ html[dir="rtl"] .article-block > .controls{
 }
 .article-block.view > .markdown pre {
     margin: 5px 0px;
-}
-.article-block.view > .markdown a {
-    color: var(--secondary-color-5) !important;
-}
-.article-block.view > .markdown a:visited {
-    color: var(--secondary-color-3) !important;
 }
 .article-block.view > .markdown :not(pre) > code{
 }
@@ -267,6 +256,7 @@ html[dir="rtl"] .article-block > .controls{
 }
 
 /*image & cover & video*/
+
 /*Image*/
 .article-block.view > .image > .image-container,
 .article-block.view > .video > .image-container{
@@ -278,6 +268,38 @@ html[dir="rtl"] .article-block > .controls{
 .article-block.view > .video > .image-container > video{
     max-width: 100%;
 }
+
+/*Image - Full Screen*/
+.article-block.view > .image > .image-container > img,
+.article-block.view > .image.full-screen > .image-container{
+    cursor: pointer;
+}
+
+.article-block.view > .image.full-screen > .image-container{
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    width: 100vw;
+    padding: 20px !important;
+    margin: 0 !important;
+    overflow-y: auto;
+    background: var(--shadow-dark-8) !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.article-block.view > .image.full-screen > .image-container > img{
+    max-width: calc(100% - 10px);
+    min-width: 20px;
+    min-height: 20px;
+}
+.article-block.view > .image.full-screen.high > .image-container > img{
+    position: absolute;
+    top: 0px;
+}
+
 /*Cover*/
 .article-block.view > .cover{
     display: flex;
@@ -318,7 +340,6 @@ html[dir="rtl"] .article-block > .controls{
     background: var(--main-color-2);
     transition: 0.2s ease-in-out;
     border: 1px var(--main-color-5) solid;
-    border-radius: 5px;
     min-width: 300px;
     min-height: 200px;
 }
@@ -326,16 +347,16 @@ html[dir="rtl"] .article-block > .controls{
     background: var(--main-color-3);
 }
 .article-block.view > .article > a  > .title{
-    color: var(--secondary-color-8);
+    color: var(--main-color-10);
 }
 
 .article-block.view > .article > a  > .author > *{
     margin: 0px 5px 0px 0px;
-    color: var(--secondary-color-6);
+    color: var(--main-color-9);
 }
 .article-block.view > .article > a  > .author::before{
     content: 'Author: ';
-    color: var(--secondary-color-8);
+    color: var(--main-color-10);
 }
 
 .article-block.view > .article > a  > .thumbnail{
@@ -347,6 +368,9 @@ html[dir="rtl"] .article-block > .controls{
 }
 .article-block.view > .article > a  > .thumbnail > img{
     max-width: 100%;
+}
+.article-block.view > .article > a  > .thumbnail > img.image-generic{
+    opacity: 0.5;
 }
 
 /* Responsiveness */
@@ -364,7 +388,7 @@ html[dir="rtl"] .article-block > .controls{
     }
     .article-block.edit form > .selector-container.gallery-selector > .selector-sub-container > .search-list .search-item {
         flex-direction: column;
-        max-width: calc(100vw - 100px);
+        max-width: calc(100vw - 30px);
     }
     .article-block.edit form > .selector-container.gallery-selector > .selector-sub-container > .search-list .search-item .search-item-title {
         display: inherit !important;

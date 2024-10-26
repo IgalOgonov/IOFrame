@@ -88,11 +88,13 @@
 .media-viewer .media-object-container > .thumbnail-container > video {
     max-height: 150px;
     max-width: 150px;
+    min-width: 30px;
+    min-height: 30px;
 }
 .media-viewer .media-object-container.mediaFolder > .thumbnail-container > img,
 .media-viewer .media-object-container.mediaFolder > .thumbnail-container > video {
     height: auto;
-    width: auto;
+    width: 100%;
 }
 
 /* Image Caption*/

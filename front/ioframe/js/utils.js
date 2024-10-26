@@ -25,7 +25,7 @@ function isElement(obj) {
  * @param {Object} params parameters of the form:
  *                  allowSpec: bool, default true - whether to allow html characters
  *                  extraClasses: string, default '' - extra classes to add.
- *                  dismissible: string, default 'button' - how to dismiss the alert. Set to 'click' to do so on click,
+ *                  dismissible: string, default 'click' - how to dismiss the alert. Set to 'button' to do so with a button,
  *                                                          or to false to make the alert permenant.
  *                  closeClass: string, default '' - class of the close button (if using one)
  *
@@ -65,13 +65,13 @@ function IsJsonString(str) {
 
 //Generates a fingerprint for the user device
 function generateFP(attrName, target){
-    res = ["123"];
+    let res = ["123"];
     if(attrName === undefined)
         attrName = "deviceID";
     if(target === undefined)
         target = "localStorage";
 
-    var options = {
+    let options = {
         excludeLanguage : true,
         excludeColorDepth : true,
         excludeAvailableScreenResolution: true,
@@ -81,10 +81,10 @@ function generateFP(attrName, target){
         excludeAdBlock: true
     };
 
-    fingerprints = new Fingerprint2(options);
+    let fingerprints = new Fingerprint2(options);
 
     fingerprints.get(function(result){
-        if(target=='localStorage')
+        if(target==='localStorage')
             localStorage.setItem(attrName,result);
     });
 }
@@ -92,7 +92,7 @@ function generateFP(attrName, target){
 /**
  * Deep merge two objects.
  * @param target
- * @param ...sources
+ * @param sources
  */
 function mergeDeep(target, ...sources) {
     if (!sources.length)
@@ -125,13 +125,19 @@ function mergeDeep(target, ...sources) {
 // alert( strhash('http://www.w3schools.com/js/default.asp') ); // 6mn6tf7st333r2q4o134o58888888888
 function strhash( str ) {
     if (str.length % 32 > 0) str += Array(33 - str.length % 32).join("z");
-    var hash = '', bytes = [], i = j = k = a = 0, dict = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','1','2','3','4','5','6','7','8','9'];
-    for (i = 0; i < str.length; i++ ) {
-        ch = str.charCodeAt(i);
+    let hash = '';
+    let bytes = [];
+    let i = 0;
+    let j = 0;
+    let k = 0;
+    let a = 0;
+    let dict = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','1','2','3','4','5','6','7','8','9'];
+    for (let i = 0; i < str.length; i++ ) {
+        let ch = str.charCodeAt(i);
         bytes[j++] = (ch < 127) ? ch & 0xFF : 127;
     }
-    var chunk_len = Math.ceil(bytes.length / 32);   
-    for (i=0; i<bytes.length; i++) {
+    let chunk_len = Math.ceil(bytes.length / 32);
+    for (let i=0; i<bytes.length; i++) {
         j += bytes[i];
         k++;
         if ((k == chunk_len) || (i == bytes.length-1)) {
@@ -208,9 +214,9 @@ function throttle(func, wait, timerName = '') {
 
 //generates a random id
 function makeid(length,characters='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz') {
-    var result           = '';
-    var charactersLength = characters.length;
-    for ( var i = 0; i < length; i++ ) {
+    let result           = '';
+    let charactersLength = characters.length;
+    for ( let i = 0; i < length; i++ ) {
         result += characters.charAt(Math.floor(Math.random() * charactersLength));
     }
     return result;
@@ -230,9 +236,7 @@ function sleep(ms) {
 function checkLoggedIn(pathToRoot,trustLocalStorage=false){
     return new Promise(function(resolve, reject) {
         //If we are logged in
-        let res = false;
-        (document.loggedIn === true)?
-            res = true : res = false;
+        let res = document.ioframe.loggedIn === true;
 
         if ((typeof(Storage) !== "undefined") && trustLocalStorage && res) {
             let sesInfo = localStorage.getItem('sesInfo');
@@ -260,23 +264,23 @@ function updateCSRFToken(consumeExisting = true){
             let action;
             action = 'CSRF_token';
             // url
-            let url=document.rootURI+"api\/v1\/session";
+            let url=document.ioframe.rootURI+"api\/v1\/session";
             //Request itself
-            var xhr = new XMLHttpRequest();
+            let xhr = new XMLHttpRequest();
             xhr.open('GET', url+'?'+action);
             xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
             //console.log('To url',url,' , send: ',action);
             //-return;
             xhr.send(null);
             xhr.onreadystatechange = function () {
-                var DONE = 4; // readyState 4 means the request is done.
-                var OK = 200; // status 200 is a successful return.
+                let DONE = 4; // readyState 4 means the request is done.
+                let OK = 200; // status 200 is a successful return.
                 if (xhr.readyState === DONE) {
                     if (xhr.status === OK){
                         let response = xhr.responseText;
                         console.log(response);
                         if(response){
-                            var sesInfo=JSON.parse(response);
+                            let sesInfo=JSON.parse(response);
                             resolve(sesInfo['CSRF_token']);
                         }
                         else
@@ -298,7 +302,7 @@ function updateCSRFToken(consumeExisting = true){
 //-------------------Encrypts text given the text, key and IV
 function encryptText(data,key,iv){
 
-    var encrypted = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(data), CryptoJS.enc.Hex.parse(key), { iv: CryptoJS.enc.Hex.parse(iv) });
+    let encrypted = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(data), CryptoJS.enc.Hex.parse(key), { iv: CryptoJS.enc.Hex.parse(iv) });
     return encrypted.ciphertext;
 }
 
@@ -323,12 +327,12 @@ function decryptText(){
 
 //Combines each consecutive character of 2 strings, into 1 string. for example, "abc" and "def" will combine into "adbecf".
 function stringScrumble(str1, str2){
-    var res='';
-    if(str1.length!=str2.length){
+    let res='';
+    if(str1.length!==str2.length){
         return false;
     }
     else{
-        for(i = 0; i<str1.length; i++){
+        for(let i = 0; i<str1.length; i++){
             res=res.concat(str1.charAt(i)).concat(str2.charAt(i));
         }
     }
@@ -340,19 +344,19 @@ function stringScrumble(str1, str2){
 //Mode 1 - returns odd string
 //Mode 2 - Returns even string
 function stringDecrumble(str,mode){
-    if(str.length%2 !=0 )
+    if(str.length%2 !==0 )
         return false;
-    var res='';
+    let res='';
     if(mode===undefined)
         mode = 1;
     switch (mode){
         case 1:
-            for(i=0; i<str.length; i+=2){
+            for(let i=0; i<str.length; i+=2){
                 res=res.concat(str.charAt(i));
             }
             break;
         case 2:
-            for(i=1; i<str.length; i+=2){
+            for(let i=1; i<str.length; i+=2){
                 res=res.concat(str.charAt(i));
             }
             break;
@@ -407,8 +411,8 @@ function displayImageFromInput(input,img, params = {}){
 
         let file = files[0];
 
-        var imageType = file.type;
-        var blob = null;
+        let imageType = file.type;
+        let blob = null;
 
         file.arrayBuffer().then(function(resolve,reject){
             blob = new Blob( [ resolve ], { type: imageType } );
@@ -429,11 +433,11 @@ function displayImageFromInput(input,img, params = {}){
 function bindImagePreview(input,img,params = {}){
 
     //Optional callback after click
-    var callback = (params['callback']!==undefined)?
+    let callback = (params['callback']!==undefined)?
         params['callback'] : function(){};
 
     //Whether to make clicks on the image open the upload
-    var bindClick = (params['bindClick'])?
+    let bindClick = (params['bindClick'])?
         true : false;
     if(bindClick){
         if(isElement(params['bindClick']))
@@ -497,15 +501,15 @@ function getReadableSize(bytes){
 
 /* Gets current time - in regard to server offset */
 function getCurrentDate(){
-    const offset = document.serverTimeDelta*1000;
+    const offset = document.ioframe.serverTimeDelta*1000;
     const currentTime = Date.now()+offset;
     return new Date(+currentTime);
 }
 
 /* Given the (shitty) standard DD-MM-YYYY, returns the unix timestamp */
-function dateToTimestamp(date){
+function dateToTimestamp(date, americanBullshit = false){
     date= date.split("-");
-    var newDate =date[0]+","+date[1]+","+date[2];
+    let newDate = americanBullshit ?  date[1]+","+date[0]+","+date[2] : date[0]+","+date[1]+","+date[2];
     let temp = new Date(newDate);
     //Time minus timezone offset (minutes => ms))
     return temp.getTime() - temp.getTimezoneOffset()*1000*60;
@@ -533,8 +537,17 @@ function timestampToDate(timestamp){
 
 /*Converts a common PHP Timestamp into a date*/
 function timeStampToFullDate(timestamp){
+    if(!timestamp)
+        return null;
+
+    let subSeconds = null;
+    if(timestamp.toString().includes('.')) {
+        const arr = timestamp.toString().split('.');
+        subSeconds = arr[1];
+        timestamp = arr[0];
+    }
     timestamp -= 0;
-    timestamp += document.serverTimeDelta ?? 0;
+    timestamp += document.ioframe.serverTimeDelta ?? 0;
     timestamp *= 1000;
     let date = timestampToDate(timestamp);
     let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
@@ -546,12 +559,14 @@ function timeStampToFullDate(timestamp){
         minutes = '0'+minutes;
     if(seconds < 10)
         seconds = '0'+seconds;
-    return {date:date,hours:hours,minutes:minutes,seconds:seconds};
+    return {date:date,hours:hours,minutes:minutes,seconds:seconds, subSeconds: subSeconds};
 }
 
 /*Converts a common PHP Timestamp into a readable date*/
 function timeStampToReadableFullDate(timestamp, round = 3){
     let obj = timeStampToFullDate(timestamp);
+    if(!obj)
+        return '';
     let res = obj.date.split('-').reverse().join('-');
     if(round > 0)
         res += ', ' + obj.hours;
@@ -559,6 +574,8 @@ function timeStampToReadableFullDate(timestamp, round = 3){
         res += ':'+ obj.minutes;
     if(round > 2)
         res += ':'+obj.seconds;
+    if(round > 3)
+        res += '.'+obj.subSeconds;
     return  res;
 }
 
@@ -576,8 +593,22 @@ function timeStampToReadableMinutes(timestamp){
 * @credit https://stackoverflow.com/questions/1912501/unescape-html-entities-in-javascript/1912522#1912522
 * */
 function htmlDecode(input){
-    var e = document.createElement('textarea');
+    let e = document.createElement('textarea');
     e.innerHTML = input;
     // handle case of empty input
     return e.childNodes.length === 0 ? "" : e.childNodes[0].nodeValue;
+}
+
+/** Replaces something with a new value, if the new value is not undefined.
+ *
+ @param object
+ @param key
+ @param newValue
+ @param defaultValue Default value both object key and newValue are undefined
+ * */
+function replaceInObjectIfNewValueExists(object, key, newValue, defaultValue = undefined){
+    if(newValue !== undefined)
+        object[key] = newValue;
+    else if((object[key] === undefined) && (defaultValue !== undefined))
+        object[key] = defaultValue;
 }

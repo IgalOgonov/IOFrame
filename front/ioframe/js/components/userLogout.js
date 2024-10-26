@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('user-logout', {
     props:{
         text: {
@@ -41,15 +38,15 @@ Vue.component('user-logout', {
     methods:{
         logOut: function(){
             let data = 'action=logUser&log=out&req=new';
-            let url=document.pathToRoot+"api\/v1\/users";
+            let url=document.ioframe.pathToRoot+"api\/v1\/users";
             //Send logout request
-            var xhr = new XMLHttpRequest();
+            let xhr = new XMLHttpRequest();
             xhr.open('POST', url+'?'+data);
             xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
             xhr.send(null);
             xhr.onreadystatechange = function () {
-                var DONE = 4; // readyState 4 means the request is done.
-                var OK = 200; // status 200 is a successful return.
+                let DONE = 4; // readyState 4 means the request is done.
+                let OK = 200; // status 200 is a successful return.
                 if (xhr.readyState === DONE) {
                     if (xhr.status === OK){
                         //If we logged out, update current session.
@@ -57,7 +54,7 @@ Vue.component('user-logout', {
                         localStorage.removeItem("sesIV");
                         localStorage.removeItem("myMail");
                         //Set 2nd parameter to false or remove it if you don't want a page reload.
-                        updateSesInfo(document.pathToRoot,{
+                        updateSesInfo(document.ioframe.pathToRoot,{
                             'sessionInfoUpdated': function(){
                                 location.reload();
                             }

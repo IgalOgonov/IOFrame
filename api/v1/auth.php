@@ -1,12 +1,12 @@
 <?php
 
-/* This the the API that handles all the auth functions.
+/* This is the API that handles all the auth functions.
  *
  *      See standard return values at defaultInputResults.php
  *
  * Parameters:
- * "action"     - Requested action - described bellow
- * "params"     - Parameters, depending on action - described bellow
+ * "action"     - Requested action - described below
+ * "params"     - Parameters, depending on action - described below
  * "limit/offset" - can be passed as explicit parameters, will the override whatever is in "params"
  *_________________________________________________
  * getRank
@@ -127,7 +127,7 @@
  *                                                              ]
  *          When fetching actions, limit/offset are ignored, and there is no '@' key in the main array.
  * Examples:
- *      action=getGroups&params={"action":[["=","BAN_USERS_AUTH"],["=","TREE_C_AUTH"]],"separator":"OR"}
+ *      action=getGroups&params={"action":[["=","BAN_USERS_AUTH"],["=","SOME_ACTION"]],"separator":"OR"}
  *_________________________________________________
  * getGroupActions
  *      Returns all groups and their actions. Is an alias of getGroups.
@@ -179,12 +179,11 @@
  *              'actions' => A JSON object of the form:
  *                          <Action Name> => Bool true/false for set/delete.
  * Examples:
- *      action=modifyGroupActions&params={"groupName":"Test Group","actions":{"TREE_R_AUTH":false,"STRANGE_ACTION":true}}
+ *      action=modifyGroupActions&params={"groupName":"Test Group","actions":{"SOME_ACTION":false,"STRANGE_ACTION":true}}
  * */
 
-if(!defined('coreInit'))
-    require __DIR__ . '/../../main/coreInit.php';
-
+if(!defined('IOFrameMainCoreInit'))
+    require __DIR__ . '/../../main/core_init.php';
 require __DIR__ . '/../apiSettingsChecks.php';
 require __DIR__ . '/../defaultInputChecks.php';
 require __DIR__ . '/../defaultInputResults.php';
@@ -198,7 +197,7 @@ if(!isset($_REQUEST["action"]))
     exit('Action not specified!');
 $action = $_REQUEST["action"];
 
-if(!checkApiEnabled('auth',$apiSettings,$_REQUEST['action']))
+if(!checkApiEnabled('auth',$apiSettings,$SecurityHandler,$_REQUEST['action']))
     exit(API_DISABLED);
 
 if(isset($_REQUEST['params']))
@@ -216,7 +215,7 @@ foreach($commons as $common){
 switch($action){
     case 'getRank':
         require 'auth_fragments/getRank_execution.php';
-        echo  ($result)? $result : '0';
+        echo  ($result)?: '0';
         break;
 
     case 'isLoggedIn':
@@ -225,7 +224,7 @@ switch($action){
         break;
 
     case 'modifyUserRank':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
         require 'auth_fragments/modifyUserRank_auth.php';
         require 'auth_fragments/modifyUserRank_checks.php';
@@ -255,7 +254,7 @@ switch($action){
         break;
 
     case 'setActions':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
         require 'auth_fragments/set_auth.php';
         require 'auth_fragments/set_checks.php';
@@ -264,7 +263,7 @@ switch($action){
         break;
 
     case 'deleteActions':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
         require 'auth_fragments/delete_auth.php';
         require 'auth_fragments/delete_checks.php';
@@ -290,7 +289,7 @@ switch($action){
 
 
     case 'setGroups':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
         require 'auth_fragments/set_auth.php';
         require 'auth_fragments/set_checks.php';
@@ -300,7 +299,7 @@ switch($action){
 
 
     case 'deleteGroups':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
         require 'auth_fragments/delete_auth.php';
         require 'auth_fragments/delete_checks.php';
@@ -310,7 +309,7 @@ switch($action){
 
 
     case 'modifyUserActions':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
         require 'auth_fragments/modify_auth.php';
         require 'auth_fragments/modify_checks.php';
@@ -320,7 +319,7 @@ switch($action){
 
 
     case 'modifyUserGroups':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
         require 'auth_fragments/modify_auth.php';
         require 'auth_fragments/modify_checks.php';
@@ -329,7 +328,7 @@ switch($action){
         break;
 
     case 'modifyGroupActions':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
         require 'auth_fragments/modify_auth.php';
         require 'auth_fragments/modify_checks.php';
@@ -340,7 +339,5 @@ switch($action){
     default:
         exit('Specified action is not recognized');
 }
-
-?>
 
 

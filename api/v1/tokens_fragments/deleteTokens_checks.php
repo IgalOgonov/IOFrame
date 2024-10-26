@@ -1,7 +1,7 @@
 <?php
 
 if($inputs['tokens'] !== null){
-    if(!\IOFrame\Util\is_json($inputs['tokens'])){
+    if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs['tokens'])){
         if($test)
             echo 'tokens must be a valid JSON!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);

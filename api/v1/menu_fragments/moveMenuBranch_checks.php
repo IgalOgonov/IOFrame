@@ -45,7 +45,7 @@ $addresses = ['sourceAddress','targetAddress'];
 
 foreach($addresses as $addressParam){
 
-    if(!\IOFrame\Util\is_json($inputs[$addressParam])){
+    if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs[$addressParam])){
         if($test)
             echo $addressParam.' must be a valid json!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);

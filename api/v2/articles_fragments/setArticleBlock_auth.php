@@ -1,6 +1,6 @@
 <?php
 //If we are passing potentially unsafe inputs, we need to perform special checks
-if($inputs['safe']){
+if($inputs['safe'] ?? false){
     $authCheck = checkAuth([
         'test'=>$test,
         'authRequired' => REQUIRED_AUTH_ADMIN,
@@ -16,7 +16,9 @@ if($inputs['safe']){
     if($authCheck === false){
         if($test)
             echo 'Authentication failed!'.EOL;
-        die(AUTHENTICATION_FAILURE);
+        die(json_encode([
+            'error'=>AUTHENTICATION_FAILURE
+        ]));
     }
 }
 
@@ -34,10 +36,5 @@ $authCheck = checkAuth([
 ]);
 
 if($authCheck === false || (gettype($authCheck) === 'array' && !empty($authCheck))){
-    if($test)
-        echo 'Authentication failed!'.EOL;
-    die(json_encode([
-        'error'=>'Authentication',
-        'message'=>'Authentication failed for article!'
-    ]));
+    \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON(['error'=>AUTHENTICATION_FAILURE,'message'=>'Authentication failed'],!$test);
 }

@@ -1,0 +1,16 @@
+{
+	"dynamicJobProperties":{
+		"sleepy_1":{
+			"_url":"cli/cron-management/examples/sleepy_job.php",
+			"maxParallel":2,
+			"sleepy":{
+				"sleep":5,
+				"iterations":6,
+				"errors":{
+					"example-error-1":"error-value-1",
+					"example-error-2":"error-value-2"
+				}
+			}
+		}
+	}
+}

@@ -12,10 +12,9 @@ if(!$test){
 
     $url = $settings->getSetting('absPathToRoot').'plugins/'.$name.'/';   //Plugin folder
     $depUrl = $settings->getSetting('absPathToRoot').'localFiles/pluginDependencyMap/';
-    $LockHandler = new IOFrame\Handlers\LockHandler($url);
-    $FileHandler = new IOFrame\Handlers\FileHandler();
-    $SQLHandler = new IOFrame\Handlers\SQLHandler($settings);
-    $plugList = new IOFrame\Handlers\SettingsHandler($settings->getSetting('absPathToRoot').'localFiles/plugins/');
+    $LockManager = new \IOFrame\Managers\LockManager($url);
+    $SQLManager = new \IOFrame\Managers\SQLManager($settings);
+    $plugList = new \IOFrame\Handlers\SettingsHandler($settings->getSetting('absPathToRoot').'localFiles/plugins/');
     $plugName = $PluginHandler->getInfo(['name'=>$name])[0];
     //-------Check if the plugin is absent - or if override is false while the plugin isn't listed installed.
     $goOn = ($plugName['status'] != 'absent');
@@ -45,14 +44,14 @@ if(!$test){
         unset($_SESSION['testSetting']);
 
         //Create a PDO connection
-        $sqlSettings = new IOFrame\Handlers\SettingsHandler($settings->getSetting('absPathToRoot').SETTINGS_DIR_FROM_ROOT.'/sqlSettings/');
-        $conn = IOFrame\Util\prepareCon($sqlSettings);
+        $sqlSettings = new \IOFrame\Handlers\SettingsHandler($settings->getSetting('absPathToRoot').\IOFrame\Handlers\SettingsHandler::SETTINGS_DIR_FROM_ROOT.'/sqlSettings/');
+        $conn = \IOFrame\Util\FrameworkUtilFunctions::prepareCon($sqlSettings);
         // set the PDO error mode to exception
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         // INITIALIZE CORE VALUES TABLE
         /* Literally just the pivot time for now. */
-        $makeTB = $conn->prepare("DROP TABLE ".$SQLHandler->getSQLPrefix()."TEST_TABLE CASCADE;");
+        $makeTB = $conn->prepare("DROP TABLE ".$SQLManager->getSQLPrefix()."TEST_TABLE CASCADE;");
         $makeTB->execute();
     }
     catch(Exception $e){
@@ -67,11 +66,11 @@ if(!$test){
         ['verify'=>false,'backUp'=>true,'local'=>false,'test'=>$test]
     );
     //-------Remove dependencies
-    $dep = json_decode($FileHandler->readFileWaitMutex($url,'dependencies.json',[]),true);
+    $dep = json_decode(\IOFrame\Util\FileSystemFunctions::readFileWaitMutex($url,'dependencies.json'),true);
     if($dep != '')
         foreach($dep as $pName=>$ver){
             if(file_exists($depUrl.$pName.'/settings')){
-                $depHandler = new IOFrame\Handlers\SettingsHandler($depUrl.$pName.'/');
+                $depHandler = new \IOFrame\Handlers\SettingsHandler($depUrl.$pName.'/');
                 $depHandler->setSetting($name,null);
                 echo 'Removing '.$name.' from dependency tree of '.$pName.EOL;
             }
@@ -86,10 +85,10 @@ if(!$test){
         try{
             $gDefUrl = $settings->getSetting('absPathToRoot').'localFiles/definitions/';
             //Read definition files - and remove the matching ones
-            $defFile = $FileHandler->readFileWaitMutex($url,'definitions.json',['LockHandler' => $LockHandler]);
+            $defFile = \IOFrame\Util\FileSystemFunctions::readFileWaitMutex($url,'definitions.json',['LockManager' => $LockManager]);
             if($defFile != null){       //If the file is empty, don't bother doing work
                 $defArr = json_decode($defFile,true);
-                $gDefFile = $FileHandler->readFileWaitMutex($gDefUrl,'definitions.json',['LockHandler' => $LockHandler]);
+                $gDefFile = \IOFrame\Util\FileSystemFunctions::readFileWaitMutex($gDefUrl,'definitions.json',['LockManager' => $LockManager]);
                 $gDefArr = json_decode($gDefFile,true);
                 foreach($defArr as $def=>$val){
                     if(isset($gDefArr[$def]))
@@ -98,9 +97,9 @@ if(!$test){
                         }
                 }
                 //Write to global definition file after backing it up
-                $defLock = new IOFrame\Handlers\LockHandler($gDefUrl);
+                $defLock = new \IOFrame\Managers\LockManager($gDefUrl);
                 $defLock->makeMutex();
-                $FileHandler->backupFile($gDefUrl,'definitions.json');
+                \IOFrame\Util\FileSystemFunctions::backupFile($gDefUrl,'definitions.json');
                 $gDefFile = fopen($gDefUrl.'definitions.json', "w+") or die("Unable to open definitions file!");
                 fwrite($gDefFile,json_encode($gDefArr));
                 fclose($gDefFile);
@@ -108,7 +107,7 @@ if(!$test){
                 echo 'Definitions removed from system definitions: '.$defFile.EOL;
             }
         }
-        catch (Exception $e){
+        catch (\Exception $e){
             echo 'Exception during definition removal plugin '.$name.': '.$e.EOL;
             return 5;
         }
@@ -138,5 +137,3 @@ else{
 
 
 
-
-?>

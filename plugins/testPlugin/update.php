@@ -1,7 +1,7 @@
 <?php
 /*This example update will expand test's include file to initiate another session variable -
   one that contains the current version*/
-$existingInclude = $this->FileHandler->readFileWaitMutex($url,'include.php',[]);
+$existingInclude = \IOFrame\Util\FileSystemFunctions::readFileWaitMutex($url,'include.php');
 if(!$existingInclude)
     throw new \Exception("Failed to read existing include!");
 if($verbose)
@@ -20,7 +20,5 @@ if($verbose)
     echo 'New include is '.htmlspecialchars($existingInclude).EOL;
 
 if(!$test)
-    if(!$this->FileHandler->writeFileWaitMutex($url,'include.php',$existingInclude,$params))
+    if(!\IOFrame\Util\FileSystemFunctions::writeFileWaitMutex($url,'include.php',$existingInclude,$params))
         throw new \Exception("Failed to write new include!");
-
-?>

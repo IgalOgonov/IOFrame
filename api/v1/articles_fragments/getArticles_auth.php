@@ -5,7 +5,7 @@ if($requiredAuth !== REQUIRED_AUTH_NONE){
     //Convert keys
     $authKeys = [];
     foreach($inputs['keys'] as $key)
-        array_push($authKeys,['Article_ID'=>$key]);
+        $authKeys[] = ['Article_ID' => $key];
     $authCheck = checkAuth([
         'test'=>$test,
         'authRequired' => $requiredAuth,

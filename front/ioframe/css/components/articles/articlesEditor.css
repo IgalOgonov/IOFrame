@@ -8,7 +8,6 @@
 /*Types*/
 .articles-editor > .wrapper > .types{
     display: flex;
-    background: var(--secondary);
 }
 .articles-editor > .wrapper > .types > button{
     padding: 5px 10px;
@@ -46,7 +45,6 @@
 .articles-editor form > div{
     padding: 5px 20px 5px 10px;
     margin: 5px 0px;
-    border-radius: 5px;
     transition: 0.2s ease-in-out;
 }
 .articles-editor form >div.changed{
@@ -78,6 +76,10 @@
     content: ' *';
     color: var(--button-negative-color-2);
 }
+/*Generic Image*/
+.articles-editor form.article-info-editor .image-generic{
+    opacity: 0.5;
+}
 
 /*Static stuff*/
 .articles-editor form.article-info-editor > div.static {
@@ -94,6 +96,40 @@
 }
 .articles-editor form.article-info-editor > div.static > .item-param:hover {
     background: var(--shadow-dark-2);
+}
+
+/*Tags*/
+.articles-editor form.article-info-editor .tags{
+    flex-direction: revert;
+    flex-wrap: wrap;
+}
+.articles-editor form.article-info-editor .tags > .tag{
+    background: var(--main-color-5-3);
+    border: 1px solid var(--main-color-9);
+    margin: 5px;
+    padding: 3px;
+}
+.articles-editor form.article-info-editor .tags > .tag > button {
+    border: 1px solid var(--button-dangerous-3-color-1);
+    color: var(--button-dangerous-2-color-2);
+    padding: 3px 5px;
+}
+.articles-editor form.article-info-editor .tags > .tag.removed > button,
+.articles-editor form.article-info-editor .tags > .tag.new > button {
+    border: 1px solid var(--button-positive-2-border-1);
+    color: var(--button-positive-color-1);
+}
+.articles-editor form.article-info-editor .tags > .buttons{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    width: 100%;
+}
+.articles-editor form.article-info-editor .tags > .buttons > button{
+    padding: 3px 5px;
+    margin: 0px 5px;
+    height: 30px;
 }
 
 /*Control buttons*/
@@ -115,13 +151,11 @@
     right: 125px;
     width: calc(100vw - 250px);
     box-shadow: 0px 0px 6px var(--dark-1);
-    border-radius: 5px;
 }
 
 .articles-editor .media-selector-container > .control-buttons {
     background: rgb(236, 251, 255);
     text-align: end;
-    border-radius: 5px 5px 0px 0px;
 }
 .articles-editor .media-selector-container > .control-buttons img{
     cursor: pointer;
@@ -134,7 +168,6 @@
     background: var(--main-color-3);
     border: 1px var(--main-color-5) solid;
     border-top: none;
-    border-radius: 0px 0px 5px 5px;
     overflow-y: auto;
     max-width: 90vw;
     max-height: 85vh;
@@ -153,7 +186,7 @@
     padding: 5px;
     margin: 5px;
     min-height: 40px;
-    background: var(--secondary-color-1);
+    background: var(--main-color-2);
 }
 .articles-editor .main-article .block-controls button{
     display: flex;
@@ -163,8 +196,7 @@
 .articles-editor .main-article.passed-controls .block-controls.detach{
     position: fixed;
     top: 6px;
-    border: 1px var(--secondary-color-5) solid;
-    border-radius: 5px;
+    border: 1px var(--main-color-3) solid;
     z-index: 10;
 }
 .articles-editor .main-article:not(.passed-controls) .block-controls.placeholder{
@@ -184,7 +216,6 @@
     position: fixed;
     right: 20px;
     bottom: 20px;
-    border-radius: 5px;
     z-index: 10;
     transform: rotate3d(0,1,0,0deg);
     transition: transform 0.5s ease-in-out;
@@ -235,7 +266,6 @@
 /* Non existent blocks */
 .articles-editor  .article-block.non-existent {
     background: var(--soft-red-1);
-    border-radius: 5px;
     padding: 5px;
     margin: 10px 0px;
 }

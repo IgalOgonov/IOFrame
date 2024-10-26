@@ -1,0 +1,7 @@
+{
+	"dynamicJobProperties":{
+		"default_mailing_queue":{
+			"active":1
+		}
+	}
+}

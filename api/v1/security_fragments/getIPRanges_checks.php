@@ -1,7 +1,7 @@
 <?php
 
 if($inputs['ranges'] !== null){
-    if(!\IOFrame\Util\is_json($inputs['ranges'])){
+    if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs['ranges'])){
         if($test)
             echo 'ranges must be a valid JSON!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);

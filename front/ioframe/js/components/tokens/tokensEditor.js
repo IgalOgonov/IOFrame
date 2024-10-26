@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('tokens-editor', {
     mixins: [sourceURL,eventHubManager,IOFrameCommons],
     props: {
@@ -115,10 +112,7 @@ Vue.component('tokens-editor', {
                     onUpdate:{
                         setName:'token',
                         validate: function(value){
-                            if(this.mode === 'update')
-                                return true;
-                            else
-                                return value.match(/^[\w][\w ]{0,255}$/);
+                            return value.match(/^[\w][\w ]{0,255}$/);
                         },
                         validateFailureMessage: 'Token must match ^[\\w][\\w ]{0,255}$'
                     }
@@ -211,7 +205,7 @@ Vue.component('tokens-editor', {
                 }
             },
             //Whether the item is up to date
-            upToDate: this.mode == 'create',
+            upToDate: this.mode === 'create',
            //Whether we are currently initiating the item
            initiating: false,
            //Whether we are currently updating the item
@@ -438,7 +432,7 @@ Vue.component('tokens-editor', {
                      alertLog('Server error!','error',this.$el);
                      break;
                  case 0:
-                     alertLog('Item updated!','success',this.$el);
+                     alertLog('Item updated!','success',this.$el,{autoDismiss:2000});
                      if(this.mode === 'update')
                          this.setInputsAsCurrent();
                      else
@@ -447,7 +441,6 @@ Vue.component('tokens-editor', {
                      break;
                  case 1:
                      alertLog('Token already exists!','warning',this.$el);
-                     break;
                      break;
                  case 2:
                      alertLog('Token doesn\'t exist anymore!','warning',this.$el);

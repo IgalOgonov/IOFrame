@@ -1,8 +1,5 @@
 <?php
 
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
-
 //Input checks
 if($params == null && ($action === 'getUsersWithActions' || $action === 'getGroupActions') ){
     if($test)
@@ -46,7 +43,7 @@ foreach($expectedParams as $expectedParam){
                             }
                         }
                         else{
-                            if(!\IOFrame\Util\validator::validateSQLKey($pair[1])){
+                            if(!\IOFrame\Util\ValidatorFunctions::validateSQLKey($pair[1])){
                                 if($test)
                                     echo 'Action/Group names must be 1 to 256 characters!'.EOL;
                                 exit(INPUT_VALIDATION_FAILURE);
@@ -70,7 +67,7 @@ foreach($expectedParams as $expectedParam){
                         }
                         else{
                             foreach($pair[1] as $target){
-                                if(!\IOFrame\Util\validator::validateSQLKey($target)){
+                                if(!\IOFrame\Util\ValidatorFunctions::validateSQLKey($target)){
                                     if($test)
                                         echo 'Action/Group names must a 1 to 256 characters string!'.EOL;
                                     exit(INPUT_VALIDATION_FAILURE);
@@ -116,23 +113,13 @@ foreach($expectedParams as $expectedParam){
                 }
                 break;
             case 'orderByExp':
-                switch($action){
-                    case 'getUsers':
-                        $allowedExpressions = ['ID'];
-                        break;
-                    case 'getGroups':
-                        $allowedExpressions = ['Auth_Group'];
-                        break;
-                    case 'getUsersWithActions':
-                        $allowedExpressions = ['ID','Auth_Group','Auth_Action'];
-                        break;
-                    case 'getGroupActions':
-                        $allowedExpressions = ['Auth_Group','Auth_Action'];
-                        break;
-                    default:
-                        $allowedExpressions = [];
-
-                }
+                $allowedExpressions = match ($action) {
+                    'getUsers' => ['ID'],
+                    'getGroups' => ['Auth_Group'],
+                    'getUsersWithActions' => ['ID', 'Auth_Group', 'Auth_Action'],
+                    'getGroupActions' => ['Auth_Group', 'Auth_Action'],
+                    default => [],
+                };
                 if(!in_array($params[$expectedParam],$allowedExpressions)){
                     if($test)
                         echo 'Currently, only allowed custom order expressions are '.json_encode($allowedExpressions).'!'.EOL;

@@ -213,8 +213,8 @@
  *          0 - All is well
  * */
 
-if(!defined('coreInit'))
-    require __DIR__ . '/../../main/coreInit.php';
+if(!defined('IOFrameMainCoreInit'))
+    require __DIR__ . '/../../main/core_init.php';
 
 require __DIR__ . '/../apiSettingsChecks.php';
 require __DIR__ . '/../defaultInputChecks.php';
@@ -230,7 +230,7 @@ $action = $_REQUEST["action"];
 if($test)
     echo 'Testing mode!'.EOL;
 
-if(!checkApiEnabled('orders',$apiSettings,$_REQUEST['action']))
+if(!checkApiEnabled('orders',$apiSettings,$SecurityHandler,$_REQUEST['action']))
     exit(API_DISABLED);
 
 //Handle inputs
@@ -247,7 +247,7 @@ $PurchaseOrderHandler = new \IOFrame\Handlers\PurchaseOrderHandler(
 );
 
 //We also get the session details for that very reason
-$loggedIn = isset($_SESSION['logged_in'])? $_SESSION['logged_in'] : false;
+$loggedIn = $_SESSION['logged_in'] ?? false;
 //There is not a single action here you may perform if you are not logged in
 if(!$loggedIn){
     if($test)
@@ -291,12 +291,12 @@ switch($action){
 
     case 'createOrder':
     case 'updateOrder':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["orderInfo","orderType","orderStatus"];
         if($action === 'updateOrder')
-            array_push($arrExpected,'id');
+            $arrExpected[] = 'id';
 
         require __DIR__ . '/../setExpectedInputs.php';
         require 'orders_fragments/setOrder_auth_checks.php';
@@ -308,7 +308,7 @@ switch($action){
         break;
 
     case 'archiveOrders':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = array_merge(["ids","typeIs","statusIs","returnIDMeta"],$standardPaginationInputs);
@@ -336,7 +336,7 @@ switch($action){
 
     case 'assignUserToOrder':
     case 'updateOrderUserAssignment':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["userID","orderID","relationType","meta"];
@@ -351,7 +351,7 @@ switch($action){
         break;
 
     case 'removeUserFromOrder':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["userID","orderID"];
@@ -368,5 +368,3 @@ switch($action){
     default:
         exit('Specified action is not recognized');
 }
-
-?>

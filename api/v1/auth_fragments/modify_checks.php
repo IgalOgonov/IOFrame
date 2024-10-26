@@ -1,7 +1,6 @@
 <?php
 
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 
 if($params == null){
     if($test)
@@ -29,7 +28,7 @@ if($expectedTarget == 'id'){
     }
 }
 else{
-    if(!\IOFrame\Util\validator::validateSQLKey($params[$expectedTarget])){
+    if(!\IOFrame\Util\ValidatorFunctions::validateSQLKey($params[$expectedTarget])){
         if($test)
             echo 'Group must be a string of 1 to 256 characters!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);
@@ -53,7 +52,7 @@ foreach($params[$expectedParam] as $name => $assignment){
     if($assignment == '0' || strtolower($assignment) == 'false')
         $params[$expectedParam][$name] = false;
 
-    if(!\IOFrame\Util\validator::validateSQLKey($name)){
+    if(!\IOFrame\Util\ValidatorFunctions::validateSQLKey($name)){
         if($test)
             echo 'Each member of '.$expectedParam.' must be a string of 1 to 256 characters!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);

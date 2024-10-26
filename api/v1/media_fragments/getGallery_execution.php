@@ -1,10 +1,9 @@
 <?php
-if(!defined('FrontEndResourceHandler'))
-    require __DIR__ . '/../../../IOFrame/Handlers/FrontEndResourceHandler.php';
 
-$FrontEndResourceHandler = new IOFrame\Handlers\FrontEndResourceHandler($settings,$defaultSettingsParams);
 
-$result = $FrontEndResourceHandler->getFrontendResourceCollections(
+$FrontEndResources = new \IOFrame\Handlers\Extenders\FrontEndResources($settings,$defaultSettingsParams);
+
+$result = $FrontEndResources->getFrontendResourceCollections(
     [$inputs['gallery']],
     ($action === 'getGallery' ? 'img':'vid'),
     ['test'=>$test,'includeGalleryInfo'=>true]
@@ -22,13 +21,13 @@ foreach($result as $resultName => $infoArray){
         $parsedResults['@']['lastChanged'] = $infoArray['Last_Updated'];
         //Handle meta
         $meta = $infoArray['Meta'];
-        if(\IOFrame\Util\is_json($meta)){
+        if(\IOFrame\Util\PureUtilFunctions::is_json($meta)){
             $meta = json_decode($meta,true);
 
             $expected = ['name'];
 
             foreach($languages as $lang){
-                array_push($expected,$lang.'_name');
+                $expected[] = $lang . '_name';
             }
 
             foreach($expected as $attr){
@@ -46,16 +45,16 @@ foreach($result as $resultName => $infoArray){
         //Handle meta
         $meta = $parsedResults[$resultName]['meta'];
         unset($parsedResults[$resultName]['meta']);
-        if(\IOFrame\Util\is_json($meta)){
+        if(\IOFrame\Util\PureUtilFunctions::is_json($meta)){
             $meta = json_decode($meta,true);
             $expected = ['name','caption','size'];
             if($action === 'getGallery')
-                array_push($expected,'alt');
+                $expected[] = 'alt';
             else
                 array_push($expected,'autoplay','loop','mute','controls','poster','preload');
             foreach($languages as $lang){
-                array_push($expected,$lang.'_name');
-                array_push($expected,$lang.'_caption');
+                $expected[] = $lang . '_name';
+                $expected[] = $lang . '_caption';
             }
             foreach($expected as $attr){
                 if(isset($meta[$attr]))

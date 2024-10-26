@@ -7,4 +7,3 @@ if(!$test){
 else{
     echo 'quickUninstall activates here!'.EOL;
 }
-?>

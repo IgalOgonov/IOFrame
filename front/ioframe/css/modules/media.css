@@ -79,8 +79,21 @@
     background: var(--shadow-dark-1);
 }
 .image-uploader .image-container > img,
-.image-editor .image-container > img{
+.image-editor .image-container > img,
+.image-uploader .image-container > video,
+.image-editor .image-container > video{
     max-width: 100%;
+}
+.image-uploader .image-container{
+    cursor: pointer;
+}
+.image-uploader .image-container > img.upload-preview{
+    width: 100px;
+    height: 100px;
+}
+.image-uploader .image-container > img.upload-preview{
+    width: 100px;
+    height: 100px;
 }
 
 /*Link container*/

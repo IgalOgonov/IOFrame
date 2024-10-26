@@ -1,8 +1,6 @@
 <?php
-if(!defined('ResourceHandler'))
-    require __DIR__ . '/../../../IOFrame/Handlers/ResourceHandler.php';
 
-$ResourceHandler = new IOFrame\Handlers\ResourceHandler($settings,$defaultSettingsParams);
+$ResourceHandler = new \IOFrame\Handlers\ResourceHandler($settings,$defaultSettingsParams);
 
 
 $img = $ResourceHandler->getResources(
@@ -45,7 +43,7 @@ if(
 
 
     $meta = $img[$inputs['address']]['Text_Content'];
-    if(\IOFrame\Util\is_json($meta)){
+    if(\IOFrame\Util\PureUtilFunctions::is_json($meta)){
         if(isset($meta['size']))
             header("Content-Length: " . $meta['size']);
     }

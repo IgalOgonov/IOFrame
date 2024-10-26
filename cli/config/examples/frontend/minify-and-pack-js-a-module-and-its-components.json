@@ -1,0 +1,11 @@
+{
+	"minificationType":"js",
+	"minificationTargets":["components/articles","modules/articles.js"],
+	"minificationProperties":{
+		"minifyToFolder":"min",
+		"minifyName":"articlesPackage"
+	},
+	"minificationIncludeOptions":{
+		"subFolders":true
+	}
+}

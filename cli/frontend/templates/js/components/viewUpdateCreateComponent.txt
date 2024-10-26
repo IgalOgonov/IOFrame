@@ -20,6 +20,12 @@ Vue.component('%%COMPONENT_NAME%%', {
             type: String,
             default: ''
         },%%
+        passedCommonText: {
+            type: Object,
+            default: function(){
+                return {};
+            }
+        },
         //App Identifier
         identifier: {
             type: String,
@@ -39,10 +45,26 @@ Vue.component('%%COMPONENT_NAME%%', {
     data: function(){
         return {
             configObject: JSON.parse(JSON.stringify(document.siteConfig)),
+            commonText: {
+                'operation-create-identifier':'Identifier',
+                'operation-confirm':'Confirm',
+                'operation-cancel':'Cancel',
+                'create-missing-input-identifier':'Item must have an identifier',
+                'create-invalid-input-requires-regex':'must match regex',
+                'response-unknown':'Unknown response',
+                'response-db-connection-error':'Server internal connection error',
+                'response-update-dependency':'Dependency no longer exists',
+                'response-update-does-exist':'Item already exists',
+                'response-update-does-not-exist':'Item no longer exists',
+                'response-update-success':'Item updated',
+                'response-creation-success':'Item created',
+                'info-created':'Created',
+                'info-updated':'Updated'
+            },
             //Main item focused on in this component
             mainItem:{
             },
-            //Sometimes, you need to manially recompute Vue computed properties
+            //Sometimes, you need to mainally recompute Vue computed properties
             recompute:{
                 changed:false,
                 paramMap: false
@@ -121,6 +143,46 @@ Vue.component('%%COMPONENT_NAME%%', {
                  }
                  * */
             },
+            //Event Parsing Map
+            eventParsingMap: {
+                //Fully filled as an example
+                'handleItemCreate':{
+                    identifierFrom:this.identifier,
+                    apiResponses:true,
+                    alertErrors:true,
+                    valid:{
+                        type: 'number',
+                        value: 0
+                    },
+                    errorMap:{
+                        '-1':{
+                            text:'Server error!',
+                            warningType: 'error',
+                        },
+                        '1':{
+                            text:'Item already exists',
+                            warningType: 'error',
+                        },
+                    }
+                },
+                'handleItemUpdate':{
+                    apiResponses:true,
+                    alertErrors:true,
+                    valid:{
+                        type: 'number',
+                        value: 0
+                    },
+                    errorMap:{
+                        '-1':{
+                            text:'Server error!',
+                        },
+                        '2':{
+                            text:'Item no longer exists',
+                            warningType: 'error',
+                        },
+                    }
+                }
+            },
             //Whether the item is up to date
             upToDate: this.mode == 'create',
            //Whether we are currently initiating the item
@@ -130,13 +192,15 @@ Vue.component('%%COMPONENT_NAME%%', {
         }
     },
     created:function(){
-      //Register eventhub
-      this.registerHub(eventHub);
-      //Register events
-      this.registerEvent('setResponse' ,this.handleItemSet);
-      %%IF(PASS_ID)if(this.mode==='update')
+        //Register eventhub
+        this.registerHub(eventHub);
+        //Register events
+        this.registerEvent('setResponse' ,this.handleItemSet);
+        this.updateText();
+        this.updateParamMap();
+        %%IF(PASS_ID)if(this.mode==='update')
           this.getItemInfo();%%
-      %%IF(PASS_ITEM)this.setMainItem(this.item); %%
+        %%IF(PASS_ITEM)this.setMainItem(this.item); %%
     },
     mounted:function(){
     },
@@ -164,6 +228,23 @@ Vue.component('%%COMPONENT_NAME%%', {
         },
     },
     methods:{
+        updateText: function (){
+            for (let i in this.passedCommonText){
+                replaceInObjectIfNewValueExists(this.commonText,i,this.passedCommonText[i]);
+            }
+            for (let event in this.eventParsingMap){
+                for (let error in this.eventParsingMap[event]){
+                    const ErrTextMap = {
+                        '-1':this.commonText['response-db-connection-error'],
+                        '1':this.commonText['response-update-does-exist'],
+                        '2':this.commonText['response-update-does-not-exist'],
+                    };
+                    if(ErrTextMap[error]){
+                        replaceInObjectIfNewValueExists(this.eventParsingMap[event][error],'text',ErrTextMap[error]);
+                    }
+                }
+            }
+        },
         //Sets main item
         setMainItem(item){
 
@@ -355,64 +436,31 @@ Vue.component('%%COMPONENT_NAME%%', {
         },
         //Handles item  update
         handleItemSet: function(response){
+            let creation = this.mode === 'create';
 
-            if(this.verbose)
-                console.log('Received handleItemSet',response);
+            let eventResult = this.eventResponseParser(response,creation?'handleItemCreate':'handleItemUpdate',2);
 
-            if(this.identifier && (response.from !== this.identifier))
+            if(!eventResult)
                 return;
 
             this.updating = false;
 
-            if(response.from)
-                response = response.content;
-
-            if (response === 'AUTHENTICATION_FAILURE') {
-                alertLog('Not authorized to '+(this.mode === 'create'? '%%API_CREATE_ACTION%%': '%%API_UPDATE_ACTION%%')+'! Check to see if you are logged in.','error',this.$el);
-                return;
+            if(eventResult.valid){
+                if(creation){//TODO add relevant
+                    //this.resetAllMainItems(); TODO Uncomment if relevant
+                    //eventHub.$emit('searchAgain'); TODO Uncomment if relevant
+                }
+                else{//TODO add relevant
+                    alertLog(
+                        creation? this.commonText['response-creation-success'] :  this.commonText['response-update-success'],
+                        'success',
+                        this.$el,
+                        {autoDismiss:2000}
+                    );
+                    this.updateMainItem();
+                    //eventHub.$emit('searchAgain'); TODO Uncomment if relevant
+                }
             }
-
-            /* Multi-stage response
-
-                let goOn = false;
-
-                if(typeof response === 'object')
-                    goOn = true;
-                else
-                    alertLog('Illegal '+(this.mode === 'create'? '%%API_CREATE_ACTION%%': '%%API_UPDATE_ACTION%%')+' response!','error',this.$el);
-
-                if(!goOn)
-                    return;
-                else
-                    goOn = false;
-
-                switch (response.) { //TODO Add response stage
-                    case -1:
-                        alertLog('Server error!','error',this.$el);
-                        break;
-                    default:
-                        goOn = true;
-                        break;
-                }
-
-             */
-
-            /* Single-stage response
-
-                 switch (response) {
-                    case -1:
-                        alertLog('Server error!','error',this.$el);
-                        break;
-                    case 0:
-                        alertLog('Item updated!','success',this.$el);
-                        break;
-                    default:
-                        alertLog('Unknown '+(this.mode === 'create'? '%%API_CREATE_ACTION%%': '%%API_UPDATE_ACTION%%')+' response '+response,'error',this.$el);
-                        break;
-                }
-
-             */
-
         },
         %%IF(PASS_ID)//Handles the response to the get request
         handleItemGet: function(response){
@@ -458,7 +506,7 @@ Vue.component('%%COMPONENT_NAME%%', {
     watch: {
     },
     template: `
-    <div class="%%COMPONENT_NAME%%">
+    <div class="%%COMPONENT_NAME%%" :class="{initiating:initiating,initiated:initiated,updating:updating}>
         <div class="wrapper">
 
             <div class="info message-info-2" v-if="this.itemHasInfo">
@@ -516,7 +564,7 @@ Vue.component('%%COMPONENT_NAME%%', {
                     v-model:value="item.current"
                     @change="item.current = paramMap[key].parseOnChange($event.target.value);recompute.changed = ! recompute.changed"
                     >
-                       <option v-for="item in paramMap[key].list" :value="item.value" v-text="item.title? item.title: item.value"></option>
+                        <option v-for="(title,value) in paramMap[key].list" :value="value" v-text="title"></option>
                     </select>
 
                 </div>

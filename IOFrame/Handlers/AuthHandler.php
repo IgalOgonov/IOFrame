@@ -1,60 +1,56 @@
 <?php
 namespace IOFrame\Handlers{
-    use IOFrame;
-    define('AuthHandler',true);
-    if(!defined('abstractDBWithCache'))
-        require 'abstractDBWithCache.php';
+    define('IOFrameHandlersAuthHandler',true);
 
     /**Handles user authorization (not authentication!) in IOFrame
      * @author Igal Ogonov <igal1333@hotmail.com>
-     * @license LGPL
      * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
      */
-    class AuthHandler extends IOFrame\abstractDBWithCache{
+    class AuthHandler extends \IOFrame\Abstract\DBWithCache{
 
         /** @var bool $loggedIn Whether the user is logged in or not
          * */
-        protected $loggedIn=false;
+        protected bool $loggedIn=false;
 
         /** @var int $rank User rank
          * */
-        protected $rank=10000;
+        protected int $rank=10000;
 
         /** @var string[] $actions User actions
          * */
-        protected $actions=[];
+        protected array $actions=[];
 
         /** @var array $groups Groups belonging to a user.
          *              An array of the form "groupName" => <Array of Actions> (if groups are initiated)
          * */
-        protected $groups=[];
+        protected array $groups=[];
 
         /** @var string[] $details User Details array
          * */
-        protected $details=[];
+        protected array $details=[];
 
         /** @var bool $useCache Specifies whether we should be using cache
          */
-        protected $useCache = false;
+        protected mixed $useCache = false;
 
         /** @var int $lastUpdated When the user information we got was last updated.
          */
-        protected $lastUpdatedUser = 0;
+        protected int $lastUpdatedUser = 0;
 
         /** @var array $lastUpdatedGroups When the group information we got was last updated. Of the form:
          *                                  "groupName" => last update time
          */
-        protected $lastUpdatedGroups = [];
+        protected array $lastUpdatedGroups = [];
 
         /** @var bool $userInitiated Whether the user was initiated with all his groups/actions from the DB/Cache
          * */
-        protected $userInitiated=false;
+        protected bool $userInitiated=false;
 
-        protected $userLastUpdatedCachePrefix = '_auth_userLastUpdated_';
-        protected $userActionsCachePrefix = '_auth_userActions_';
-        protected $userGroupsCachePrefix = '_auth_userGroups_';
-        protected $groupLastUpdatedCachePrefix = '_auth_groupLastUpdated_';
-        protected $groupActionsCachePrefix = '_auth_groupActions_';
+        protected string $userLastUpdatedCachePrefix = '_auth_userLastUpdated_';
+        protected string $userActionsCachePrefix = '_auth_userActions_';
+        protected string $userGroupsCachePrefix = '_auth_userGroups_';
+        protected string $groupLastUpdatedCachePrefix = '_auth_groupLastUpdated_';
+        protected string $groupActionsCachePrefix = '_auth_groupActions_';
 
         /**
          * Basic construction function
@@ -63,12 +59,11 @@ namespace IOFrame\Handlers{
          *                      'initiateUser' => Boolean, whether to initiate actions/groups from the start
          *                                          (default false, actions are initiated only on request)
          */
-        function __construct(SettingsHandler $settings, $params = []){
+        function __construct(\IOFrame\Handlers\SettingsHandler $settings, $params = []){
 
-            parent::__construct($settings,$params);
+            parent::__construct($settings,array_merge($params,['logChannel'=>\IOFrame\Definitions::LOG_GENERAL_SECURITY_CHANNEL]));
 
-            $this->useCache = isset($this->defaultSettingsParams['useCache'])?
-                $this->defaultSettingsParams['useCache'] : false;
+            $this->useCache = $this->defaultSettingsParams['useCache'] ?? false;
 
             $this->init($params);
         }
@@ -80,13 +75,9 @@ namespace IOFrame\Handlers{
          * @param array $params of the form:
          *              'initiateUser' - bool, default false - Whether to initiate user actions/groups by default, or only on request
          */
-        function init(array $params)
-        {
+        function init(array $params): void {
 
-            if(isset($params['initiateUser']))
-                $initiateUser = $params['initiateUser'];
-            else
-                $initiateUser = false;
+            $initiateUser = $params['initiateUser'] ?? false;
 
             //This means we logged in, so the rank (and logged in status) must be accurate
             if(isset($_SESSION['logged_in']) && isset($_SESSION['details'])){
@@ -107,7 +98,7 @@ namespace IOFrame\Handlers{
         /** Updates the user actions and groups. First from the cache (if used), then from the DB.
          * @param array $params
          */
-        function updateUserInfoFromDB(array $params = []){
+        function updateUserInfoFromDB(array $params = []): void {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
@@ -188,13 +179,16 @@ namespace IOFrame\Handlers{
          * After that, we update the handler and cache with anything new we found (and remove anything no longer there).
          *
          * This should take care of auto-updating after doing any change, to a group or a user.
-         * //TODO Add cache TTL settings (to siteSettings probably)
          *
          * @param array $params - array of the form
          *                  'userID'=>int, defaults to session ID - user ID to update auth info from
-         * */
-        function updateFromDB(array $params = []){
-            $prefix = $this->SQLHandler->getSQLPrefix();
+         *
+         * @throws \Exception
+         * @throws \Exception
+         * @throws \Exception
+         */
+        function updateFromDB(array $params = []): ?array {
+            $prefix = $this->SQLManager->getSQLPrefix();
             $groupTable = $prefix.'GROUPS_AUTH';
             $userTable = $prefix.'USERS_AUTH';
             $actionTable = $prefix.'ACTIONS_AUTH';
@@ -206,10 +200,7 @@ namespace IOFrame\Handlers{
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
 
-            if(isset($params['userID']))
-                $userID = $params['userID'];
-            else
-                $userID = $this->details['ID'];
+            $userID = $params['userID'] ?? $this->details['ID'];
 
             $updateTime = time();
 
@@ -221,21 +212,21 @@ namespace IOFrame\Handlers{
             $groupsToGetConditions = [];
             if($this->groups != []){
                 foreach($this->groups as $groupName => $actions){
-                    array_push($groupsToIgnoreCond,[$groupName,'STRING']);
-                    array_push($groupsToCheckCond,[$usersGroupsTable.'.Auth_Group',[$groupName,'STRING'],'=']);
+                    $groupsToIgnoreCond[] = [$groupName, 'STRING'];
+                    $groupsToCheckCond[] = [$usersGroupsTable . '.Auth_Group', [$groupName, 'STRING'], '='];
                     $tempCond = [];
-                    array_push($tempCond,[$groupsActionsTable.'.Auth_Group',[$groupName,'STRING'],'=']);
-                    array_push($tempCond,[$groupTable.'.Last_Updated',[(string)$this->lastUpdatedGroups[$groupName],'STRING'],'>=']);
-                    array_push($tempCond,'AND');
-                    array_push($groupsToGetConditions,$tempCond);
+                    $tempCond[] = [$groupsActionsTable . '.Auth_Group', [$groupName, 'STRING'], '='];
+                    $tempCond[] = [$groupTable . '.Last_Updated', [(string)$this->lastUpdatedGroups[$groupName], 'STRING'], '>='];
+                    $tempCond[] = 'AND';
+                    $groupsToGetConditions[] = $tempCond;
                 }
-                array_push($groupsToGetConditions,'OR');
+                $groupsToGetConditions[] = 'OR';
 
                 $groupsToGetConditions = [
                     $groupsToGetConditions,
                     [
                         $groupsActionsTable.'.Auth_Group',
-                        $this->SQLHandler->selectFromTable(
+                        $this->SQLManager->selectFromTable(
                             $usersGroupsTable.' INNER JOIN '.$userTable.' ON '.$userTable.'.ID = '.$usersGroupsTable.'.ID',
                             [
                                 [$userTable.'.ID',$userID,'='],
@@ -253,15 +244,15 @@ namespace IOFrame\Handlers{
                 if($verbose)
                     echo 'Groups found: '.json_encode($groupsToIgnoreCond).EOL;
 
-                array_push($groupsToIgnoreCond,'CSV');
-                array_push($groupsToCheckCond,'OR');
+                $groupsToIgnoreCond[] = 'CSV';
+                $groupsToCheckCond[] = 'OR';
             }
 
             //A.3 query depends on whether there were groups to begin with that need to be ignored.
             $newGroupsCondition = [
                 [
                     $groupsActionsTable.'.Auth_Group',
-                    $this->SQLHandler->selectFromTable(
+                    $this->SQLManager->selectFromTable(
                         $usersGroupsTable.' INNER JOIN '.$userTable.' ON '.$userTable.'.ID = '.$usersGroupsTable.'.ID',
                         [
                             [$usersGroupsTable.'.ID',$userID,'='],
@@ -276,22 +267,22 @@ namespace IOFrame\Handlers{
             ];
             //If there were groups to ignore (aka present in the cache), we must add that condition.
             if($this->groups != [])
-                array_push($newGroupsCondition,[
+                $newGroupsCondition[] = [
                     [
-                        $groupsActionsTable.'.Auth_Group',
+                        $groupsActionsTable . '.Auth_Group',
                         $groupsToIgnoreCond,
                         'IN'
                     ],
                     'NOT'
-                ]);
-            array_push($newGroupsCondition,'AND');
+                ];
+            $newGroupsCondition[] = 'AND';
 
             //The initial parts of the query are A.1 and A.3 (which always checks for new groups either way)
-            $query = $this->SQLHandler->selectFromTable(
+            $query = $this->SQLManager->selectFromTable(
                     $actionTable,
                     [
                         $actionTable.'.Auth_Action',
-                        $this->SQLHandler->selectFromTable(
+                        $this->SQLManager->selectFromTable(
                             $usersActionsTable.' INNER JOIN '.$userTable.' ON '.$userTable.'.ID = '.$usersActionsTable.'.ID',
                             [
                                 [$usersActionsTable.'.ID',$userID,'='],
@@ -304,14 +295,13 @@ namespace IOFrame\Handlers{
                         'IN'
                     ],
                     [$actionTable.'.Auth_Action as actionName, "@" as groupName, TRUE as userHadGroup'],
-                    ['justTheQuery'=>true],
-                    false
+                    ['justTheQuery'=>true]
                 ).' UNION '.
-                $this->SQLHandler->selectFromTable(
+                $this->SQLManager->selectFromTable(
                     $groupsActionsTable.' JOIN '.$actionTable.' ON '.$groupsActionsTable.'.Auth_Action = '.$actionTable.'.Auth_Action',
                     [
                         $actionTable.'.Auth_Action',
-                        $this->SQLHandler->selectFromTable(
+                        $this->SQLManager->selectFromTable(
                             $groupsActionsTable,
                             $newGroupsCondition,
                             [$groupsActionsTable.'.Auth_Action'],
@@ -320,19 +310,18 @@ namespace IOFrame\Handlers{
                         'IN'
                     ],
                     [$actionTable.'.Auth_Action as actionName, '.$groupsActionsTable.'.Auth_Group as groupName, FALSE as userHadGroup'],
-                    ['justTheQuery'=>true],
-                    false
+                    ['justTheQuery'=>true]
                 )
             ;
 
             //The other parts of the query are only relevant if there were groups in the cache
             if($this->groups !=[]){
                 //Check for A.2
-                $query .=' UNION '.$this->SQLHandler->selectFromTable(
+                $query .=' UNION '.$this->SQLManager->selectFromTable(
                         $groupsActionsTable.' JOIN '.$actionTable.' ON '.$groupsActionsTable.'.Auth_Action = '.$actionTable.'.Auth_Action',
                         [
                             $actionTable.'.Auth_Action',
-                            $this->SQLHandler->selectFromTable(
+                            $this->SQLManager->selectFromTable(
                                 $groupsActionsTable.' INNER JOIN '.$groupTable.' ON '.$groupTable.'.Auth_Group = '.$groupTable.'.Auth_Group',
                                 $groupsToGetConditions,
                                 [$groupsActionsTable.'.Auth_Action'],
@@ -341,12 +330,12 @@ namespace IOFrame\Handlers{
                             'IN'
                         ],
                         [$actionTable.'.Auth_Action as actionName, '.$groupsActionsTable.'.Auth_Group as groupName, TRUE as userHadGroup'],
-                        ['justTheQuery'=>true],
-                        false);
+                        ['justTheQuery'=>true]
+                    );
 
 
                 //Check for B - which groups stayed alive
-                $query .=' UNION '.$this->SQLHandler->selectFromTable(
+                $query .=' UNION '.$this->SQLManager->selectFromTable(
                         $usersGroupsTable,
                         [
                             [$usersGroupsTable.'.ID',$userID,'='],
@@ -360,8 +349,11 @@ namespace IOFrame\Handlers{
 
             if($verbose)
                 echo 'Query to send: '.$query.EOL;
-            $res = $this->SQLHandler->exeQueryBindParam($query,[],['fetchAll'=>true]);
-
+            $res = $this->SQLManager->exeQueryBindParam($query,[],['fetchAll'=>true]);
+            if(!is_array($res)){
+                $this->logger->error('Could not load user auth ',['user'=>$userID,'query'=>$query]);
+                return [$userID=>[]];
+            }
 
             // Now, extract all info from the result:
             // An array of the form <Group Name> => [
@@ -374,29 +366,28 @@ namespace IOFrame\Handlers{
             $groupArray = [];
             foreach($res as $val){
                 if(!isset($groupArray[$val['groupName']])){
+                    $groupArray[$val['groupName']]['actions'] = [];
                     //In case this is just an unchanged group
                     if($val['actionName'] == -1){
-                        $groupArray[$val['groupName']]['actions'] = [];
                         $groupArray[$val['groupName']]['indicator'] = 0;
                     }
                     //Else it's an updated group or new
                     else{
-                        $groupArray[$val['groupName']]['actions'] = [];
                         $groupArray[$val['groupName']]['indicator'] =
                             ($val['userHadGroup'] == '1') ? 1 : 2;
-                        array_push($groupArray[$val['groupName']]['actions'],$val['actionName']);
+                        $groupArray[$val['groupName']]['actions'][] = $val['actionName'];
                     }
                 }
                 else{
                     //In case we found an unchanged group that actually has new actions (notice in this case actionName can't be -1)
                     if($groupArray[$val['groupName']]['indicator'] == 0){
                         $groupArray[$val['groupName']]['indicator'] = 1;
-                        array_push($groupArray[$val['groupName']]['actions'],$val['actionName']);
+                        $groupArray[$val['groupName']]['actions'][] = $val['actionName'];
                     }
                     //If we found a new/changed group, just make sure we're not pushing -1 as an action
                     else{
                         if($val['actionName'] != -1)
-                            array_push($groupArray[$val['groupName']]['actions'],$val['actionName']);
+                            $groupArray[$val['groupName']]['actions'][] = $val['actionName'];
                     }
                 }
             }
@@ -404,7 +395,7 @@ namespace IOFrame\Handlers{
             $removedGroups = [];
             foreach($this->groups as $groupName => $actions){
                 if(!isset($groupArray[$groupName]))
-                    array_push($removedGroups,$groupName);
+                    $removedGroups[] = $groupName;
             }
 
             if($verbose){
@@ -414,7 +405,7 @@ namespace IOFrame\Handlers{
 
             //If nothing changed, then there is no reason to keep running this procedure
             if($groupArray == [] && $removedGroups == [])
-                return;
+                return null;
 
 
             //First, update the handler
@@ -472,7 +463,7 @@ namespace IOFrame\Handlers{
                 $groupList = [];
 
                 foreach($this->groups as $name=>$v){
-                    array_push($groupList,$name);
+                    $groupList[] = $name;
                 }
 
 
@@ -489,6 +480,7 @@ namespace IOFrame\Handlers{
             }
 
 
+            return null;
         }
 
         /** Gets requested user groups & user actions / group actions from cache, and updates the handler
@@ -503,7 +495,7 @@ namespace IOFrame\Handlers{
          *                ]
          *                or NULL if user/group does not exist in the cache (or cache is disabled)
          */
-        function getFromCache(array $params = []){
+        function getFromCache(array $params = []): ?array {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
@@ -513,29 +505,29 @@ namespace IOFrame\Handlers{
             if(!$this->useCache){
                 if($verbose)
                     echo 'Trying to get something from cache when cache is disabled!'.EOL;
-                return $res;
+                return null;
             }
 
             //If we are fetching user info from cache
             if(isset($params['userID'])){
                 //Lets see if the user is even in the cache
-                $lastUpdated = $this->RedisHandler->call('get',$this->userLastUpdatedCachePrefix.$params['userID']);
+                $lastUpdated = $this->RedisManager->call('get',$this->userLastUpdatedCachePrefix.$params['userID']);
                 if($verbose)
                     echo 'Redis query - get from '.$this->userLastUpdatedCachePrefix.$params['userID'].', result - '.$lastUpdated.EOL;
                 //This means the user is not in the cache
                 if($lastUpdated === false)
-                    return $res;
+                    return null;
                 else
                     $res['lastUpdated'] = $lastUpdated;
 
                 //If user is in the cache, decode everything else (note he still might have 0 actions/groups)
-                $actionsJSON = $this->RedisHandler->call('get',$this->userActionsCachePrefix.$params['userID']);
+                $actionsJSON = $this->RedisManager->call('get',$this->userActionsCachePrefix.$params['userID']);
                 if($verbose)
                     echo 'Redis query - get from '.$this->userActionsCachePrefix.', result - '.$actionsJSON.EOL;
                 if($actionsJSON !== false)
                     $res['actions'] = json_decode($actionsJSON,true);
 
-                $groupsJSON = $this->RedisHandler->call('get',$this->userGroupsCachePrefix.$params['userID']);
+                $groupsJSON = $this->RedisManager->call('get',$this->userGroupsCachePrefix.$params['userID']);
                 if($verbose)
                     echo 'Redis query - get from '.$this->userGroupsCachePrefix.$params['userID'].', result - '.$groupsJSON.EOL;
                 if($groupsJSON !== false)
@@ -546,17 +538,17 @@ namespace IOFrame\Handlers{
             //If we are fetching group info from cache
             elseif(isset($params['groupName'])){
                 //Lets see if the group is even in the cache
-                $lastUpdated = $this->RedisHandler->call('get',$this->groupLastUpdatedCachePrefix.$params['groupName']);
+                $lastUpdated = $this->RedisManager->call('get',$this->groupLastUpdatedCachePrefix.$params['groupName']);
                 if($verbose)
                     echo 'Redis query - get from '.$this->groupLastUpdatedCachePrefix.$params['groupName'].', result - '.$lastUpdated.EOL;
                 //This means the group is not in the cache
                 if($lastUpdated === false)
-                    return $res;
+                    return null;
                 else
                     $res['lastUpdated'] = $lastUpdated;
 
                 //If group is in the cache, decode everything else (still, might be 0 actions)
-                $actionsJSON = $this->RedisHandler->call('get',$this->groupActionsCachePrefix.$params['groupName']);
+                $actionsJSON = $this->RedisManager->call('get',$this->groupActionsCachePrefix.$params['groupName']);
                 if($verbose)
                     echo 'Redis query - get from '.$this->groupActionsCachePrefix.$params['groupName'].', result - '.$actionsJSON.EOL;
                 if($actionsJSON !== false)
@@ -578,7 +570,7 @@ namespace IOFrame\Handlers{
          *
          *                  If both userID and groupName are set, will update user.
          */
-        function updateCache(array $params = []){
+        function updateCache(array $params = []): void {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
@@ -600,17 +592,17 @@ namespace IOFrame\Handlers{
 
                 //Update actions if given
                 if(isset($params['actions']))
-                    $this->RedisHandler->call('set',[$this->userActionsCachePrefix.$params['userID'],json_encode($params['actions'])]);
+                    $this->RedisManager->call('set',[$this->userActionsCachePrefix.$params['userID'],json_encode($params['actions'])]);
 
                 //Update groups if given
                 if(isset($params['groups']))
-                    $this->RedisHandler->call('set',[$this->userGroupsCachePrefix.$params['userID'],json_encode($params['groups'])]);
+                    $this->RedisManager->call('set',[$this->userGroupsCachePrefix.$params['userID'],json_encode($params['groups'])]);
 
                 //Check if we got a lastUpdated date, if no set to default
                 if(!isset($params['lastUpdated']))
                     $params['lastUpdated'] = time();
                 //Update lastUpdated
-                $this->RedisHandler->call('set',[$this->userLastUpdatedCachePrefix.$params['userID'],$params['lastUpdated']]);
+                $this->RedisManager->call('set',[$this->userLastUpdatedCachePrefix.$params['userID'],$params['lastUpdated']]);
 
             }
             //If we are updating a group
@@ -618,13 +610,13 @@ namespace IOFrame\Handlers{
 
                 //Update actions if given
                 if(isset($params['actions']))
-                    $this->RedisHandler->call('set',[$this->groupActionsCachePrefix.$params['groupName'],json_encode(['actions'])]);
+                    $this->RedisManager->call('set',[$this->groupActionsCachePrefix.$params['groupName'],json_encode(['actions'])]);
 
                 //Check if we got a lastUpdated date, if no set to default
                 if(!isset($params['lastUpdated']))
                     $params['lastUpdated'] = time();
                 //Update lastUpdated
-                $this->RedisHandler->call('set',[$this->groupLastUpdatedCachePrefix.$params['groupName'],$params['lastUpdated']]);
+                $this->RedisManager->call('set',[$this->groupLastUpdatedCachePrefix.$params['groupName'],$params['lastUpdated']]);
 
             }
 
@@ -635,7 +627,7 @@ namespace IOFrame\Handlers{
          * @returns bool true if the user is authorized below or at target level, false otherwise.
          * @throws \Exception If target is less than 0 - that must be a programmer error
          * */
-        function isAuthorized(int $target = 0){
+        function isAuthorized(int $target = 0): bool {
             if($target<0){
                 throw(new \Exception('Highest authorization level is 0.'));
             }
@@ -643,10 +635,6 @@ namespace IOFrame\Handlers{
                 if($this->rank <= $target)
                     return true;
                 else{
-                    /* TODO ADD MODULAR LOGGING CONDITION
-                    if(log_level_at_least(2,$this->settings))
-                        $this->logger->warning('User '.$this->details['ID'].' tried to perform unauthorized action - requires rank '.$target);
-                     * */
                     return false;
                 }
             }
@@ -656,32 +644,29 @@ namespace IOFrame\Handlers{
 
         /*@return integer user's rank, or 10000 if not logged in.
         */
-        function getRank(){
+        function getRank(): int {
             return $this->rank;
         }
 
         /**@return bool true if the user is logged in, false otherwise.
          */
-        function isLoggedIn(){
+        function isLoggedIn(): bool {
             return $this->loggedIn;
         }
 
         /**
          * @param string $arg Gets relevant detail from $this->details
-         * @return mixed a specific detail from the details array, or 'unset' if it isn't set.
+         * @return string|null a specific detail from the details array, or 'unset' if it isn't set.
          */
-        function getDetail(string $arg){
-            if(isset($this->details[$arg]))
-                return $this->details[$arg];
-            else
-                return null;
+        function getDetail(string $arg): mixed {
+            return $this->details[$arg] ?? null;
         }
 
         /** Check if a user has an action
          * @param string $target Action to check
          * @return bool true if the user has an action in their Actions array
          */
-        function hasAction(string $target){
+        function hasAction(string $target): bool {
             if(!$this->userInitiated)
                 $this->updateUserInfoFromDB();
             if($this->loggedIn){
@@ -689,7 +674,7 @@ namespace IOFrame\Handlers{
                 if($res)
                     return true;
                 else{
-                    foreach($this->groups as $groupName=>$groupActions){
+                    foreach($this->groups as $groupActions){
                         $res = in_array($target,$groupActions);
                         if($res)
                             return true;
@@ -708,14 +693,14 @@ namespace IOFrame\Handlers{
          * @param mixed $identifier Either user ID or user Mail
          * @param int $newRank Rank to assign
          * @param array $params
-         * @returns bool
-         * */
-        function modifyUserRank($identifier, int $newRank, array $params = []){
+         * @return array|bool|int|mixed|string|string[]
+         */
+        function modifyUserRank(mixed $identifier, int $newRank, array $params = []){
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
 
-            $prefix = $this->SQLHandler->getSQLPrefix();
+            $prefix = $this->SQLManager->getSQLPrefix();
 
             //Works both with user mail and ID
             if(gettype($identifier) == 'integer'){
@@ -725,12 +710,15 @@ namespace IOFrame\Handlers{
                 $identityCond = [$prefix.'USERS.Email',[$identifier,'STRING'],'='];
             }
 
-            $res = $this->SQLHandler->updateTable(
-                $this->SQLHandler->getSQLPrefix().'USERS',
-                ['Auth_Rank = '.$newRank.''],
+            $res = $this->SQLManager->updateTable(
+                $this->SQLManager->getSQLPrefix().'USERS',
+                ['Auth_Rank = '.$newRank],
                 $identityCond,
                 ['test'=>$test,'verbose'=>$verbose]
             );
+
+            if(!$res)
+                $this->logger->error('Failed to modify user rank',['id'=>$identityCond,'rank'=>$newRank]);
 
             return $res;
         }
@@ -760,13 +748,16 @@ namespace IOFrame\Handlers{
          *                                                               ...
          *                                                              ]
          *              where "@" are actions belonging directly to the user.
+         * @throws \Exception
+         * @throws \Exception
+         * @throws \Exception
          */
-        function getUsers(array $params = []){
+        function getUsers(array $params = []): array {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
 
-            $prefix = $this->SQLHandler->getSQLPrefix();
+            $prefix = $this->SQLManager->getSQLPrefix();
             $userTable = $prefix.'USERS_AUTH';
             $usersActionsTable = $prefix.'USERS_ACTIONS_AUTH';
             $groupsActionsTable = $prefix.'GROUPS_ACTIONS_AUTH';
@@ -775,15 +766,9 @@ namespace IOFrame\Handlers{
             $selectionFilter = [];
 
             //Default params
-            if(isset($params['separator']))
-                $separator = $params['separator'];
-            else
-                $separator = 'AND';
+            $separator = $params['separator'] ?? 'AND';
 
-            if(isset($params['includeActions']))
-                $includeActions = $params['includeActions'];
-            else
-                $includeActions = false;
+            $includeActions = $params['includeActions'] ?? false;
 
             if(isset($params['limit']))
                 $limit = min((int)$params['limit'],$this->defaultQueryLimit);
@@ -801,10 +786,7 @@ namespace IOFrame\Handlers{
                 $offset = null;
             }
 
-            if(isset($params['orderByExp']))
-                $orderByExp = $params['orderByExp'];
-            else
-                $orderByExp = 'ID';
+            $orderByExp = $params['orderByExp'] ?? 'ID';
 
             //Valid parameters - not including filter ones
             $validParams = ['id','action','group'];
@@ -829,7 +811,7 @@ namespace IOFrame\Handlers{
                             case 'NOT IN':
                                 switch($paramName){
                                     case 'id':
-                                        array_push($target,'CSV');
+                                        $target[] = 'CSV';
                                         $cond =
                                             [
                                                 [
@@ -839,15 +821,15 @@ namespace IOFrame\Handlers{
                                                 ],
                                                 'NOT'
                                             ];
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                     case 'action':
-                                        array_push($target,'CSV');
+                                        $target[] = 'CSV';
                                         $cond =
                                             [
                                                 [
                                                     $userTable.'.ID',
-                                                    $this->SQLHandler->selectFromTable(
+                                                    $this->SQLManager->selectFromTable(
                                                         $userTable.' JOIN '.$usersActionsTable.' ON '.$userTable.'.ID = '.$usersActionsTable.'.ID',
                                                         [
                                                             $usersActionsTable.'.Auth_Action',
@@ -861,15 +843,15 @@ namespace IOFrame\Handlers{
                                                 ],
                                                 'NOT'
                                             ];
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                     case 'group':
-                                        array_push($target,'CSV');
+                                        $target[] = 'CSV';
                                         $cond =
                                             [
                                                 [
                                                     $userTable.'.ID',
-                                                    $this->SQLHandler->selectFromTable(
+                                                    $this->SQLManager->selectFromTable(
                                                         $userTable.' JOIN '.$usersGroupsTable.' ON '.$userTable.'.ID = '.$usersGroupsTable.'.ID',
                                                         [
                                                             $usersGroupsTable.'.Auth_Group',
@@ -883,28 +865,28 @@ namespace IOFrame\Handlers{
                                                 ],
                                                 'NOT'
                                             ];
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                 }
                                 break;
                             case 'IN':
                                 switch($paramName){
                                     case 'id':
-                                        array_push($target,'CSV');
+                                        $target[] = 'CSV';
                                         $cond =
                                             [
                                                 $userTable.'.ID',
                                                 $target,
                                                 'IN'
                                             ];
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                     case 'action':
-                                        array_push($target,'CSV');
+                                        $target[] = 'CSV';
                                         $cond =
                                             [
                                                 $userTable.'.ID',
-                                                $this->SQLHandler->selectFromTable(
+                                                $this->SQLManager->selectFromTable(
                                                     $userTable.' JOIN '.$usersActionsTable.' ON '.$userTable.'.ID = '.$usersActionsTable.'.ID',
                                                     [
                                                         $usersActionsTable.'.Auth_Action',
@@ -916,14 +898,14 @@ namespace IOFrame\Handlers{
                                                 ),
                                                 'IN'
                                             ];
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                     case 'group':
-                                        array_push($target,'CSV');
+                                        $target[] = 'CSV';
                                         $cond =
                                             [
                                                 $userTable.'.ID',
-                                                $this->SQLHandler->selectFromTable(
+                                                $this->SQLManager->selectFromTable(
                                                     $userTable.' JOIN '.$usersGroupsTable.' ON '.$userTable.'.ID = '.$usersGroupsTable.'.ID',
                                                     [
                                                         $usersGroupsTable.'.Auth_Group',
@@ -936,7 +918,7 @@ namespace IOFrame\Handlers{
                                                 'IN'
                                             ]
                                         ;
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                 }
                                 break;
@@ -953,13 +935,13 @@ namespace IOFrame\Handlers{
                                                 $target,
                                                 $operator
                                             ];
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                     case 'action':
                                         $cond =
                                             [
                                                 $userTable.'.ID',
-                                                $this->SQLHandler->selectFromTable(
+                                                $this->SQLManager->selectFromTable(
                                                     $userTable.' JOIN '.$usersActionsTable.' ON '.$userTable.'.ID = '.$usersActionsTable.'.ID',
                                                     [
                                                         $usersActionsTable.'.Auth_Action',
@@ -971,13 +953,13 @@ namespace IOFrame\Handlers{
                                                 ),
                                                 'IN'
                                             ];
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                     case 'group':
                                         $cond =
                                             [
                                                 $userTable.'.ID',
-                                                $this->SQLHandler->selectFromTable(
+                                                $this->SQLManager->selectFromTable(
                                                     $userTable.' JOIN '.$usersGroupsTable.' ON '.$userTable.'.ID = '.$usersGroupsTable.'.ID',
                                                     [
                                                         $usersGroupsTable.'.Auth_Group',
@@ -989,7 +971,7 @@ namespace IOFrame\Handlers{
                                                 ),
                                                 'IN'
                                             ];
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                 }
                         }
@@ -1002,7 +984,7 @@ namespace IOFrame\Handlers{
              * */
 
             if($selectionFilter != [])
-                array_push($selectionFilter,$separator);
+                $selectionFilter[] = $separator;
 
             if($includeActions){
                 $query = 'SELECT ID, Auth_Group, Auth_Action FROM (';
@@ -1018,16 +1000,15 @@ namespace IOFrame\Handlers{
                 $columns1 = [$userTable.'.ID'];
             }
 
-            $query .= $this->SQLHandler->selectFromTable(
+            $query .= $this->SQLManager->selectFromTable(
                 $tables1,
                 $selectionFilter,
                 $columns1,
-                ['justTheQuery'=>true],
-                false
+                ['justTheQuery'=>true]
             );
             if(isset($tables2)){
                 $query .= ' UNION ';
-                $query .= $this->SQLHandler->selectFromTable(
+                $query .= $this->SQLManager->selectFromTable(
                     $tables2,
                     $selectionFilter,
                     $columns2,
@@ -1047,7 +1028,11 @@ namespace IOFrame\Handlers{
 
             if($verbose)
                 echo 'Query to send: '.$query.EOL;
-            $response = $this->SQLHandler->exeQueryBindParam($query,[],['fetchAll'=>true]);
+            $response = $this->SQLManager->exeQueryBindParam($query,[],['fetchAll'=>true]);
+            if(!is_array($response)){
+                $this->logger->error('Could not load user auth ',['params'=>$params,'query'=>$query]);
+                return [];
+            }
 
 
             $result = [];
@@ -1061,7 +1046,7 @@ namespace IOFrame\Handlers{
                     if(!isset($result[$row['ID']][$row['Auth_Group']]))
                         $result[$row['ID']][$row['Auth_Group']] = [];
 
-                    array_push($result[$row['ID']][$row['Auth_Group']],$row['Auth_Action']);
+                    $result[$row['ID']][$row['Auth_Group']][] = $row['Auth_Action'];
                 }
             }
             else{
@@ -1072,10 +1057,15 @@ namespace IOFrame\Handlers{
 
             //If we ar just getting IDs, we can also get the corrent number of total results
             if(!$includeActions){
-                $queryWithoutLimit = str_replace('DISTINCT ID','COUNT(DISTINCT ID)',$queryWithoutLimit);
-                $totals = $this->SQLHandler->exeQueryBindParam($queryWithoutLimit,[],['fetchAll'=>true]);
-                if($totals)
-                    $result['@'] = ['#'=>$totals[0][0]];
+                try{
+                    $queryWithoutLimit = str_replace('DISTINCT ID','COUNT(DISTINCT ID)',$queryWithoutLimit);
+                    $totals = $this->SQLManager->exeQueryBindParam($queryWithoutLimit,[],['fetchAll'=>true]);
+                    if($totals)
+                        $result['@'] = ['#'=>$totals[0][0]];
+                }
+                catch (\Exception $e){
+                    $this->logger->error('Could not load user auth total, exception '.$e->getMessage(),['params'=>$params,'query'=>$queryWithoutLimit,'trace'=>$e->getTrace()]);
+                }
             }
 
             return $result;
@@ -1089,7 +1079,7 @@ namespace IOFrame\Handlers{
          * @param array $params same as getUsers
          * @returns array same as getUsers
          */
-        function getUsersWithActions(array $params = []){
+        function getUsersWithActions(array $params = []): array {
             return $this->getUsers(array_merge($params,['includeActions'=>true]));
         }
 
@@ -1107,9 +1097,9 @@ namespace IOFrame\Handlers{
          *                             ...
          *                            ]
          */
-        function getActions(array $params = []){
+        function getActions(array $params = []): array {
 
-            $prefix = $this->SQLHandler->getSQLPrefix();
+            $prefix = $this->SQLManager->getSQLPrefix();
             $actionsTable = $prefix.'ACTIONS_AUTH';
 
             if(isset($params['limit']))
@@ -1122,24 +1112,21 @@ namespace IOFrame\Handlers{
             else
                 $offset = null;
 
-            if(isset($params['safeStr']))
-                $safeStr = $params['safeStr'];
-            else
-                $safeStr = true;
+            $safeStr = $params['safeStr'] ?? true;
 
 
             $params['orderBy'] = 'Auth_Action';
             $params['limit'] = $limit;
             $params['offset'] = $offset;
 
-            $response = $this->SQLHandler->selectFromTable(
+            $response = $this->SQLManager->selectFromTable(
                 $actionsTable,
                 [],
                 ['Auth_Action','Description'],
                 $params
             );
 
-            $totals = $this->SQLHandler->selectFromTable(
+            $totals = $this->SQLManager->selectFromTable(
                 $actionsTable,
                 [],
                 ['COUNT(*)'],
@@ -1150,15 +1137,10 @@ namespace IOFrame\Handlers{
 
             $res = [];
 
-            if($safeStr){
-                if(!defined('safeSTR'))
-                    require __DIR__ . '/../Util/safeSTR.php';
-            }
-
             if(is_array($response))
                 foreach($response as $row){
                     $res[$row['Auth_Action']] = [
-                        'description' => isset($row['Description'])? ( $safeStr ? IOFrame\Util\safeStr2Str($row['Description']) : $row['Description'] ) : null
+                        'description' => isset($row['Description'])? ( $safeStr ? \IOFrame\Util\SafeSTRFunctions::safeStr2Str($row['Description']) : $row['Description'] ) : null
                     ];
                 }
 
@@ -1176,44 +1158,34 @@ namespace IOFrame\Handlers{
          *                  'safeStr' => bool, default true - Whether to convert descriptions to safeString
          * @returns bool Whether the query succeeded or not.
          */
-        function setActions(array $actions, array $params = []){
+        function setActions(array $actions, array $params = []): array|bool|int|string|null {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
 
-            $prefix = $this->SQLHandler->getSQLPrefix();
+            $prefix = $this->SQLManager->getSQLPrefix();
             $actionsTable = $prefix.'ACTIONS_AUTH';
 
-            if(isset($params['safeStr']))
-                $safeStr = $params['safeStr'];
-            else
-                $safeStr = true;
-
-            if($safeStr){
-                if(!defined('safeSTR'))
-                    require __DIR__ . '/../Util/safeSTR.php';
-            }
+            $safeStr = $params['safeStr'] ?? true;
 
             $actionsToInsert = [];
 
             foreach($actions as $actionName=>$desc){
                 if($desc!==null){
                     if($safeStr)
-                        $desc = IOFrame\Util\str2SafeStr($desc);
+                        $desc = \IOFrame\Util\SafeSTRFunctions::str2SafeStr($desc);
                     $desc = [$desc,'STRING'];
                 }
                 $actionName = [$actionName,'STRING'];
-                array_push($actionsToInsert,[$actionName,$desc]);
+                $actionsToInsert[] = [$actionName, $desc];
             }
 
-            $res = $this->SQLHandler->insertIntoTable(
+            return $this->SQLManager->insertIntoTable(
                 $actionsTable,
                 ['Auth_Action','Description'],
                 $actionsToInsert,
                 ['onDuplicateKey'=>true,'test'=>$test,'verbose'=>$verbose]
             );
-
-            return $res;
         }
 
         /**
@@ -1221,14 +1193,14 @@ namespace IOFrame\Handlers{
          *
          * @param array $actions An array of action names
          * @param array $params
-         * @returns bool Whether the query succeeded or not.
+         * @return array|bool|int|mixed|string|string[]
          */
         function deleteActions(array $actions, array $params = []){
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
 
-            $prefix = $this->SQLHandler->getSQLPrefix();
+            $prefix = $this->SQLManager->getSQLPrefix();
             $actionsTable = $prefix.'ACTIONS_AUTH';
             $userTable = $prefix.'USERS_AUTH';
             $groupsActionsTable = $prefix.'GROUPS_ACTIONS_AUTH';
@@ -1239,7 +1211,7 @@ namespace IOFrame\Handlers{
                 $actions[$k] = [$actionName,'STRING'];
             }
 
-            $res = $this->SQLHandler->deleteFromTable(
+            $res = $this->SQLManager->deleteFromTable(
                 $actionsTable,
                 [
                     'Auth_Action',
@@ -1249,31 +1221,38 @@ namespace IOFrame\Handlers{
                 ['test'=>$test,'verbose'=>$verbose]
             );
 
-            if($res)
-                $res = $this->SQLHandler->updateTable(
+            $conds = [
+                'ID',
+                '('.$this->SQLManager->selectFromTable(
+                    $usersActionsTable,
+                    ['Auth_Action',$actions,'IN'],
+                    ['ID'],
+                    ['justTheQuery'=>true,'DISTINCT'=>true,'test'=>false]
+                ).' UNION '.$this->SQLManager->selectFromTable(
+                    $usersGroupsTable.' JOIN '.$groupsActionsTable.' ON '.$usersGroupsTable.'.Auth_Group = '.$groupsActionsTable.'.Auth_Group',
+                    ['Auth_Action',$actions,'IN'],
+                    [$usersGroupsTable.'.ID'],
+                    ['justTheQuery'=>true,'DISTINCT'=>true,'test'=>false]
+                ).')',
+                'IN'
+            ];
+
+            if($res){
+                $res = $this->SQLManager->updateTable(
                     $userTable,
                     ['Last_Updated = "'.time().'"'],
-                    [
-                        'ID',
-                        '('.$this->SQLHandler->selectFromTable(
-                            $usersActionsTable,
-                            ['Auth_Action',$actions,'IN'],
-                            ['ID'],
-                            ['justTheQuery'=>true,'DISTINCT'=>true,'test'=>false]
-                        ).' UNION '.$this->SQLHandler->selectFromTable(
-                            $usersGroupsTable.' JOIN '.$groupsActionsTable.' ON '.$usersGroupsTable.'.Auth_Group = '.$groupsActionsTable.'.Auth_Group',
-                            ['Auth_Action',$actions,'IN'],
-                            [$usersGroupsTable.'.ID'],
-                            ['justTheQuery'=>true,'DISTINCT'=>true,'test'=>false]
-                        ).')',
-                        'IN'
-                    ],
+                    $conds,
                     ['test'=>$test,'verbose'=>$verbose]
                 );
+                if(!$res)
+                    $this->logger->error('Could not update users after actions change',['conditions'=>$conds]);
+            }
+            else{
+                $this->logger->error('Could not delete actions ',['actions'=>$actions]);
+            }
             return $res;
 
         }
-
 
 
         /**
@@ -1285,18 +1264,18 @@ namespace IOFrame\Handlers{
          *                                                               <Group Name> => Array of Actions
          *                                                               ...
          *                                                              ]
+         * @throws \Exception
+         * @throws \Exception
+         * @throws \Exception
          */
-        function getGroups(array $params = []){
+        function getGroups(array $params = []): array {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
 
-            if(isset($params['safeStr']))
-                $safeStr = $params['safeStr'];
-            else
-                $safeStr = true;
+            $safeStr = $params['safeStr'] ?? true;
 
-            $prefix = $this->SQLHandler->getSQLPrefix();
+            $prefix = $this->SQLManager->getSQLPrefix();
             $userTable = $prefix.'USERS_AUTH';
             $groupTable = $prefix.'GROUPS_AUTH';
             $groupsActionsTable = $prefix.'GROUPS_ACTIONS_AUTH';
@@ -1305,15 +1284,9 @@ namespace IOFrame\Handlers{
             $selectionFilter = [];
 
             //Default params
-            if(isset($params['separator']))
-                $separator = $params['separator'];
-            else
-                $separator = 'AND';
+            $separator = $params['separator'] ?? 'AND';
 
-            if(isset($params['includeActions']))
-                $includeActions = $params['includeActions'];
-            else
-                $includeActions = false;
+            $includeActions = $params['includeActions'] ?? false;
 
             if(isset($params['limit']))
                 $limit = min((int)$params['limit'],$this->defaultQueryLimit);
@@ -1331,10 +1304,7 @@ namespace IOFrame\Handlers{
                 $offset = null;
             }
 
-            if(isset($params['orderByExp']))
-                $orderByExp = $params['orderByExp'];
-            else
-                $orderByExp = 'Auth_Group';
+            $orderByExp = $params['orderByExp'] ?? 'Auth_Group';
 
             //Valid parameters - not including filter ones
             $validParams = ['id','action','group'];
@@ -1359,12 +1329,12 @@ namespace IOFrame\Handlers{
                             case 'NOT IN':
                                 switch($paramName){
                                     case 'id':
-                                        array_push($target,'CSV');
+                                        $target[] = 'CSV';
                                         $cond =
                                             [
                                                 [
                                                     $groupTable.'.Auth_Group',
-                                                    $this->SQLHandler->selectFromTable(
+                                                    $this->SQLManager->selectFromTable(
                                                         $userTable.' JOIN '.$usersGroupsTable.' ON '.$userTable.'.ID = '.$usersGroupsTable.'.ID',
                                                         [
                                                             $usersGroupsTable.'.ID',
@@ -1378,15 +1348,15 @@ namespace IOFrame\Handlers{
                                                 ],
                                                 'NOT'
                                             ];
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                     case 'action':
-                                        array_push($target,'CSV');
+                                        $target[] = 'CSV';
                                         $cond =
                                             [
                                                 [
                                                     $groupTable.'.Auth_Group',
-                                                    $this->SQLHandler->selectFromTable(
+                                                    $this->SQLManager->selectFromTable(
                                                         $groupTable.' JOIN '.$groupsActionsTable.' ON '.$groupTable.'.Auth_Group = '.$groupsActionsTable.'.Auth_Group',
                                                         [
                                                             $groupsActionsTable.'.Auth_Action',
@@ -1400,10 +1370,10 @@ namespace IOFrame\Handlers{
                                                 ],
                                                 'NOT'
                                             ];
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                     case 'group':
-                                        array_push($target,'CSV');
+                                        $target[] = 'CSV';
                                         $cond =
                                             [
                                                 [
@@ -1413,18 +1383,18 @@ namespace IOFrame\Handlers{
                                                 ],
                                                 'NOT'
                                             ];
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                 }
                                 break;
                             case 'IN':
                                 switch($paramName){
                                     case 'id':
-                                        array_push($target,'CSV');
+                                        $target[] = 'CSV';
                                         $cond =
                                             [
                                                 $groupTable.'.Auth_Group',
-                                                $this->SQLHandler->selectFromTable(
+                                                $this->SQLManager->selectFromTable(
                                                     $userTable.' JOIN '.$usersGroupsTable.' ON '.$userTable.'.ID = '.$usersGroupsTable.'.ID',
                                                     [
                                                         $usersGroupsTable.'.ID',
@@ -1436,14 +1406,14 @@ namespace IOFrame\Handlers{
                                                 ),
                                                 'IN'
                                             ];
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                     case 'action':
-                                        array_push($target,'CSV');
+                                        $target[] = 'CSV';
                                         $cond =
                                             [
                                                 $groupTable.'.Auth_Group',
-                                                $this->SQLHandler->selectFromTable(
+                                                $this->SQLManager->selectFromTable(
                                                     $groupTable.' JOIN '.$groupsActionsTable.' ON '.$groupTable.'.Auth_Group = '.$groupsActionsTable.'.Auth_Group',
                                                     [
                                                         $groupsActionsTable.'.Auth_Action',
@@ -1455,17 +1425,17 @@ namespace IOFrame\Handlers{
                                                 ),
                                                 'IN'
                                             ];
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                     case 'group':
-                                        array_push($target,'CSV');
+                                        $target[] = 'CSV';
                                         $cond =
                                             [
                                                 $groupTable.'.Auth_Group',
                                                 $target,
                                                 'IN'
                                             ];
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                 }
                                 break;
@@ -1479,7 +1449,7 @@ namespace IOFrame\Handlers{
                                         $cond =
                                             [
                                                 $groupTable.'.Auth_Group',
-                                                $this->SQLHandler->selectFromTable(
+                                                $this->SQLManager->selectFromTable(
                                                     $userTable.' JOIN '.$usersGroupsTable.' ON '.$userTable.'.ID = '.$usersGroupsTable.'.ID',
                                                     [
                                                         $usersGroupsTable.'.ID',
@@ -1491,13 +1461,13 @@ namespace IOFrame\Handlers{
                                                 ),
                                                 'IN'
                                             ];
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                     case 'action':
                                         $cond =
                                             [
                                                 $groupTable.'.Auth_Group',
-                                                $this->SQLHandler->selectFromTable(
+                                                $this->SQLManager->selectFromTable(
                                                     $groupTable.' JOIN '.$groupsActionsTable.' ON '.$groupTable.'.Auth_Group = '.$groupsActionsTable.'.Auth_Group',
                                                     [
                                                         $groupsActionsTable.'.Auth_Action',
@@ -1509,7 +1479,7 @@ namespace IOFrame\Handlers{
                                                 ),
                                                 'IN'
                                             ];
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                     case 'group':
                                         $cond =
@@ -1518,7 +1488,7 @@ namespace IOFrame\Handlers{
                                                 $target,
                                                 $operator
                                             ];
-                                        array_push($selectionFilter,$cond);
+                                        $selectionFilter[] = $cond;
                                         break;
                                 }
                         }
@@ -1531,7 +1501,7 @@ namespace IOFrame\Handlers{
              * */
 
             if($selectionFilter != [])
-                array_push($selectionFilter,$separator);
+                $selectionFilter[] = $separator;
 
             if($includeActions){
                 $query = 'SELECT Auth_Group, Auth_Action FROM (';
@@ -1544,7 +1514,7 @@ namespace IOFrame\Handlers{
                 $columns = [$groupTable.'.Auth_Group'];
             }
 
-            $query .= $this->SQLHandler->selectFromTable(
+            $query .= $this->SQLManager->selectFromTable(
                 $tables,
                 $selectionFilter,
                 $columns,
@@ -1568,10 +1538,14 @@ namespace IOFrame\Handlers{
 
             if($verbose)
                 echo 'Query to send: '.$query.EOL;
-            $response = $this->SQLHandler->exeQueryBindParam($query,[],['fetchAll'=>true]);
-
+            $response = $this->SQLManager->exeQueryBindParam($query,[],['fetchAll'=>true]);
 
             $result = [];
+
+            if(!is_array($response)){
+                $this->logger->error('Could not load group auth ',['params'=>$params,'query'=>$query]);
+                return $result;
+            }
 
             if($includeActions){
                 foreach($response as $row){
@@ -1579,23 +1553,28 @@ namespace IOFrame\Handlers{
                     if(!isset($result[$row['Auth_Group']]))
                         $result[$row['Auth_Group']] = [];
 
-                    array_push($result[$row['Auth_Group']],$row['Auth_Action']);
+                    $result[$row['Auth_Group']][] = $row['Auth_Action'];
                 }
             }
             else{
                 foreach($response as $row){
                     $result[$row['Auth_Group']] = [
-                        'description'=> isset($row['Description'])? ( $safeStr ? IOFrame\Util\safeStr2Str($row['Description']) : $row['Description'] ) : null
+                        'description'=> isset($row['Description'])? ( $safeStr ? \IOFrame\Util\SafeSTRFunctions::safeStr2Str($row['Description']) : $row['Description'] ) : null
                     ];
                 }
             }
 
             //If we ar just getting IDs, we can also get the corrent number of total results
             if(!$includeActions){
-                $queryWithoutLimit = str_replace('DISTINCT Auth_Group','COUNT(DISTINCT Auth_Group)',$queryWithoutLimit);
-                $totals = $this->SQLHandler->exeQueryBindParam($queryWithoutLimit,[],['fetchAll'=>true]);
-                if($totals)
-                    $result['@'] = ['#'=>$totals[0][0]];
+                try{
+                    $queryWithoutLimit = str_replace('DISTINCT Auth_Group','COUNT(DISTINCT Auth_Group)',$queryWithoutLimit);
+                    $totals = $this->SQLManager->exeQueryBindParam($queryWithoutLimit,[],['fetchAll'=>true]);
+                    if($totals)
+                        $result['@'] = ['#'=>$totals[0][0]];
+                }
+                catch (\Exception $e){
+                    $this->logger->error('Could not load group auth total, exception '.$e->getMessage(),['params'=>$params,'query'=>$queryWithoutLimit,'trace'=>$e->getTrace()]);
+                }
             }
 
             return $result;
@@ -1606,7 +1585,7 @@ namespace IOFrame\Handlers{
          * @param array $params same as getGroups
          *@returns array same as getGroups
          */
-        function getGroupActions(array $params = []){
+        function getGroupActions(array $params = []): array {
             return $this->getGroups(array_merge($params,['includeActions'=>true]));
         }
 
@@ -1617,41 +1596,35 @@ namespace IOFrame\Handlers{
          *                  'safeStr' => bool, default true - Whether to convert descriptions to safeString
          * @returns bool
          */
-        function setGroups(array $groups, array $params = []){
+        function setGroups(array $groups, array $params = []): array|bool|int|string|null {
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
 
-            $prefix = $this->SQLHandler->getSQLPrefix();
+            $prefix = $this->SQLManager->getSQLPrefix();
             $groupsTable = $prefix.'GROUPS_AUTH';
 
-            if(isset($params['safeStr']))
-                $safeStr = $params['safeStr'];
-            else
-                $safeStr = true;
-
-            if($safeStr){
-                if(!defined('safeSTR'))
-                    require __DIR__ . '/../Util/safeSTR.php';
-            }
+            $safeStr = $params['safeStr'] ?? true;
 
             $groupsToInsert = [];
 
             foreach($groups as $groupName=>$desc){
                 if($desc!==null){
                     if($safeStr)
-                        $desc = IOFrame\Util\str2SafeStr($desc);
+                        $desc = \IOFrame\Util\SafeSTRFunctions::str2SafeStr($desc);
                     $desc = [$desc,'STRING'];
                 }
                 $groupName = [$groupName,'STRING'];
-                array_push($groupsToInsert,[$groupName,$desc]);
+                $groupsToInsert[] = [$groupName, $desc];
             }
 
-            $res = $this->SQLHandler->insertIntoTable(
+            $res = $this->SQLManager->insertIntoTable(
                 $groupsTable,
                 ['Auth_Group','Description'],
                 $groupsToInsert,
                 ['onDuplicateKey'=>true,'test'=>$test,'verbose'=>$verbose]
             );
+            if(!$res)
+                $this->logger->error('Could not set auth groups',['toSet'=>$groupsToInsert]);
 
             return $res;
         }
@@ -1660,13 +1633,13 @@ namespace IOFrame\Handlers{
          * Deletes groups
          * @param string[] $groups Group names
          * @param array $params
-         * @returns bool
+         * @return array|bool|int|mixed|string|string[]
          */
         function deleteGroups(array $groups, array $params = []){
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
 
-            $prefix = $this->SQLHandler->getSQLPrefix();
+            $prefix = $this->SQLManager->getSQLPrefix();
             $userTable = $prefix.'USERS_AUTH';
             $groupsTable = $prefix.'GROUPS_AUTH';
             $usersGroupsTable = $prefix.'USERS_GROUPS_AUTH';
@@ -1675,7 +1648,7 @@ namespace IOFrame\Handlers{
                 $groups[$k] = [$groupName,'STRING'];
             }
 
-            $res = $this->SQLHandler->deleteFromTable(
+            $res = $this->SQLManager->deleteFromTable(
                 $groupsTable,
                 [
                     'Auth_Group',
@@ -1684,23 +1657,30 @@ namespace IOFrame\Handlers{
                 ],
                 ['test'=>$test,'verbose'=>$verbose]
             );
+            if(!$res)
+                $this->logger->error('Could not delete auth groups',['groups'=>$groups]);
 
-            if($res)
-                $res = $this->SQLHandler->updateTable(
+            if($res){
+                $cond = [
+                    'ID',
+                    $this->SQLManager->selectFromTable(
+                        $usersGroupsTable,
+                        ['Auth_Group',$groups,'IN'],
+                        ['ID'],
+                        ['justTheQuery'=>true,'useBrackets'=>true,'DISTINCT'=>true]
+                    ),
+                    'IN'
+                ];
+                $res = $this->SQLManager->updateTable(
                     $userTable,
                     ['Last_Updated = "'.time().'"'],
-                    [
-                        'ID',
-                        $this->SQLHandler->selectFromTable(
-                            $usersGroupsTable,
-                            ['Auth_Group',$groups,'IN'],
-                            ['ID'],
-                            ['justTheQuery'=>true,'useBrackets'=>true,'DISTINCT'=>true]
-                        ),
-                        'IN'
-                    ],
+                    $cond,
                     ['test'=>$test,'verbose'=>$verbose]
                 );
+
+                if(!$res)
+                    $this->logger->error('Could not update users after auth groups change',['groups'=>$groups,'cond'=>$cond]);
+            }
             return $res;
 
         }
@@ -1711,6 +1691,8 @@ namespace IOFrame\Handlers{
          *                      <Action Name> => Bool true/false for set/delete. Will do both insertions and deletions.
          * @param array $params An array currently empty
          * @returns bool
+         * @throws \Exception
+         * @throws \Exception
          */
         function modifyUserActions(int $id, array $actions, array $params = []){
             $params['targetType'] = 'userActions';
@@ -1722,7 +1704,8 @@ namespace IOFrame\Handlers{
          * @param array $groups An array of the form:
          *                      <Groups Name> => Bool true/false for set/delete. Will do both insertions and deletions.
          * @param array $params
-         * @returns bool
+         * @return array|bool|int|mixed|string|string[]
+         * @throws \Exception
          */
         function modifyUserGroups(int $id, array $groups, array $params = []){
             $params['targetType'] = 'userGroups';
@@ -1734,7 +1717,8 @@ namespace IOFrame\Handlers{
          * @param array $actions An array of the form:
          *                      <Action Name> => Bool true/false for set/delete. Will do both insertions and deletions.
          * @param array $params
-         * @returns bool
+         * @return array|bool|int|mixed|string|string[]
+         * @throws \Exception
          */
         function modifyGroupActions(string $groupName,  array $actions, array $params = []){
             $params['targetType'] = 'groupActions';
@@ -1755,7 +1739,7 @@ namespace IOFrame\Handlers{
             else
                 $targetType = $params['targetType'];
 
-            $prefix = $this->SQLHandler->getSQLPrefix();
+            $prefix = $this->SQLManager->getSQLPrefix();
 
             if($targetType == 'userGroups')
                 $targetTable = $prefix.'USERS_GROUPS_AUTH';
@@ -1783,25 +1767,28 @@ namespace IOFrame\Handlers{
             foreach($targets as $targetName => $toSet){
                 //A reminder - an INT will stay an INT even when passed as a 'STRING' to the PHP Query parser
                 if($toSet)
-                    array_push($insertArray,[[$identifier,'STRING'],[$targetName,'STRING']]);
+                    $insertArray[] = [[$identifier, 'STRING'], [$targetName, 'STRING']];
                 else
-                    array_push($deleteArray,[$targetTable.'.'.$targetCol,$targetName,'=']);
+                    $deleteArray[] = [$targetTable . '.' . $targetCol, $targetName, '='];
             }
             //Insert what we need
             if($insertArray != []){
-                $this->SQLHandler->insertIntoTable(
+                $res = $this->SQLManager->insertIntoTable(
                     $targetTable,
                     [$idCol,$targetCol],
                     $insertArray,
                     ['onDuplicateKey'=>true,'test'=>$test,'verbose'=>$verbose]
                 );
+
+                if(!$res)
+                    $this->logger->error('Could not insert new auth',['table'=>$targetTable,'id'=>[$idCol,$targetCol],'insert'=>$insertArray]);
             }
 
             $res = true;
 
             //Delete what we need
             if($deleteArray != []){
-                array_push($deleteArray,'OR');
+                $deleteArray[] = 'OR';
 
                 $deleteArray = [
                     [$idCol,$identifier,'='],
@@ -1809,11 +1796,14 @@ namespace IOFrame\Handlers{
                     'AND'
                 ];
 
-                $res = $this->SQLHandler->deleteFromTable(
+                $res = $this->SQLManager->deleteFromTable(
                     $targetTable,
                     $deleteArray,
                     ['test'=>$test,'verbose'=>$verbose]
                 );
+
+                if(!$res)
+                    $this->logger->error('Could not delete auth',['table'=>$targetTable,'conditions'=>$deleteArray]);
             }
 
             if(!$res)
@@ -1821,25 +1811,29 @@ namespace IOFrame\Handlers{
 
             //If anything was changed, update user Last_Updated
             if($deleteArray != [] && $insertArray != []){
+
                 //This happens when we update a user action/group
-                if($targetType != 'groupActions')
-                    $res = $this->SQLHandler->insertIntoTable(
+                if($targetType != 'groupActions'){
+                    $loggingId = $identifier;
+                    $res = $this->SQLManager->insertIntoTable(
                         $users,
                         ['ID', 'Last_Updated'],
-                        [[$identifier,[(string)time(),'STRING']]],
+                        [[$loggingId,[(string)time(),'STRING']]],
                         ['test'=>$test,'verbose'=>$verbose,'onDuplicateKey'=>true]
                     );
-                //This happens when we update a a group
+                }
+                //This happens when we update a group
                 else{
-                    $res = $this->SQLHandler->insertIntoTable(
+                    $loggingId = $this->SQLManager->selectFromTable(
+                        $usersGroups,
+                        ['Auth_Group',$identifier,'='],
+                        ['ID','"'.time().'" AS Last_Updated'],
+                        ['justTheQuery'=>true,'useBrackets'=>false,'DISTINCT'=>true]
+                    );
+                    $res = $this->SQLManager->insertIntoTable(
                         $users,
                         ['ID', 'Last_Updated'],
-                        $this->SQLHandler->selectFromTable(
-                            $usersGroups,
-                            ['Auth_Group',$identifier,'='],
-                            ['ID','"'.time().'" AS Last_Updated'],
-                            ['justTheQuery'=>true,'useBrackets'=>false,'DISTINCT'=>true]
-                        ),
+                        $loggingId,
                         [
                             'test'=>$test,
                             'verbose'=>$verbose,
@@ -1848,6 +1842,9 @@ namespace IOFrame\Handlers{
                         ]
                     );
                 }
+
+                if(!$res)
+                    $this->logger->error('Could not update users last changed after auth modification',['type'=>$targetType,'id'=>$loggingId]);
             }
 
             return $res;
@@ -1855,5 +1852,3 @@ namespace IOFrame\Handlers{
     }
 
 }
-
-?>

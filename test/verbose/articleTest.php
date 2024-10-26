@@ -1,7 +1,7 @@
 <?php
 require __DIR__.'/../../IOFrame/Handlers/ArticleHandler.php';
 
-$ArticleHandler = new IOFrame\Handlers\ArticleHandler($settings,$defaultSettingsParams);
+$ArticleHandler = new \IOFrame\Handlers\ArticleHandler($settings,$defaultSettingsParams);
 
 /* ------------------------------------------------------------
                         Gets
@@ -42,10 +42,30 @@ var_dump(
     )
 );
 
+echo EOL.'Getting articles with specific tags:'.EOL;
+var_dump(
+    $ArticleHandler->getItems(
+        [],
+        'articles',
+        [
+            'tagsIn'=>[
+                [
+                    'type'=>'default-article-tags',
+                    'name'=>'test-1'
+                ],
+            ],
+            'limit'=>5,
+            'offset'=>0,
+            'test'=>true,
+            'verbose'=>true
+        ]
+    )
+);
+
 echo EOL.'Getting specific articles:'.EOL;
 var_dump(
     $ArticleHandler->getItems(
-        [[1]],
+        [[4]],
         'articles',
         [
             'test'=>true,
@@ -67,7 +87,7 @@ var_dump(
 echo EOL.'Getting specific article blocks:'.EOL;
 var_dump(
     $ArticleHandler->getItems(
-        [[1]],
+        [[4]],
         'general-block',
         [
             'test'=>true,

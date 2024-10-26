@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 /** Get and set sync-able objects
  * **/
 const syncableObjectsHandler = {
@@ -62,6 +59,8 @@ const syncableObjectsHandler = {
               setResponseCode: undefined,
               //Event that is sent when the members were locally updated (to be used by OTHER modules/components).
               setLocalEventName: 'update'+<capitalized objectName>+'Local',
+              //Event that is sent when the members were locally updated (to be used by THIS OR OTHER modules/components).
+              syncableObjectsUpdateFinishEventName: 'update'+<capitalized objectName>+'SyncableFinished',
               //function - if not undefined, will add an event listener that handles the api call result (the function would get it as its first parameter).
               //Requires a predefined getEventName. If defined (or true), will default to updating the cache/this object. If false, will do nothing
               ['eventHandler']: undefined
@@ -79,7 +78,7 @@ const syncableObjectsHandler = {
         for(let i in this.syncableObjects){
             if((typeof this.syncableObjects[i] !== 'object') || Array.isArray(this.syncableObjects[i]))
                 continue;
-            let capitalizedObject = i[0].toUpperCase()+i.substr(1);
+            let capitalizedObject = i[0].toUpperCase()+i.substring(1);
             //Defaults
             this.syncableObjects[i].members = this.syncableObjects[i].members ?? {};
             this.syncableObjects[i].upToDate = this.syncableObjects[i].upToDate ?? false;
@@ -95,9 +94,10 @@ const syncableObjectsHandler = {
             this.syncableObjects[i].getEventName = this.syncableObjects[i].getEventName ?? 'get'+capitalizedObject+'Response';
             this.syncableObjects[i].setEventName = this.syncableObjects[i].setEventName ?? 'set'+capitalizedObject+'Response';
             this.syncableObjects[i].setLocalEventName = this.syncableObjects[i].setLocalEventName ?? 'update'+capitalizedObject+'Local';
+            this.syncableObjects[i].syncableObjectsUpdateFinishEventName = this.syncableObjects[i].syncableObjectsUpdateFinishEventName ?? 'update'+capitalizedObject+'SyncableFinished';
             this.syncableObjects[i].eventHandler = this.syncableObjects[i].eventHandler ?? undefined;
             //Reserved
-            this.syncableObjects[i].userLoggedIn = document.siteConfig.signedIn && document.siteConfig.active;
+            this.syncableObjects[i].userLoggedIn = document.ioframe.loggedIn && document.siteConfig.active;
             this.syncableObjects[i].updated = 0;
             this.syncableObjects[i].setResponseValid = false;
             this.syncableObjects[i].setResponseCode = undefined;
@@ -139,8 +139,11 @@ const syncableObjectsHandler = {
                                     if(context.verbose)
                                         console.log('Updating '+i,updateTarget);
                                     Vue.set(context.syncableObjects[i],'members',updateTarget.members);
-                                    context.syncableObjects[i].updated = updateTarget.updated;
-                                    context.syncableObjects[i]['upToDate'] = true;
+                                    Vue.set(context.syncableObjects[i],'updated',updateTarget.updated);
+                                    Vue.set(context.syncableObjects[i],'upToDate',true);
+                                    if(context.verbose)
+                                        console.log('Emitting '+context.syncableObjects[i].syncableObjectsUpdateFinishEventName);
+                                    eventHub.$emit(context.syncableObjects[i].syncableObjectsUpdateFinishEventName);
                                 })
                             });
                         }

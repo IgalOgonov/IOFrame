@@ -1,6 +1,5 @@
 <?php
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 
 //Address
 if($inputs['address'] === null){
@@ -10,7 +9,7 @@ if($inputs['address'] === null){
 }
 
 
-$valid = \IOFrame\Util\validator::validateRelativeFilePath($inputs['address']);
+$valid = \IOFrame\Util\ValidatorFunctions::validateRelativeFilePath($inputs['address']);
 $valid = $valid || filter_var($inputs['address'],FILTER_VALIDATE_URL);
 
 if(!$valid){

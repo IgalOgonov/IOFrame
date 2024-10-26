@@ -44,6 +44,7 @@
     max-width: max-content;
     padding: 20px;
     border-radius: 5px;
+    margin-top: 10px;
     background: var(--main-color-2);
     border: var(--main-color-8) 1px solid;
 }

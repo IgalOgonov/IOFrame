@@ -7,9 +7,10 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot.'headers_sta
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'cp_redirect_to_login.php';
 
+/*God this first Vue module is so shit the same JS/CSS files contain both the module and the components, so no reason to package*/
 array_push($JS,'ezPopup.js','mixins/sourceUrl.js','modules/CPMenu.js','modules/plugins.js','modules/pluginList.js');
 
-array_push($CSS,'cp.css','popUpTooltip.css','modules/CPMenu.css','modules/plugins.css');
+array_push($CSS,'cp.css','animations.css','popUpTooltip.css','modules/CPMenu.css','modules/plugins.css');
 
 require $settings->getSetting('absPathToRoot') . $IOFrameTemplateRoot.'headers_get_resources.php';
 
@@ -58,4 +59,3 @@ $frontEndResourceTemplateManager->printResources('JS');
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot.'footers_end.php';
 
-?>

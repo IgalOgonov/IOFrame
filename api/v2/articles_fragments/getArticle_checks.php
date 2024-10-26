@@ -7,25 +7,23 @@ $requiredAuth = REQUIRED_AUTH_NONE;
 
 //Set 'authAtMost' if not requested by the user
 if(isset($inputs['authAtMost'])){
-    if($inputs['authAtMost'] === 0)
-        $requiredAuth = REQUIRED_AUTH_NONE;
-    elseif($inputs['authAtMost'] === 1)
+    if($inputs['authAtMost'] === 1)
         $requiredAuth = max($requiredAuth,REQUIRED_AUTH_RESTRICTED);
     elseif($inputs['authAtMost'] == 2)
         $requiredAuth = max($requiredAuth,REQUIRED_AUTH_OWNER);
-    else
+    elseif($inputs['authAtMost'] !== 0)
         $requiredAuth = max($requiredAuth,REQUIRED_AUTH_ADMIN);
 }
 $retrieveParams['authAtMost'] = $requiredAuth;
 
 //Handle the case where we're getting specific article by address
-if(!empty($inputs['id']) && $apiSettings->getSetting('restrictedArticleByAddress') && $requiredAuth <=REQUIRED_AUTH_RESTRICTED){
+if(!empty($inputs['id']) && $apiSettings->getSetting('restrictedArticleByAddress') && ($requiredAuth <=REQUIRED_AUTH_RESTRICTED)){
     $requiredAuth = REQUIRED_AUTH_NONE;
     $retrieveParams['authAtMost'] = REQUIRED_AUTH_RESTRICTED;
 }
 
 //Set 'ignoreOrphan' if requested by the user
-if(isset($inputs['ignoreOrphan'])){
+if(isset($inputs['ignoreOrphan']) && !$inputs['ignoreOrphan']){
     $requiredAuth = max($requiredAuth,REQUIRED_AUTH_OWNER);
     $inputs['ignoreOrphan'] = (bool)$inputs['ignoreOrphan'];
 }
@@ -36,9 +34,9 @@ $inputs['preloadGalleries'] = $inputs['preloadGalleries'] !== null ? $inputs['pr
 
 //Allows restriction of article types via settings
 if(empty($apiSettings))
-    $apiSettings = new IOFrame\Handlers\SettingsHandler($rootFolder.'/localFiles/apiSettings/',$defaultSettingsParams);
+    $apiSettings = new \IOFrame\Handlers\SettingsHandler($rootFolder.'/localFiles/apiSettings/',$defaultSettingsParams);
 $relevantSetting = $apiSettings->getSetting('articles');
-if(\IOFrame\Util\is_json($relevantSetting)){
+if(\IOFrame\Util\PureUtilFunctions::is_json($relevantSetting)){
     $relevantSetting = json_decode($relevantSetting,true);
     if(!empty($relevantSetting['articleContactTypes'])){
         $types = explode(',',$relevantSetting['articleContactTypes']);

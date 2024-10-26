@@ -9,10 +9,10 @@ $result = [
 if(!empty($inputs['permanent'])){
     $deletionTargets = [];
     foreach($inputs['targets'] as $ID){
-        array_push($deletionTargets,[
-            'Article_ID'=>$inputs['id'],
-            'Block_ID'=>$ID,
-        ]);
+        $deletionTargets[] = [
+            'Article_ID' => $inputs['id'],
+            'Block_ID' => $ID,
+        ];
     }
     $result['block'] = $ArticleHandler->deleteItems($deletionTargets, 'general-block', $deletionParams);
 }
@@ -37,6 +37,6 @@ if($continue){
                 $inputs['targets'],
                 ['test'=>$test]
             );
-};
+}
 
 $result = ['response'=>$result];

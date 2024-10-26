@@ -7,9 +7,9 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot.'headers_sta
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'cp_redirect_to_login.php';
 
-array_push($JS,'mixins/sourceUrl.js','modules/CPMenu.js','modules/mails.js');
+array_push($JS,'mixins/sourceUrl.js','mixins/searchListFilterSaver.js','components/searchList.js','modules/CPMenu.js','modules/mails.js');
 
-array_push($CSS,'cp.css','modules/CPMenu.css','modules/mails.css');
+array_push($CSS,'cp.css','components/searchList.css','modules/CPMenu.css','modules/mails.css');
 
 require $settings->getSetting('absPathToRoot') . $IOFrameTemplateRoot.'/headers_get_resources.php';
 
@@ -53,5 +53,3 @@ require $settings->getSetting('absPathToRoot') . $IOFrameTemplateRoot.'/footers_
 $frontEndResourceTemplateManager->printResources('JS');
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot.'/footers_end.php';
-
-?>

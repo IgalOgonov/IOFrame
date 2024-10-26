@@ -1,6 +1,5 @@
 <?php
-if(!defined('validator'))
-    require __DIR__ . '/../../IOFrame/Util/validator.php';
+
 
 //ID
 if($inputs['userID'] === null){
@@ -16,7 +15,7 @@ else{
 
 //relationType
 if($inputs['relationType'] !== null) {
-    if (!\IOFrame\Util\validator::validateSQLKey($inputs['relationType'])) {
+    if (!\IOFrame\Util\ValidatorFunctions::validateSQLKey($inputs['relationType'])) {
         if ($test)
             echo 'Invalid type!' . EOL;
         exit(INPUT_VALIDATION_FAILURE);
@@ -25,7 +24,7 @@ if($inputs['relationType'] !== null) {
 
 //orderBy
 if($inputs['orderBy'] !== null) {
-    if (!\IOFrame\Util\validator::validateSQLKey($inputs['orderBy'])) {
+    if (!\IOFrame\Util\ValidatorFunctions::validateSQLKey($inputs['orderBy'])) {
         if ($test)
             echo 'Invalid orderBy!' . EOL;
         exit(INPUT_VALIDATION_FAILURE);

@@ -22,7 +22,7 @@
     }
     #settings .search-list .search-item {
         flex-direction: column;
-        max-width: calc(100vw - 100px);
+        max-width: calc(100vw - 30px);
     }
     #settings .search-list .search-item .search-item-title {
         display: inherit !important;

@@ -24,7 +24,7 @@ const parseLimit = {
                 if(secondsLeft > 0){
                     timeArray.push(secondsLeft+' '+(secondsLeft>1?this.text.rateLimit.seconds : this.text.rateLimit.second));
                 }
-                return  this.text.rateLimit.tryAgain+' '+timeArray.join(this.text.rateLimit.connector);
+                return this.text.rateLimit.tryAgain+' '+timeArray.join(this.text.rateLimit.connector);
             }
             return false;
         }

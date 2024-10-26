@@ -9,8 +9,8 @@
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    class="icon user"
    width="24.75"
-   height="35.75"
-   viewBox="0 0 13.5 19.5"
+   height="30.446001"
+   viewBox="0 0 13.5 16.60691"
    stroke-width="1.5"
    stroke="currentColor"
    fill="none"
@@ -27,7 +27,7 @@
          rdf:about="">
         <dc:format>image/svg+xml</dc:format>
         <dc:type
-           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+           rdf:resource="https://purl.org/dc/dcmitype/StillImage" />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -46,19 +46,22 @@
      inkscape:window-height="1017"
      id="namedview10"
      showgrid="false"
-     inkscape:zoom="16.704545"
-     inkscape:cx="12.375"
-     inkscape:cy="17.875"
+     inkscape:zoom="2.0328663"
+     inkscape:cx="182.61239"
+     inkscape:cy="112.11293"
      inkscape:window-x="1912"
      inkscape:window-y="-8"
      inkscape:window-maximized="1"
-     inkscape:current-layer="svg8" />
-  <circle
-     cx="6.75"
-     cy="4.75"
-     r="4"
-     id="circle4" />
+     inkscape:current-layer="svg8"
+     inkscape:document-rotation="0" />
   <path
-     d="m 0.75,18.75 v -2 a 4,4 0 0 1 4,-4 h 4 a 4,4 0 0 1 4,4 v 2"
-     id="path6" />
+     d="m 0.75,15.856909 v -2 l 4,-3.9999995 h 4 l 4,3.9999995 v 2"
+     id="path6"
+     style="stroke:#1c7786;stroke-linecap:square;stroke-opacity:1"
+     sodipodi:nodetypes="cccccc" />
+  <path
+     id="rect833"
+     style="fill:none;stroke:#1c7786;stroke-width:1.09091;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:2;stroke-dasharray:none;stroke-opacity:1;paint-order:markers stroke fill"
+     d="M 2.7272727,1.6365098 4.7272364,0.54545498 H 9.0872727 L 10.909091,1.6363641 V 6.8175333 L 6.8181818,7.9084425 2.7272727,6.8175333 Z"
+     sodipodi:nodetypes="cccccccc" />
 </svg>

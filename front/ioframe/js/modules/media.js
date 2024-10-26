@@ -7,239 +7,277 @@ if(eventHub === undefined)
 var media = new Vue({
     el: '#media',
     name:'Media',
-    mixins:[sourceURL,eventHubManager],
-    data: {
-        configObject: JSON.parse(JSON.stringify(document.siteConfig)),
-        //Modes, and array of available operations in each mode
-        modes: {
-            'view':{
-                operations:{
-                    'move':{
-                        title:'Move'
-                    },
-                    'copy':{
-                        title:'Copy'
-                    },
-                    'rename':{
-                        title:'Rename (Filename / Identifier)'
-                    },
-                    'delete':{
-                        title:'Delete',
-                        button:'negative-1'
-                    },
-                    'deleteMultiple':{
-                        title:'Delete Multiple',
-                        button:'negative-1'
-                    },
-                    'create':{
-                        title:'Create Folder'
-                    },
-                    'cancel':{
-                        title:'Cancel',
-                        button:'cancel-1'
-                    }
-                },
-                title:'View Media'
+    mixins:[sourceURL,eventHubManager,searchListFilterSaver],
+    data: function(){
+        return {
+            identifier: 'media',
+                configObject: JSON.parse(JSON.stringify(document.siteConfig)),
+            eventsProperties:{
+            'select':{
+                fn:this.selectElement,
+                from:['viewer1','viewer2']
             },
-            'view-db':{
-                operations:{
-                    'copy':{
-                        title:'Copy'
-                    },
-                    'rename':{
-                        title:'Rename (filename)'
-                    },
-                    'delete':{
-                        title:'Delete',
-                        button:'negative-1'
-                    },
-                    'deleteMultiple':{
-                        title:'Delete Multiple',
-                        button:'negative-1'
-                    },
-                    'cancel':{
-                        title:'Cancel',
-                        button:'cancel-1'
-                    }
-                },
-                title:'View Remote Media'
+            'requestSelection':{
+                fn:this.selectSearchElement,
+                from:'search'
             },
-            'edit':{
-                operations:{},
-                title:'View/Edit Media'
+            'changeURLRequest':{
+                fn:this.changeURLRequest,
+                from:['viewer1','viewer2'] /* Could also be expressed as viewer\d */
             },
-            'upload':{
-                operations:{},
-                title:'Upload Media'
-            }
+            'viewElementsUpdated':{
+                fn:this.updateViewElements,
+                from:['viewer1','viewer2']
+            },
+            'updateViewElement':{
+                fn:this.updateViewElement,
+                from:'editor',
+            },
+            'updateSearchListElement':{
+                fn:this.updateSearchListElement,
+                from:'editor',
+            },
+            'imageUploadedToServer':{
+                fn:this.updateView,
+                from:'uploader'
+            },
+            'searchResults':{
+                fn:this.parseSearchResults,
+                from:'search'
+            },
+            'goToPage':{
+                fn:this.goToPage,
+                from:'search'
+            },
+            'resizeImages':{
+                fn:this.resizeImages,
+                from:'media',
+                to:'media'
+            },
         },
-        currentMode: 'view',
-        //Types of media - Images or Videos
-        currentType:'img',
-        mediaTypes:{
+            //Modes, and array of available operations in each mode
+            modes: {
+                'view':{
+                    operations:{
+                        'move':{
+                            title:'Move'
+                        },
+                        'copy':{
+                            title:'Copy'
+                        },
+                        'rename':{
+                            title:'Rename (Filename / Identifier)'
+                        },
+                        'delete':{
+                            title:'Delete',
+                                button:'negative-1'
+                        },
+                        'deleteMultiple':{
+                            title:'Delete Multiple',
+                                button:'negative-1'
+                        },
+                        'create':{
+                            title:'Create Folder'
+                        },
+                        'cancel':{
+                            title:'Cancel',
+                                button:'cancel-1'
+                        }
+                    },
+                    title:'View Media'
+                },
+                'view-db':{
+                    operations:{
+                        'copy':{
+                            title:'Copy'
+                        },
+                        'rename':{
+                            title:'Rename (filename)'
+                        },
+                        'delete':{
+                            title:'Delete',
+                                button:'negative-1'
+                        },
+                        'deleteMultiple':{
+                            title:'Delete Multiple',
+                                button:'negative-1'
+                        },
+                        'cancel':{
+                            title:'Cancel',
+                                button:'cancel-1'
+                        }
+                    },
+                    title:'View Remote Media'
+                },
+                'edit':{
+                    operations:{},
+                    title:'View/Edit Media'
+                },
+                'upload':{
+                    operations:{},
+                    title:'Upload Media'
+                }
+            },
+            currentMode: 'view',
+                //Types of media - Images or Videos
+                currentType:'img',
+            mediaTypes:{
             img:'Images',
-            vid:'Videos'
+                vid:'Videos'
         },
-        currentOperation: '',
-        operationInput:'',
-        mediaURL: document.rootURI + 'api/media',
-        view1:{
+            currentOperation: '',
+                operationInput:'',
+            mediaURL: document.ioframe.rootURI + 'api/media',
+            view1:{
             url: '',
-            target:'',
-            deleteTargets:[],
-            elements: {},
+                target:'',
+                deleteTargets:[],
+                elements: {},
             upToDate:false,
         },
-        view2:{
-            url: '',
-            target:'',
-            elements: {},
-            upToDate:false,
-        },
-        searchList:{
-            //Filters to display for the search list
-            filters:[
-                {
-                    type:'Group',
-                    group: [
-                        {
-                            name:'createdAfter',
-                            title:'Created After',
-                            type:'Datetime',
-                            parser: function(value){ return Math.round(value/1000); }
-                        },
-                        {
-                            name:'createdBefore',
-                            title:'Created Before',
-                            type:'Datetime',
-                            parser: function(value){ return Math.round(value/1000); }
-                        }
-                    ]
-                },
-                {
-                    type:'Group',
-                    group: [
-                        {
-                            name:'changedAfter',
-                            title:'Changed After',
-                            type:'Datetime',
-                            parser: function(value){ return Math.round(value/1000); }
-                        },
-                        {
-                            name:'changedBefore',
-                            title:'Changed Before',
-                            type:'Datetime',
-                            parser: function(value){ return Math.round(value/1000); }
-                        }
-                    ]
-                },
-                {
-                    type:'Group',
-                    group: [
-                        {
-                            name:'includeRegex',
-                            title:'Include',
-                            placeholder:'Text identifier includes',
-                            type:'String',
-                            min:0,
-                            max: 64,
-                            validator: function(value){
-                                return value.match(/^[\w\.\-\_ ]{1,64}$/) !== null;
-                            }
-                        },
-                        {
-                            name:'excludeRegex',
-                            title:'Exclude',
-                            placeholder:'Text identifier excludes',
-                            type:'String',
-                            min:0,
-                            max: 64,
-                            validator: function(value){
-                                return value.match(/^[\w\.\-\_ ]{1,64}$/) !== null;
-                            }
-                        },
-                    ]
-                }
-            ],
-            //Result comunts to display, and how to parse them
-            columns:[
-                {
-                    id:'media',
-                    custom:true,
-                    title:'Media',
-                    parser:function(item){
-                        let src = item.dataType? (document.rootURI+'api/media?action=getDBMedia&address='+item.identifier+'&lastChanged='+item.lastChanged) : item.identifier;
-                        return '<img src="'+src+'">';
-                    }
-                },
-                {
-                    id:'name',
-                    custom:true,
-                    title:'Name',
-                    parser:function(item){
-                        if(document.selectedLanguage && (item[document.selectedLanguage+'_name'] !== undefined) )
-                                return item[document.selectedLanguage+'_name'];
-                        else
-                            return item.name? item.name : (item.dataType ? item.identifier : 'Unnamed link');
-                    }
-                },
-                {
-                    id:'lastChanged',
-                    title:'Last Changed',
-                    parser:timeStampToReadableFullDate
-                },
-                {
-                    id:'identifier',
-                    title:'Media Identifier',
-                    parser:function(identifier){
-                        return '<textarea disabled>'+identifier+'</textarea>';
-                    }
-                }
-            ],
-            page:0,
-            limit:25,
-            total: 0,
-            items: [],
-            initiated: false,
-            selected:[],
-            extraParams:{
-                getDB:1
+            view2:{
+                url: '',
+                    target:'',
+                    elements: {},
+                upToDate:false,
             },
-            extraClasses: function(item){
-                if(item.vertical)
-                    return 'vertical';
-                else if(item.small)
-                    return 'small';
-                else
-                    return false;
-            },
-            functions:{
-                'mounted': function(){
-                    //This means we re-mounted the component without searching again
-                    if(!this.initiate){
-                        eventHub.$emit('resizeImages');
+            searchList:{
+                //Filters to display for the search list
+                filters:[
+                    {
+                        type:'Group',
+                        group: [
+                            {
+                                name:'createdAfter',
+                                title:'Created After',
+                                type:'Datetime',
+                                parser: function(value){ return Math.round(value/1000); }
+                            },
+                            {
+                                name:'createdBefore',
+                                title:'Created Before',
+                                type:'Datetime',
+                                parser: function(value){ return Math.round(value/1000); }
+                            }
+                        ]
+                    },
+                    {
+                        type:'Group',
+                        group: [
+                            {
+                                name:'changedAfter',
+                                title:'Changed After',
+                                type:'Datetime',
+                                parser: function(value){ return Math.round(value/1000); }
+                            },
+                            {
+                                name:'changedBefore',
+                                title:'Changed Before',
+                                type:'Datetime',
+                                parser: function(value){ return Math.round(value/1000); }
+                            }
+                        ]
+                    },
+                    {
+                        type:'Group',
+                        group: [
+                            {
+                                name:'includeRegex',
+                                title:'Include',
+                                placeholder:'Text identifier includes',
+                                type:'String',
+                                min:0,
+                                max: 64,
+                                validator: function(value){
+                                    return value.match(/^[\w\.\-\_ ]{1,64}$/) !== null;
+                                }
+                            },
+                            {
+                                name:'excludeRegex',
+                                title:'Exclude',
+                                placeholder:'Text identifier excludes',
+                                type:'String',
+                                min:0,
+                                max: 64,
+                                validator: function(value){
+                                    return value.match(/^[\w\.\-\_ ]{1,64}$/) !== null;
+                                }
+                            },
+                        ]
+                    }
+                ],
+                    //Result comunts to display, and how to parse them
+                    columns:[
+                    {
+                        id:'media',
+                        custom:true,
+                        title:'Media',
+                        parser:function(item){
+                            let src = item.dataType? (document.ioframe.rootURI+'api/media?action=getDBMedia&address='+item.identifier+'&lastChanged='+item.lastChanged) : item.identifier;
+                            return '<img src="'+src+'">';
+                        }
+                    },
+                    {
+                        id:'name',
+                        custom:true,
+                        title:'Name',
+                        parser:function(item){
+                            const lang = document.ioframe.selectedLanguage;
+                            if(lang && (item[lang+'_name'] !== undefined) )
+                                return item[lang+'_name'] ?? item.identifier;
+                            else
+                                return item.name?? item.identifier;
+                        }
+                    },
+                    {
+                        id:'lastChanged',
+                        title:'Last Changed',
+                        parser:timeStampToReadableFullDate
+                    },
+                    {
+                        id:'identifier',
+                        title:'Media Identifier',
+                        parser:function(identifier){
+                            return '<textarea disabled>'+identifier+'</textarea>';
+                        }
+                    }
+                ],
+                    page:0,
+                    limit:25,
+                    total: 0,
+                    items: [],
+                    initiated: false,
+                    selected:[],
+                    extraParams:{
+                    getDB:1
+                },
+                extraClasses: function(item){
+                    if(item.vertical)
+                        return 'vertical';
+                    else if(item.small)
+                        return 'small';
+                    else
+                        return false;
+                },
+                functions:{
+                    'mounted': function(){
+                        //This means we re-mounted the component without searching again
+                        if(!this.initiate){
+                            eventHub.$emit('resizeImages');
+                        }
                     }
                 }
-            }
-        },
-        lastMode:'view', //This can only be 'view' or 'view-db' -
-        isLoading:false,
-        verbose:false,
-        test:false
+            },
+            lastMode:'view', //This can only be 'view' or 'view-db' -
+                isLoading:false,
+            verbose:false,
+            test:false
+        }
     },
     created:function(){
         this.registerHub(eventHub);
         //Tells viewer to load initial target
-        this.registerEvent('select', this.selectElement);
-        this.registerEvent('requestSelection', this.selectSearchElement);
-        this.registerEvent('changeURLRequest', this.changeURLRequest);
-        this.registerEvent('viewElementsUpdated', this.updateViewElements);
-        this.registerEvent('updateViewElement', this.updateViewElement);
-        this.registerEvent('updateSearchListElement', this.updateSearchListElement);
-        this.registerEvent('imageUploadedToServer', this.updateView);
-        this.registerEvent('searchResults',this.parseSearchResults);
-        this.registerEvent('goToPage',this.goToPage);
-        this.registerEvent('resizeImages',this.resizeImages);
+        this.registerEvents();
 
         //Defaults
         if(this.configObject.media === undefined)
@@ -325,7 +363,9 @@ var media = new Vue({
     },
     methods:{
         //Switches to requested mode
-        updateView: function(){
+        updateView: function(request){
+            if(!this.checkIfRelevantEvent('imageUploadedToServer',request))
+                return;
             this.view1.upToDate = false;
         },
         //Switches to requested mode
@@ -342,7 +382,7 @@ var media = new Vue({
             ){
                 alertLog('Please select the media before you view/edit it!','info',document.querySelector('#media'));
                 return;
-            };
+            }
 
             if(['view','view-db'].indexOf(newMode) !== -1 && this.lastMode !== newMode)
                 this.lastMode = newMode;
@@ -391,11 +431,11 @@ var media = new Vue({
             if(this.verbose)
                 console.log('Current Operation ', this.currentOperation ,'Current input ',this.operationInput);
             let data = new FormData();
-            var apiURL = this.mediaURL;
-            var test = this.test;
-            var verbose = this.verbose;
-            var currentOperation = this.currentOperation;
-            var thisElement = this.$el;
+            let apiURL = this.mediaURL;
+            let test = this.test;
+            let verbose = this.verbose;
+            let currentOperation = this.currentOperation;
+            let thisElement = this.$el;
 
             let source;
             let destination;
@@ -453,10 +493,10 @@ var media = new Vue({
                         console.log(currentOperation+' ',source,' to ',destination);
                     break;
                 case 'deleteMultiple':
-                    var deletionTargets = [];
+                    let deletionTargets = [];
 
                     if(this.currentMode === 'view'){
-                        var url = this.view1.url;
+                        let url = this.view1.url;
                         if(url!== '')
                             url +='/';
                         this.view1.deleteTargets.forEach(function(item,index){
@@ -483,8 +523,8 @@ var media = new Vue({
                         console.log(this.operationInput,' already exists, cannot create folder!');
                     else{
                         data.append('action', 'createFolder');
-                        data.append('category', this.currentMode);
-                        var url = this.view1.url;
+                        data.append('category', this.currentType);
+                        let url = this.view1.url;
                         if(url!== '')
                             data.append('relativeAddress', this.view1.url);
                         data.append('name', this.operationInput);
@@ -493,14 +533,14 @@ var media = new Vue({
                     }
                     break;
                 default:
-            };
+            }
 
             //Handle the rest of the request if it should be sent
             if(data.get('action')){
                 this.isLoading = true;
                 if(this.test){
                     data.append('req','test');
-                };
+                }
                 updateCSRFToken().then(
                     function(token){
                         data.append('CSRF_token', token);
@@ -620,7 +660,7 @@ var media = new Vue({
         },
         //Selects an element in the search list
         selectSearchElement: function(request){
-            if(!request.from || request.from !== 'search')
+            if(!this.checkIfRelevantEvent('requestSelection',request))
                 return;
 
             let index = request.content;
@@ -644,14 +684,10 @@ var media = new Vue({
         //Selects an element, if the mode is right
         selectElement: function(request){
 
-            if(!request.from || request.from === 'media')
+            if(!this.checkIfRelevantEvent('select',request))
                 return;
 
-            if(this.verbose)
-                console.log('Recieved', request);
-
             let isFolder = request.content.folder;
-            let shouldSelect = true;
             let newTarget = request.key.split('/').pop();
             if(this.currentOperation === 'deleteMultiple'){
                 let oldIndex = this.view1.deleteTargets.indexOf(newTarget);
@@ -673,7 +709,6 @@ var media = new Vue({
                             let newURL = this.view1.url;
                             if(newURL != '')
                                 newURL += '/';
-                            console.log('here '+newURL+targetFolder);
                             this.changeURL('viewer1',newURL+targetFolder);
                         }
                     }
@@ -710,8 +745,8 @@ var media = new Vue({
         },
         changeURLRequest: function(request){
 
-            if(this.verbose)
-                console.log('Recieved', request);
+            if(!this.checkIfRelevantEvent('changeURLRequest',request))
+                return;
 
             this.changeURL(request.from,request.content)
         },
@@ -734,53 +769,37 @@ var media = new Vue({
         //Updates the current view with what we got from a viewer
         updateViewElements: function(request){
 
-            if(this.verbose)
-                console.log('Recieved updateViewElements', request);
-
-            if(!request.from || request.from === 'media')
+            if(!this.checkIfRelevantEvent('viewElementsUpdated',request))
                 return;
 
             //If we got a valid view, update the app
-            if(typeof request.content === 'object'){
-                if(request.from === 'viewer1'){
-                    this.view1.elements = request.content;
-                    this.view1.upToDate = true;
-                }
-                else if(request.from === 'viewer2'){
-                    this.view2.elements = request.content;
-                    this.view2.upToDate = true;
-                }
+            if(request.from === 'viewer1'){
+                this.view1.elements = request.content;
+                this.view1.upToDate = true;
             }
-            //Handle errors
-            else{
-                if(this.verbose)
-                    console.log('Error code: '+request.content);
+            else if(request.from === 'viewer2'){
+                this.view2.elements = request.content;
+                this.view2.upToDate = true;
             }
         },
         //Updates a single element currently selected in the searchlist (yes I know it's the same as updateViewElement, might combine them later)
         updateSearchListElement: function(request){
 
-            if(this.verbose)
-                console.log('Received', request);
-
-            if(!request.from || request.from === 'media')
+            if(!this.checkIfRelevantEvent('updateSearchListElement',request))
                 return;
 
             //If we got a valid view, update the app
             let element = request.content;
             let target = this.searchList.items[this.searchList.selected];
             for(let key in element){
-                target[key] = element[key];
+                Vue.set(target,key,element[key]);
             }
         },
         //Updates a single element of the current view
         updateViewElement: function(request){
 
-            if(!request.from || request.from === 'media')
+            if(!this.checkIfRelevantEvent('updateViewElement',request))
                 return;
-
-            if(this.verbose)
-                console.log('Recieved', request);
 
             //If we got a valid view, update the app
             let element = request.content;
@@ -804,10 +823,7 @@ var media = new Vue({
         },
         //Parses search results returned from a search list
         parseSearchResults: function(response){
-            if(this.verbose)
-                console.log('Received response',response);
-
-            if(!response.from || response.from !== 'search')
+            if(!this.checkIfRelevantEvent('searchResults',response))
                 return;
 
             //Either way, the galleries should be considered initiated
@@ -827,15 +843,12 @@ var media = new Vue({
             }
 
             this.searchList.functions.updated = function(){
-                eventHub.$emit('resizeImages');
+                eventHub.$emit('resizeImages',{from:'media',to:'media'});
             };
         },
         //Goes to a different page
         goToPage: function(response){
-            if(this.verbose)
-                console.log('Recieved response',response);
-
-            if(!response.from || response.from !== 'search')
+            if(!this.checkIfRelevantEvent('goToPage',response))
                 return;
 
             this.searchList.page = response.content;
@@ -845,14 +858,18 @@ var media = new Vue({
             this.searchList.selected = -1;
         },
         //Resizes searchlist images
-        resizeImages: function (timeout = 5) {
+        resizeImages: function (request, timeout = 5) {
+
+            if((timeout === 5) && !this.checkIfRelevantEvent('resizeImages',request))
+                return;
 
             let context = this;
 
             if(!this.searchList.initiated && timeout > 0){
                 if(this.verbose)
                     console.log('resizing images again, timeout '+timeout);
-                setTimeout(function(){context.resizeImages(timeout-1)},1000);
+                /*After all those years, this is still the least annoying way to deal with async*/
+                setTimeout(function(){context.resizeImages(request, timeout-1)},1000);
                 return;
             }
             else if(!this.searchList.initiated && timeout === 0){
@@ -887,7 +904,7 @@ var media = new Vue({
                     if(image.complete)
                         image.onload();
                 }
-            };
+            }
         }
     },
     mounted: function(){
@@ -912,16 +929,158 @@ var media = new Vue({
                 (
                 newType === 'img' ?
                     function(item){
-                        let src = item.dataType? (document.rootURI+'api/media?action=getDBMedia&address='+item.identifier+'&resourceType=img&lastChanged='+item.lastChanged) : item.identifier;
+                        let src = item.dataType? (document.ioframe.rootURI+'api/media?action=getDBMedia&address='+item.identifier+'&resourceType=img&lastChanged='+item.lastChanged) : item.identifier;
                         return '<img src="'+src+'">';
                     }
                     :
                     function(item){
-                        let src = item.dataType? (document.rootURI+'api/media?action=getDBMedia&address='+item.identifier+'&resourceType=vid&lastChanged='+item.lastChanged) : item.identifier;
+                        let src = item.dataType? (document.ioframe.rootURI+'api/media?action=getDBMedia&address='+item.identifier+'&resourceType=vid&lastChanged='+item.lastChanged) : item.identifier;
                         return '<video src="'+src+'" preload="metadata">';
                     }
                 )
             );
         }
     },
+    template: `
+    <div id="media" class="main-app">
+        <div class="loading-cover" v-if="isLoading">
+        </div>
+    
+        <h1 v-if="title!==''" v-text="title"></h1>
+    
+        <div class="modes">
+            <button
+                v-for="(item,index) in modes"
+                v-if="shouldDisplayMode(index)"
+                @click="switchModeTo(index)"
+                v-text="item.title"
+                :class="{selected:(currentMode===index)}"
+                class="positive-3"
+                >
+            </button>
+        </div>
+        <div class="operations-container"  v-if="currentModeHasOperations">
+            <div class="operations-title" v-text="'Actions'"></div>
+            <div class="operations" v-if="currentOperation===''">
+                <button
+                    v-if="shouldDisplayOperation(index)"
+                    v-for="(item,index) in modes[currentMode].operations"
+                    @click="operation(index)"
+                    :class="[index,{selected:(currentOperation===index)},(item.button? item.button : 'positive-3')]"
+                    >
+                    <div v-text="item.title"></div>
+                </button>
+            </div>
+        </div>
+    
+        <div class="operations" v-if="currentModeHasOperations && currentOperation !== ''">
+            <div class="input-container">
+                <label :for="currentOperation" v-text="currentOperationText"></label>
+                <input
+                    v-if="currentOperationHasInput"
+                    :name="currentOperation"
+                    v-model:value="operationInput"
+                    type="text"
+                    >
+            </div>
+            <button :class="(currentOperation === 'deleteMultiple' || currentOperation === 'delete')? 'negative-1':'positive-1'" @click="confirmOperation" >
+                <div v-text="'Confirm'"></div>
+                <img :src="sourceURL() + '/img/icons/confirm-icon.svg'">
+            </button>
+            <button class="cancel-1" @click="cancelOperation" >
+                <div v-text="'Cancel'"></div>
+                <img :src="sourceURL() + '/img/icons/cancel-icon.svg'">
+            </button>
+        </div>
+    
+        <div class="types">
+            <span class="title">Media Type: </span>
+            <select class="types" v-model:value="currentType" :disabled="currentMode!=='view-db' && currentMode!=='view'">
+                <option
+                    v-for="(item,index) in mediaTypes"
+                    :value="index"
+                    :class="{selected:currentType === index}"
+                    v-text="item? item : ' - '"
+                    >
+                </option>
+            </select>
+        </div>
+    
+        <div v-if="needViewer">
+            <div is="media-viewer"
+                 :media-type="currentType"
+                 :url="view1.url"
+                 :target="view1.target"
+                 :multiple-targets="view1.deleteTargets"
+                 :select-multiple="currentOperation==='deleteMultiple'"
+                 :display-elements="view1.elements"
+                 :initiate="!view1.upToDate"
+                 :verbose="verbose"
+                 :test="test"
+                 identifier="viewer1"
+                ></div>
+    
+            <h2 v-if="secondTitle!==''" v-text="secondTitle"></h2>
+            <div is="media-viewer"
+                 v-if="needSecondViewer"
+                 :media-type="currentType"
+                 :url="view2.url"
+                 :target="view2.target"
+                 :display-elements="view2.elements"
+                 :initiate="!view2.upToDate"
+                 :test="test"
+                 :verbose="verbose"
+                 :only-folders="true"
+                 identifier="viewer2"
+                >
+            </div>
+        </div>
+    
+        <div v-if="currentMode==='view-db'">
+            <div  is="search-list"
+                  :_functions="searchList.functions"
+                  :api-url="mediaURL"
+                  :extra-params="searchList.extraParams"
+                  :extra-classes="searchList.extraClasses"
+                  :api-action="(currentType === 'img' ? 'getImages' : 'getVideos')"
+                  :page="searchList.page"
+                  :limit="searchList.limit"
+                  :total="searchList.total"
+                  :items="searchList.items"
+                  :initiate="!searchList.initiated"
+                  :columns="searchList.columns"
+                  :filters="searchList.filters"
+                  :selected="searchList.selected"
+                  :test="test"
+                  :verbose="verbose"
+                  identifier="search"
+                >
+            </div>
+        </div>
+    
+        <div  v-if="currentMode==='upload'"
+              is="media-uploader"
+              :media-type="currentType"
+              :type="lastMode === 'view'? 'local' : 'remote'"
+              :url="view1.url"
+              :test="test"
+              :verbose="verbose"
+              identifier="uploader"
+            >
+        </div>
+    
+        <div v-if="currentMode==='edit'"
+             is="media-editor"
+             :media-type="currentType"
+             :type="lastMode === 'view'? 'local' : 'remote'"
+             :url="view1.url"
+             :target="lastMode==='view' ? view1.target : searchList.items[searchList.selected[0]].identifier"
+             :image="lastMode==='view' ? view1.elements[(view1.url==='')? view1.target : view1.url+'/'+view1.target] : searchList.items[searchList.selected[0]]"
+             :verbose="verbose"
+             :test="test"
+             identifier="editor">
+            </div>
+        </div>
+    </div>
+    `
 });

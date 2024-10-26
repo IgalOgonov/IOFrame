@@ -4,10 +4,22 @@ if(eventHub === undefined)
 var articles = new Vue({
     el: '#articles',
     name: 'articles',
-    mixins:[eventHubManager,IOFrameCommons],
+    mixins:[eventHubManager,IOFrameCommons,cacheableObjectGetter,searchListFilterSaver],
     data(){
         return {
-            configObject: JSON.parse(JSON.stringify(document.siteConfig)), 
+            configObject: JSON.parse(JSON.stringify(document.siteConfig)),
+            language:document.ioframe.selectedLanguage ?? 'eng',
+            cacheableObjects:{
+                'ArticleTags':{
+                    apiName:'api/tags',
+                    actionName:'getBaseTags',
+                    cacheName:'_Default_Article_Tags_Cache',
+                    eventName:'getBaseTagsResponse',
+                    extraParams:{
+                        'type':'default-article-tags'
+                    }
+                }
+            },
             //Modes, and array of available operations in each mode
             modes: {
                 search:{
@@ -36,8 +48,221 @@ var articles = new Vue({
                     title:'Create Article'
                 }
             },
-            //Filters to display for the search list //TODO Expend common filters
-            filters:[
+            //Result columns to display, and how to parse them //TODO Expend with more
+            columns:[
+                {
+                    id:'identifier',
+                    title:'ID'
+                },
+                {
+                    id:'title',
+                    title:'Title'
+                },
+                {
+                    id:'tags',
+                    title:'Tags',
+                    parser:function(tags){
+                    }
+                },
+                {
+                    id:'image',
+                    custom:true,
+                    title:'Thumbnail',
+                    parser:function(item){
+                        if(!item.thumbnail || !item.thumbnail.address)
+                            return 'None';
+                        let src;
+                        if(item.thumbnail.local){
+                            src = document.ioframe.rootURI+document.ioframe.imagePathLocal+item.thumbnail.address;
+                        }
+                        else
+                            src = item.thumbnail.dataType?
+                                (document.ioframe.rootURI+'api/v1/media?action=getDBMedia&address='+item.thumbnail.address+'&lastChanged='+item.thumbnail.updated)
+                                :
+                                item.thumbnail.address;
+                        let alt = item.meta.alt? item.meta.alt : (item.thumbnail.meta.alt? item.thumbnail.meta.alt : '');
+                        return '<img src="'+src+'" alt="'+alt+'">';
+                    }
+                },
+                {
+                    id:'articleAuth',
+                    title:'View Auth',
+                    parser:function(level){
+                        switch (level){
+                            case 0:
+                                return 'Public';
+                            case 1:
+                                return 'Restricted';
+                            case 2:
+                                return 'Private';
+                            default:
+                                return 'Admin';
+                        }
+                    }
+                },
+                {
+                    id:'articleAddress',
+                    title:'Address'
+                },
+                {
+                    id:'subtitle',
+                    custom:true,
+                    title:'Subtitle',
+                    parser:function(item){
+                        if(!item.meta)
+                            return '';
+                        return item.meta.subtitle? (item.meta.subtitle.substring(0,40)+'...') : ' - ';
+                    }
+                },
+                {
+                    id:'caption',
+                    custom:true,
+                    title:'Caption',
+                    parser:function(item){
+                        if(!item.caption)
+                            return '';
+                        return item.meta.caption? (item.meta.caption.substring(0,40)+'...') : ' - ';
+                    }
+                },
+                {
+                    id:'weight',
+                    title:'Article Weight',
+                },
+                {
+                    id:'creator',
+                    custom:true,
+                    title:'Creator',
+                    parser:function(item){
+                        let result = item.creatorId;
+                        if(item.firstName){
+                            result = item.firstName;
+                            if(item.lastName)
+                                result += ' '+item.lastName;
+                        }
+                        return result;
+                    }
+                },
+                {
+                    id:'created',
+                    title:'Date Created',
+                    parser:timeStampToReadableFullDate
+                },
+                {
+                    id:'updated',
+                    title:'Last Changed',
+                    parser:timeStampToReadableFullDate
+                }
+            ],
+            //Calculated Dynamically
+            filters:{
+
+            },
+            //SearchList API (and probably the only relevant API) URL
+            url: document.ioframe.pathToRoot+ 'api/v2/articles',
+            //Current page
+            page:0,
+            //Go to page
+            pageToGoTo: 1,
+            //Limit
+            limit:50,
+            //Total available results
+            total: 0,
+            //Main items
+            items: [],
+            extraParams:{
+                authAtMost: 9999
+            },
+            extraClasses: function(item){
+                if(item.articleAuth > 2)
+                    return ['hidden'];
+                else
+                    return [];
+            },
+            selected:-1,
+            //Current Mode of operation
+            currentMode:'search',
+            //Current operation
+            currentOperation: '',
+            //Current operation input
+            operationInput: '',
+            //Whether we are currently loading
+            initiated: false,
+            verbose:false,
+            test:false
+        }
+    },
+    created:function(){
+        this.registerHub(eventHub);
+        this.registerEvent('requestSelection', this.selectElement);
+        this.registerEvent('searchResults', this.parseSearchResults);
+        this.registerEvent('resetSearchPage',this.resetSearchPage);
+        this.registerEvent('operationRequest', this.handleOperationResponse);
+        this.registerEvent('goToPage', this.goToPage);
+        this.registerEvent('searchAgain', this.searchAgain);
+        this.registerEvent('returnToMainApp', this.returnToMainApp);
+        this.registerEvent('getBaseTagsResponse', this.getBaseTagsResponse);
+        this.getCacheableObjects();
+        this.updateFilters();
+        this._registerSearchListFilters('search',{authAtMost:'9999',languageIs:'@'}, {startListening:true,registerDefaultEvents:true});
+    },
+    beforeMount: function (){
+    },
+    computed:{
+        //Main title
+        title:function(){
+            switch(this.currentMode){
+                case 'search':
+                    return 'Browsing Articles';
+                case 'edit':
+                    return 'Editing Article';
+                case 'create':
+                    return 'Creating Article';
+                default:
+            }
+        },
+        //Text for current operation
+        currentOperationPlaceholder:function(){
+            if(this.currentOperationHasInput){
+                switch(this.currentOperation){
+                    case 'temp':
+                        return 'temp';
+                    default:
+                        return '';
+                }
+            }
+            return '';
+        },
+        //Text for current operation
+        currentOperationText:function(){
+            switch(this.currentOperation){
+                case 'delete':
+                    return 'Delete selected?';
+                case 'permanentDeletion':
+                    return 'Delete permanently?';
+                default:
+                    return '';
+            }
+        },
+        //Whether current operation has input
+        currentOperationHasInput:function(){
+            switch(this.currentOperation){
+                default:
+                    return false;
+            }
+        },
+        //Whether the current mode has operations
+        currentModeHasOperations:function(){
+            return Object.keys(this.modes[this.currentMode].operations).length>0;
+        },
+
+    },
+    watch:{},
+    methods:{
+        //Filters depend on the tags
+        updateFilters:function(tagFilters = {}){
+            let filters = [];
+
+            filters.push(
                 {
                     type:'Group',
                     group: [
@@ -142,16 +367,17 @@ var articles = new Vue({
                                         title:'All'
                                     }
                                 ];
-                                for(let i in document.languages){
+                                for(let i in document.ioframe.languages){
                                     list.push({
-                                        value:document.languages[i],
-                                        title:document.languages[i]
+                                        value:document.ioframe.languages[i],
+                                        title:document.ioframe.languages[i]
                                     });
                                 }
                                 return list;
                             }(),
                             default: ''
-                        }
+                        },
+                        tagFilters
                     ]
                 },
                 {
@@ -188,200 +414,64 @@ var articles = new Vue({
                         }
                     ]
                 }
-            ],
-            //Result columns to display, and how to parse them //TODO Expend with more
-            columns:[
-                {
-                    id:'identifier',
-                    title:'ID'
-                },
-                {
-                    id:'title',
-                    title:'Article Title'
-                },
-                {
-                    id:'image',
-                    custom:true,
-                    title:'Thumbnail',
-                    parser:function(item){
-                        if(!item.thumbnail.address)
-                            return 'None';
-                        let src;
-                        if(item.thumbnail.local){
-                            src = document.rootURI+document.imagePathLocal+item.thumbnail.address;
+            );
+            Vue.set(this,'filters',filters) ;
+        },
+        getBaseTagsResponse:function(){
+            let context = this;
+            let tagFilters = {
+                name:'tagsIn',
+                title:'Article Tag',
+                type:'Select',
+                list:function(){
+                    let list = [
+                        {
+                            value:'',
+                            title:'All'
                         }
-                        else
-                            src = item.thumbnail.dataType?
-                                (document.rootURI+'api/v1/media?action=getDBMedia&address='+item.thumbnail.address+'&lastChanged='+item.thumbnail.updated)
-                                :
-                                item.thumbnail.address;
-                        let alt = item.meta.alt? item.meta.alt : (item.thumbnail.meta.alt? item.thumbnail.meta.alt : '');
-                        return '<img src="'+src+'" alt="'+alt+'">';
-                    }
-                },
-                {
-                    id:'articleAuth',
-                    title:'View Auth',
-                    parser:function(level){
-                        switch (level){
-                            case 0:
-                                return 'Public';
-                            case 1:
-                                return 'Restricted';
-                            case 2:
-                                return 'Private';
-                            default:
-                                return 'Admin';
+                    ];
+                    const articleTags = context.cacheableObjects.ArticleTags.contents;
+                    if(articleTags && (typeof articleTags === 'object') )
+                        for(let i in articleTags){
+                            if(i !== '@'){
+                                let tagId = i.split('/');
+                                let tagInfo = articleTags[i] ?? {};
+                                list.push({
+                                    value:i,
+                                    title:tagInfo[context.language] ?? tagInfo['eng'] ?? tagId[1]
+                                });
+                            }
                         }
+                    return list;
+                }(),
+                parser:function(value){
+                    if(!value)
+                        return value;
+                    else{
+                        let tagId = value.split('/');
+                        return tagId[1];
                     }
                 },
-                {
-                    id:'articleAddress',
-                    title:'Address'
-                },
-                {
-                    id:'subtitle',
-                    custom:true,
-                    title:'Subtitle',
-                    parser:function(item){
-                        return item.meta.subtitle? (item.meta.subtitle.substr(0,40)+'...') : ' - ';
-                    }
-                },
-                {
-                    id:'caption',
-                    custom:true,
-                    title:'Caption',
-                    parser:function(item){
-                        return item.meta.caption? (item.meta.caption.substr(0,40)+'...') : ' - ';
-                    }
-                },
-                {
-                    id:'weight',
-                    title:'Article Weight',
-                },
-                {
-                    id:'creator',
-                    custom:true,
-                    title:'Creator',
-                    parser:function(item){
-                        let result = item.creatorId;
-                        if(item.firstName){
-                            result = item.firstName;
-                            if(item.lastName)
-                                result += ' '+item.lastName;
-                        }
-                        return result;
-                    }
-                },
-                {
-                    id:'created',
-                    title:'Date Created',
-                    parser:timeStampToReadableFullDate
-                },
-                {
-                    id:'updated',
-                    title:'Last Changed',
-                    parser:timeStampToReadableFullDate
+                default: ''
+            };
+            this.updateFilters(tagFilters);
+
+            Vue.set(this.columns[2],'parser',function(tags){
+                let tagsHTML = '';
+                let tagsFromCache = context.cacheableObjects.ArticleTags.contents;
+
+                if(!tagsFromCache || !tags || !tags.length)
+                    return tagsHTML;
+                for (let i in tags){
+                    if(!tagsFromCache[tags[i]])
+                        continue;
+                    let tagId = tags[i].split('/');
+                    let tagInfo = tagsFromCache[tags[i]];
+                    tagsHTML += `<span class="tag `+tagId[0]+`">`+( tagInfo[context.language] ?? tagInfo['eng'] ?? tagId[1] )+`</span>`;
                 }
-            ],
-            //SearchList API (and probably the only relevant API) URL
-            url: document.pathToRoot+ 'api/v1/articles',
-            //Current page
-            page:0,
-            //Go to page
-            pageToGoTo: 1,
-            //Limit
-            limit:50,
-            //Total available results
-            total: 0,
-            //Main items
-            items: [],
-            extraParams: {
-                authAtMost:9999
-            },
-            extraClasses: function(item){
-                if(item.articleAuth > 2)
-                    return ['hidden'];
-                else
-                    return [];
-            },
-            selected:-1,
-            //Current Mode of operation
-            currentMode:'search',
-            //Current operation
-            currentOperation: '',
-            //Current operation input
-            operationInput: '',
-            //Whether we are currently loading
-            initiated: false,
-            verbose:false,
-            test:false
-        }
-    },
-    created:function(){
-        this.registerHub(eventHub);
-        this.registerEvent('requestSelection', this.selectElement);
-        this.registerEvent('searchResults', this.parseSearchResults);
-        this.registerEvent('operationRequest', this.handleOperationResponse);
-        this.registerEvent('goToPage', this.goToPage);
-        this.registerEvent('searchAgain', this.searchAgain);
-        this.registerEvent('returnToMainApp', this.returnToMainApp);
-    },
-    computed:{
-        //Main title TODO
-        title:function(){
-            switch(this.currentMode){
-                case 'search':
-                    return 'Browsing Articles';
-                    break;
-                case 'edit':
-                    return 'Editing Article';
-                    break;
-                case 'create':
-                    return 'Creating Article';
-                    break;
-                default:
-            }
+                return tagsHTML;
+            });
         },
-        //Text for current operation TODO
-        currentOperationPlaceholder:function(){
-            if(this.currentOperationHasInput){
-                switch(this.currentOperation){
-                    case 'temp':
-                        return 'temp';
-                    default:
-                        return '';
-                }
-            }
-            return '';
-        },
-        //Text for current operation TODO
-        currentOperationText:function(){
-            switch(this.currentOperation){
-                case 'delete':
-                    return 'Delete selected?';
-                    break;
-                case 'permanentDeletion':
-                    return 'Delete permanently?';
-                    break;
-                default:
-                    return '';
-            }
-        },
-        //Whether current operation has input TODO
-        currentOperationHasInput:function(){
-            switch(this.currentOperation){
-                default:
-                    return false;
-            }
-        },
-        //Whether the current mode has operations
-        currentModeHasOperations:function(){
-            return Object.keys(this.modes[this.currentMode].operations).length>0;
-        },
-    },
-    watch:{},
-    methods:{
         //Returns to main app
         returnToMainApp: function(){
             if(this.verbose)
@@ -397,6 +487,16 @@ var articles = new Vue({
             this.selected = -1;
             this.initiated = false;
         },
+        //Resets search result page
+        resetSearchPage: function (response){
+            if(this.verbose)
+                console.log('Received response',response);
+
+            if(!response.from || response.from !== 'search')
+                return;
+
+            this.page = 0;
+        },
         //Parses search results returned from a search list
         parseSearchResults: function(response){
             if(this.verbose)
@@ -410,16 +510,16 @@ var articles = new Vue({
             this.initiated = true;
 
             //In this case the response was an error code, or the page no longer exists
-            if(response.content['@'] === undefined)
+            if(!response.content['meta'] || !response.content.articles)
                 return;
 
-            this.total = (response.content['@']['#'] - 0) ;
-            delete response.content['@'];
-
-            for(let k in response.content){
-                response.content[k].identifier = k;
-                this.items.push(response.content[k]);
+            this.total = (response.content['meta']['#'] - 0) ;
+            const articles = response.content.articles;
+            for(let k in articles){
+                articles[k].identifier = k;
+                this.items.push(articles[k]);
             }
+            this.selected = -1;
         },
         //Handles operation response
         handleOperationResponse: function(request){
@@ -431,28 +531,34 @@ var articles = new Vue({
 
             let content = request.content;
 
-            //Common contents
-            if(content === 'INPUT_VALIDATION_FAILURE'){
-                alertLog('Operation input validation failed!','error',this.$el);
-            }
-            else if(content === 'AUTHENTICATION_FAILURE'){
-                alertLog('Operation not authorized! Check if you are logged in.','error',this.$el);
-            }
-            else if(content === 'OBJECT_AUTHENTICATION_FAILURE'){
-                alertLog('Not authorized to view/modify object!','error',this.$el);
-            }
-            else if(content === 'WRONG_CSRF_TOKEN'){
-                alertLog('CSRF token wrong. Try refreshing the page if this continues.','warning',this.$el);
-            }
-            else if(content === 'SECURITY_FAILURE'){
-                alertLog('Security related operation failure.','warning',this.$el);
+            if(content.error){
+                //Common Errors
+                if(content.error === 'INPUT_VALIDATION_FAILURE'){
+                    alertLog('Operation input validation failed!','error',this.$el);
+                }
+                else if(content.error === 'AUTHENTICATION_FAILURE'){
+                    alertLog('Operation not authorized! Check if you are logged in.','error',this.$el);
+                }
+                else if(content.error === 'OBJECT_AUTHENTICATION_FAILURE'){
+                    alertLog('Not authorized to view/modify object!','error',this.$el);
+                }
+                else if(content.error === 'WRONG_CSRF_TOKEN'){
+                    alertLog('CSRF token wrong. Try refreshing the page if this continues.','warning',this.$el);
+                }
+                else if(content.error === 'SECURITY_FAILURE'){
+                    alertLog('Security related operation failure.','warning',this.$el);
+                }
             }
 
 
             switch (request.from){
                 case 'delete':
                 case 'permanentDeletion':
-                    let actualResponse = content[this.items[this.selected].identifier];
+                    if(this.test){
+                        alertLog(content,'info',this.$el);
+                        return;
+                    }
+                    let actualResponse = content.response[this.items[this.selected].identifier];
                     if(actualResponse === undefined){
                         alertLog('Unknown '+request.from+' response, '+actualResponse,'error',this.$el);
                         return;
@@ -462,7 +568,7 @@ var articles = new Vue({
                             alertLog(request.from+' failed due to server error!','error',this.$el);
                             break;
                         case 0:
-                            alertLog(request.from+' successful!','success',this.$el);
+                            alertLog(request.from+' successful!','success',this.$el,{autoDismiss:2000});
                             if(request.from === 'permanentDeletion')
                                 this.items.splice(this.selected,1);
                             else
@@ -473,7 +579,7 @@ var articles = new Vue({
                             alertLog(request.from+' not authorized! Check if you are logged in.','error',this.$el);
                             break;
                         default:
-                            console.log(actualResponse);
+                            console.warn(actualResponse);
                             alertLog('Unknown response to '+request.from+', '+actualResponse,'error',this.$el);
                     }
                     break;
@@ -481,9 +587,9 @@ var articles = new Vue({
                     alertLog('Unknown operation '+request.from+' response, '+content,'error',this.$el);
             }
         },
-        //Goes to relevant page  TODO Remove if no searchlist
+        //Goes to relevant page
         goToPage: function(page){
-            if(!this.initiating && page.from == 'search'){
+            if(!this.initiating && (page.from === 'search')){
                 let newPage;
                 page = page.content;
 
@@ -505,10 +611,10 @@ var articles = new Vue({
                 this.selected = -1;
             }
         },
-        //Element selection from search list  TODO Remove if no searchlist
+        //Element selection from search list
         selectElement: function(request){
 
-            if(!request.from || request.from !== 'search')
+            if(!request.from || (request.from !== 'search'))
                 return;
 
             request = request.content;
@@ -540,7 +646,7 @@ var articles = new Vue({
             if(newMode === 'edit' && this.selected===-1){
                 alertLog('Please select an item before you view/edit it!','warning',this.$el);
                 return;
-            };
+            }
 
             if(newMode==='edit'){
                 switch (this.currentMode) {
@@ -561,11 +667,11 @@ var articles = new Vue({
             if(this.test)
                 console.log('Current Operation ', this.currentOperation ,'Current input ',this.operationInput);
 
-            let data = new FormData();
-            var test = this.test;
-            var verbose = this.verbose;
-            var currentOperation = this.currentOperation;
-            var thisElement = this.$el;
+            let queryParams = {};
+            let test = this.test;
+            let verbose = this.verbose;
+            let currentOperation = this.currentOperation;
+            let thisElement = this.$el;
             let operation = '';
 
             if(this.currentMode === 'search'){
@@ -573,14 +679,11 @@ var articles = new Vue({
                     case 'delete':
                     case 'permanentDeletion':
                         operation = currentOperation;
-                        data.append('action','deleteArticles');
-                        data.append('articles',JSON.stringify([this.items[this.selected].identifier]));
-                        if(currentOperation === 'permanentDeletion')
-                            data.append('permanentDeletion',true);
+                        queryParams.permanent = currentOperation === 'permanentDeletion';
                         break;
                     default:
                         break;
-                };
+                }
 
                 if(!operation){
                     if(this.verbose)
@@ -589,16 +692,18 @@ var articles = new Vue({
                 }
 
                 if(this.test)
-                    data.append('req','test');
+                    queryParams.req = 'test';
 
                  this.apiRequest(
-                     data,
-                      'api/v1/articles',
+                     null,
+                      'api/v2/articles/'+this.items[this.selected].identifier,
                       'operationRequest',
                       {
-                         verbose: this.verbose,
-                         parseJSON: true,
-                         identifier: operation
+                          method:'delete',
+                          queryParams:queryParams,
+                          verbose: this.verbose,
+                          parseJSON: true,
+                          identifier: operation
                       }
                  );
 
@@ -642,10 +747,96 @@ var articles = new Vue({
             else if(this.currentMode === 'edit'){
                 this.currentMode = 'search';
                 this.selected = -1;
-            };
+            }
             this.operationInput= '';
             this.currentOperation = '';
 
         }
     },
+    template:`
+    <div id="articles" class="main-app">
+        <div class="loading-cover" v-if="!initiated && currentMode==='search'">
+        </div>
+    
+        <h1 v-if="title!==''" v-text="title"></h1>
+        
+    
+        <div class="modes">
+            <button
+                v-for="(item,index) in modes"
+                v-if="shouldDisplayMode(index)"
+                v-text="item.title"
+                @click="switchModeTo(index)"
+                :class="[{selected:(currentMode===index)},(item.button? item.button : ' positive-3')]"
+            >
+            </button>
+        </div>
+    
+        <div class="operations-container" v-if="currentModeHasOperations">
+            <div class="operations-title" v-text="'Actions'"></div>
+            <div class="operations" v-if="currentOperation===''">
+                <button
+                    v-if="shouldDisplayOperation(index)"
+                    v-for="(item,index) in modes[currentMode].operations"
+                    @click="operation(index)"
+                    :class="[index,{selected:(currentOperation===index)},(item.button? item.button : 'positive-3')]"
+                >
+                    <div v-text="item.title"></div>
+                </button>
+            </div>
+        </div>
+    
+        <div class="operations" v-if="currentModeHasOperations && currentOperation !==''">
+            <label :for="currentOperation" v-text="currentOperationText" v-if="currentOperationText"></label>
+            <input
+                v-if="currentOperationHasInput"
+                :name="currentOperation"
+                :placeholder="currentOperationPlaceholder"
+                v-model:value="operationInput"
+                type="text"
+            >
+            <button
+                :class="(['delete','permanentDeletion'].indexOf(currentOperation) !== -1 ? 'negative-1' : 'positive-1')"
+                @click="confirmOperation">
+                <div v-text="'Confirm'"></div>
+            </button>
+            <button class="cancel-1" @click="cancelOperation">
+                <div v-text="'Cancel'"></div>
+            </button>
+        </div>
+    
+        <div is="search-list"
+             v-if="currentMode==='search'"
+             :api-url="url"
+             api-action="getArticles"
+             :extra-params="extraParams"
+             :extra-classes="extraClasses"
+             :current-filters="searchListFilters['search']"
+             :page="page"
+             :limit="limit"
+             :total="total"
+             :items="items"
+             :initiate="!initiated"
+             :columns="columns"
+             :filters="filters"
+             :selected="selected"
+             :test="test"
+             :verbose="verbose"
+             identifier="search"
+        ></div>
+    
+        <div is="articles-editor"
+             v-else=""
+             :mode="currentMode==='edit'? 'update' : 'create'"
+             :default-auth="9999"
+             :allow-modifying="true"
+             :existing-tag-info="cacheableObjects.ArticleTags"
+             :is-admin="true"
+             :item-identifier="currentMode==='edit'? items[selected].identifier - 0 : null"
+             identifier="editor"
+             :test="test"
+             :verbose="verbose"
+            ></div>
+    </div>
+    `
 });

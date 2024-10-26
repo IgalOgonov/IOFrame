@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('auth-groups-editor', {
     mixins: [sourceURL,eventHubManager,IOFrameCommons],
     props: {
@@ -60,7 +57,7 @@ Vue.component('auth-groups-editor', {
             //Items - [create] A list of newly created items
             items:[],
             //Whether the item list is up to date
-            upToDate: this.mode == 'create',
+            upToDate: this.mode === 'create',
             //Currently selected action
             selected:-1,
             //Filters will be custom per search, and passed through extraParams
@@ -80,7 +77,7 @@ Vue.component('auth-groups-editor', {
             //Whether we are currently searching
             searchInitiated: false,
             //SearchList API URL
-            url: document.rootURI+'api/v1/auth',
+            url: document.ioframe.rootURI+'api/v1/auth',
             //Whether we are currently initiating the item
             initiating: false,
             //Whether we are currently updating the item
@@ -95,6 +92,7 @@ Vue.component('auth-groups-editor', {
         this.registerEvent('setResponse' ,this.handleItemSet);
         this.registerEvent('requestSelection', this.selectElement);
         this.registerEvent('searchResults', this.parseSearchResults);
+        this.registerEvent('resetSearchPage',this.resetSearchPage);
         this.registerEvent('goToPage', this.goToPage);
 
         //Global config
@@ -228,7 +226,7 @@ Vue.component('auth-groups-editor', {
                         alertLog('Failed to add/remove actions!','error',this.$el);
                         break;
                     case 1:
-                        alertLog('Group updated!','success',this.$el);
+                        alertLog('Group updated!','success',this.$el,{autoDismiss:2000});
                         this.setInputsAsCurrent();
                         break;
                     default:
@@ -241,7 +239,7 @@ Vue.component('auth-groups-editor', {
                         alertLog('Failed to add/remove actions!','error',this.$el);
                         break;
                     case 1:
-                        alertLog('Groups created!','success',this.$el);
+                        alertLog('Groups created!','success',this.$el,{autoDismiss:2000});
                         this.resetInputs();
                         break;
                     default:
@@ -356,7 +354,7 @@ Vue.component('auth-groups-editor', {
             }
         },
         goToPage: function(page){
-            if(!this.initiating && page.from == this.identifier+'-search'){
+            if( !this.initiating && (page.from === this.identifier+'-search') ){
                 let newPage;
                 page = page.content;
 
@@ -377,6 +375,16 @@ Vue.component('auth-groups-editor', {
 
                 this.selected = -1;
             }
+        },
+        //Resets search result page
+        resetSearchPage: function (response){
+            if(this.verbose)
+                console.log('Received response',response);
+
+            if(!response.from || response.from !== this.identifier+'-search')
+                return;
+
+            this.page = 0;
         },
         //Parses search results returned from a search list
         parseSearchResults: function(response){

@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('media-editor', {
     mixins:[eventHubManager,IOFrameCommons,sourceURL],
     props: {
@@ -49,7 +46,7 @@ Vue.component('media-editor', {
     },
     data: function(){
         return {
-            languages: JSON.parse(JSON.stringify(document.languages)),
+            languages: JSON.parse(JSON.stringify(document.ioframe.languages)),
             newImageInfo:{
                 name:'',
                 caption:''
@@ -179,11 +176,11 @@ Vue.component('media-editor', {
                 data.append('req', 'test');
 
             //Api url
-            var apiURL = document.pathToRoot+"api/v1/media";
-            var verbose = this.verbose;
-            var identifier = this.identifier;
-            var thisElement = this.$el;
-            var test = this.test;
+            let apiURL = document.ioframe.pathToRoot+"api/v1/media";
+            let verbose = this.verbose;
+            let identifier = this.identifier;
+            let thisElement = this.$el;
+            let test = this.test;
             let context = this;
             //Request itself
             updateCSRFToken().then(
@@ -263,11 +260,11 @@ Vue.component('media-editor', {
             data.append('address', address);
 
             //Api url
-            var apiURL = document.pathToRoot+"api/v1/media";
-            var test = this.test;
-            var verbose = this.verbose;
-            var identifier = this.identifier;
-            var thisElement = this.$el;
+            let apiURL = document.ioframe.pathToRoot+"api/v1/media";
+            let test = this.test;
+            let verbose = this.verbose;
+            let identifier = this.identifier;
+            let thisElement = this.$el;
 
             //Request itself
             updateCSRFToken().then(
@@ -366,7 +363,7 @@ Vue.component('media-editor', {
         imageURL: function(){
             let result;
             if(this.type === 'local'){
-                result = document.rootURI + document[(this.mediaType=== 'img'?'imagePathLocal':'videoPathLocal')];
+                result = document.ioframe.rootURI + document.ioframe[(this.mediaType=== 'img'?'imagePathLocal':'videoPathLocal')];
                 result += (this.url === '')? this.url : this.url+'/';
                 result += this.target;
             }
@@ -374,7 +371,7 @@ Vue.component('media-editor', {
                 if(!this.image.dataType)
                     result = this.image.identifier;
                 else
-                    result = document.rootURI+'api/v1/media?action=getDBMedia&address='+this.image.identifier+'&resourceType='+this.mediaType+'&lastChanged='+this.image.lastChanged;
+                    result = document.ioframe.rootURI+'api/v1/media?action=getDBMedia&address='+this.image.identifier+'&resourceType='+this.mediaType+'&lastChanged='+this.image.lastChanged;
             }
             return result;
         },
@@ -506,9 +503,9 @@ Vue.component('media-editor', {
         if(this.verbose)
             console.log('Editor ',this.identifier,' mounted');
         this.resetImage();
-        var image = this.$el.querySelector('.image-container > *');
-        var identifier = this.identifier;
-        var verbose = this.verbose;
+        let image = this.$el.querySelector('.image-container > *');
+        let identifier = this.identifier;
+        let verbose = this.verbose;
 
         if(this.mediaType === 'img')
             image.onload = function(){

@@ -7,6 +7,7 @@ var %%VARIABLE_NAME%% = new Vue({
     mixins:[%%MIXINS%%],
     data(){
         return {
+            identifier:'%%VUE_NAME%%',
             configObject: JSON.parse(JSON.stringify(document.siteConfig)), %%IF(HAS_TYPES)
             types: {
                 default:{
@@ -15,6 +16,24 @@ var %%VARIABLE_NAME%% = new Vue({
                 }
             },
             currentType: 'default',%%
+            eventParsingMap:{
+                'handleItemDeletion':{
+                    identifierFrom:this.identifier,
+                    apiResponses:true,
+                    alertErrors:true,
+                    valid:{
+                        type: 'number',
+                        value: 0
+                    },
+                    objectOfResults: false,
+                    errorMap:{
+                        '-1':{
+                            text:'Server error!',
+                            warningType: 'error',
+                        }
+                    }
+                },
+            },
             //Modes, and array of available operations in each mode
             modes: {
                 search:{
@@ -112,42 +131,16 @@ var %%VARIABLE_NAME%% = new Vue({
                 {
                     id:'created',
                     title:'Date Created',
-                    parser:function(timestamp){
-                        timestamp *= 1000;
-                        let date = timestampToDate(timestamp).split('-').reverse().join('-');
-                        let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
-                        let minutes = Math.floor(timestamp%(1000 * 60 * 60)/(1000 * 60));
-                        let seconds = Math.floor(timestamp%(1000 * 60)/(1000));
-                        if(hours < 10)
-                            hours = '0'+hours;
-                        if(minutes < 10)
-                            minutes = '0'+minutes;
-                        if(seconds < 10)
-                            seconds = '0'+seconds;
-                        return date + ', ' + hours+ ':'+ minutes+ ':'+seconds;
-                    }
+                    parser:timeStampToReadableFullDate
                 },
                 {
                     id:'updated',
                     title:'Last Changed',
-                    parser:function(timestamp){
-                        timestamp *= 1000;
-                        let date = timestampToDate(timestamp).split('-').reverse().join('-');
-                        let hours = Math.floor(timestamp%(1000 * 60 * 60 * 24)/(1000 * 60 * 60));
-                        let minutes = Math.floor(timestamp%(1000 * 60 * 60)/(1000 * 60));
-                        let seconds = Math.floor(timestamp%(1000 * 60)/(1000));
-                        if(hours < 10)
-                            hours = '0'+hours;
-                        if(minutes < 10)
-                            minutes = '0'+minutes;
-                        if(seconds < 10)
-                            seconds = '0'+seconds;
-                        return date + ', ' + hours+ ':'+ minutes+ ':'+seconds;
-                    }
+                    parser:timeStampToReadableFullDate
                 }
             ],
             //SearchList API (and probably the only relevant API) URL TODO Edit
-            url: document.rootURI+ '%%API_URL%%',
+            url: document.ioframe.rootURI+ '%%API_URL%%',
             //Current page  //TODO Remove if no search list
             page:0,
             //Go to page  //TODO Remove if no search list
@@ -168,6 +161,30 @@ var %%VARIABLE_NAME%% = new Vue({
             operationInput: '',
             //Whether we are currently loading
             initiated: false,
+            //Whether we are currently in the middle of an operation
+            updating:false,
+            commonText:{ //TODO Add more relevant text
+                'title-prefix':'%%GENERAL_TITLE%%',
+                'title-edit':' - Editing',
+                'title-create':' - Creation',%%IF(HAS_TYPES)
+                'title-type':'Item Type',%%
+                'title-actions':'Actions',
+                'title-filters-toggle-show':'Show Filters',
+                'title-filters-toggle-hide':'Hide Filters',
+                'switch-mode-no-item':'Please select an item before viewing/editing it!',
+                'operation-updating':'Operation already in progress',
+                'operation-delete':'Delete selected?',
+                'operation-confirm':'Confirm',
+                'operation-cancel':'Cancel',
+                'create-invalid-input-requires-regex':'regex to match',
+                'response-unknown':'Unknown response',
+                'response-db-connection-error':'Server internal connection error',
+                'response-create-missing':'Missing inputs for items',
+                'response-create-dependency':'Dependency no longer exists for items',
+                'response-create-exists':'Identifiers already exist for items',
+                'response-create-success':'Items created',
+                'response-delete-success':'Items deleted'
+            },
             verbose:true, //TODO remove this when done building
             test:true //TODO remove this when done building
         }
@@ -176,7 +193,8 @@ var %%VARIABLE_NAME%% = new Vue({
         this.registerHub(eventHub);
         this.registerEvent('requestSelection', this.selectElement);
         this.registerEvent('searchResults', this.parseSearchResults);
-        this.registerEvent('operationRequest', this.handleOperationResponse);
+        this.registerEvent('resetSearchPage',this.resetSearchPage);
+        this.registerEvent('handleItemDeletion', this.handleItemDeletion);
         this.registerEvent('goToPage', this.goToPage); //TODO Add relevant events
         this.registerEvent('searchAgain', this.searchAgain);
         this.registerEvent('returnToMainApp', this.returnToMainApp);
@@ -186,16 +204,19 @@ var %%VARIABLE_NAME%% = new Vue({
         title:function(){
             switch(this.currentMode){
                 case 'search':
-                    return '%%SEARCH_TITLE%%';
+                    return this.commonText['title-prefix'];
                     break;
                 case 'edit':
-                    return '%%EDIT_TITLE%%';
+                    return this.commonText['title-prefix']+this.commonText['title-edit'];
                     break;
                 case 'create':
-                    return '%%CREATE_TITLE%%';
+                    return this.commonText['title-prefix']+this.commonText['title-create'];
                     break;
                 default:
             }
+        },
+        currentlySelected: function(){
+            return this.items[this.selected] ?? null;
         },
         //Text for current operation TODO
         currentOperationPlaceholder:function(){
@@ -214,7 +235,6 @@ var %%VARIABLE_NAME%% = new Vue({
             switch(this.currentOperation){
                 case 'delete':
                     return 'Delete selected?';
-                    break;
                 default:
                     return '';
             }
@@ -230,6 +250,11 @@ var %%VARIABLE_NAME%% = new Vue({
         currentModeHasOperations:function(){
             return Object.keys(this.modes[this.currentMode].operations).length>0;
         },
+        %%IF(HAS_EDITOR)//Common text for the editor TODO Add more if editor present
+        commonTextEditor: function(){
+            let text = JSON.parse(JSON.stringify(this.commonText));
+            return text;
+        },%%
     },
     watch:{%%IF(HAS_TYPES)
     'currentType':function(newVal){
@@ -259,6 +284,16 @@ var %%VARIABLE_NAME%% = new Vue({
             this.selected = -1;
             this.initiated = false;
         },
+        //Resets search result page TODO Remove if no searchlist
+        resetSearchPage: function (response){
+            if(this.verbose)
+                console.log('Received response',response);
+
+            if(!response.from || response.from !== 'search')
+                return;
+
+            this.page = 0;
+        },
         //Parses search results returned from a search list TODO Remove if no searchlist
         parseSearchResults: function(response){
             if(this.verbose)
@@ -284,54 +319,22 @@ var %%VARIABLE_NAME%% = new Vue({
             }
         },
         //Handles operation response
-        handleOperationResponse: function(request){
-            if(this.verbose)
-                console.log('Received response',request);
+        handleItemDeletion: function(response){
 
-            if(!request.from)
+            let eventResult = this.eventResponseParser(response,'handleItemDeletion'%%IF(API_VERSION_2),2%%);
+
+            if(!eventResult)
                 return;
 
-            let content = request.content;
+            this.updating = false;
 
-            //Common contents
-            if(content === 'INPUT_VALIDATION_FAILURE'){
-                alertLog('Operation input validation failed!','error',this.$el);
-            }
-            else if(content === 'AUTHENTICATION_FAILURE'){
-                alertLog('Operation not authorized! Check if you are logged in.','error',this.$el);
-            }
-            else if(content === 'OBJECT_AUTHENTICATION_FAILURE'){
-                alertLog('Not authorized to view/modify object!','error',this.$el);
-            }
-            else if(content === 'WRONG_CSRF_TOKEN'){
-                alertLog('CSRF token wrong. Try refreshing the page if this continues.','warning',this.$el);
-            }
-            else if(content === 'SECURITY_FAILURE'){
-                alertLog('Security related operation failure.','warning',this.$el);
-            }
-
-            switch (request.from){
-                case 'delete':
-                    switch (content){
-                        case -1:
-                            alertLog('Deletion failed due to server error!','error',this.$el);
-                            break;
-                        case 0:
-                            alertLog('Deletion successful!','success',this.$el);
-                            this.items.splice(this.selected,1);
-                            this.selected = -1;
-                            break;
-                        default:
-                            alertLog('Unknown response to deletion, '+content,'error',this.$el);
-                    }
-                    break;
-                default:
-                    alertLog('Unknown operation '+this.from+' response, '+content,'error',this.$el);
+            if(eventResult.valid){ //TODO Add what's needed
+                this.searchAgain();
             }
         },
         //Goes to relevant page  TODO Remove if no searchlist
         goToPage: function(page){
-            if(!this.initiating && page.from == 'search'){
+            if(!this.initiating && (page.from === 'search')){
                 let newPage;
                 page = page.content;
 
@@ -356,7 +359,7 @@ var %%VARIABLE_NAME%% = new Vue({
         //Element selection from search list  TODO Remove if no searchlist
         selectElement: function(request){
 
-            if(!request.from || request.from !== 'search')
+            if(!request.from || (request.from !== 'search'))
                 return;
 
             request = request.content;
@@ -416,44 +419,48 @@ var %%VARIABLE_NAME%% = new Vue({
             if(this.test)
                 console.log('Current Operation ', this.currentOperation ,'Current input ',this.operationInput);
 
-            var data = new FormData();
-            var test = this.test;
-            var verbose = this.verbose;
-            var currentOperation = this.currentOperation;
-            var thisElement = this.$el;
-            let operation = '';
+            %%IF(!API_VERSION_2)let data = new FormData();%% %%IF(API_VERSION_2)
+            let queryParams = {};%%
+            let currentOperation = this.currentOperation;
+            let eventName = '';%%IF(API_VERSION_2)
+            let prefix = '';%% %%IF(API_VERSION_2)
+            let method = 'post';%%
 
             if(this.currentMode === 'search'){
-                switch (currentOperation){
+                switch (currentOperation){ //TODO Add what's needed
                     case 'delete':
-                        operation = currentOperation;
-                        data.append('action','%%DELETE_ACTION_NAME%%'); //TODO Add what's needed
+                        eventName = 'handleItemDeletion';
+                        %%IF(!API_VERSION_2)data.append('action','%%DELETE_ACTION_NAME%%');%% %%IF(API_VERSION_2)
+                        queryParams.something = [].join(',');%% %%IF(API_VERSION_2)  %%IF(API_VERSION_2)
+                        prefix = '/';%% %%IF(API_VERSION_2)
+                        method = 'delete';%%
                         break;
                     default:
                         break;
                 };
 
-                if(!operation){
+                if(!eventName){
                     if(this.verbose)
                         console.log('Returning, no operation set!');
                     return;
                 }
 
                 if(this.test)
-                    data.append('req','test');
+                    %%IF(!API_VERSION_2)data.append('req','test');%% %%IF(API_VERSION_2)queryParams.req='test';%%
 
                 //TODO Add what's needed
                  this.apiRequest(
-                     data,
-                      '%%API_URL%%',
-                      'operationRequest',
+                     %%IF(!API_VERSION_2)data%% %%IF(API_VERSION_2)null%%,
+                     '%%API_URL%%' %%IF(API_VERSION_2)+ prefix%%,
+                     eventName,
                       {
-                         verbose: this.verbose,
+                         %%IF(API_VERSION_2)queryParams : queryParams,
+                         %% %%IF(API_VERSION_2)method : method,
+                         %%verbose: this.verbose,
                          parseJSON: true,
-                         identifier: operation
+                         identifier: this.identifier
                       }
                  );
-
             }
         },
         //Initiates an operation
@@ -503,4 +510,99 @@ var %%VARIABLE_NAME%% = new Vue({
 
         }
     },
+    template:`
+        <div id="%%ELEMENT_NAME%%" class="main-app">
+            <div class="loading-cover" v-if="!initiated && currentMode==='search'">
+            </div>
+
+            <h1 v-if="title!==''" v-text="title"></h1>
+            %%IF(HAS_TYPES)
+            <div class="type-mode">
+                <span v-text="commonText['title-type']"></span>
+                <select class="types" v-model:value="currentType" :disabled="currentMode !== 'search'">
+                    <option v-for="(item, index) in types"
+                        class="type"
+                        :value="index"
+                        v-text="item.title"
+                        @click="switchTypeTo(index)"
+                        :class="[{selected:(currentType===index)},(item.button? item.button : ' positive-3')]"
+                    ></option>
+                </select>
+            </div>%%
+
+            <div class="modes">
+                <button
+                    v-for="(item,index) in modes"
+                    v-if="shouldDisplayMode(index)"
+                    v-text="item.title"
+                    @click="switchModeTo(index)"
+                    :class="[{selected:(currentMode===index)},(item.button? item.button : ' positive-3')]"
+                >
+                </button>
+            </div>
+
+            <div class="operations-container" v-if="currentModeHasOperations">
+                <div class="operations-title" v-text="'Actions'"></div>
+                <div class="operations" v-if="currentOperation===''">
+                    <button
+                        v-if="shouldDisplayOperation(index)"
+                        v-for="(item,index) in modes[currentMode].operations"
+                        @click="operation(index)"
+                        :class="[index,{selected:(currentOperation===index)},(item.button? item.button : 'positive-3')]"
+                    >
+                        <div v-text="item.title"></div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="operations" v-if="currentModeHasOperations && currentOperation !==''">
+                <label :for="currentOperation" v-text="currentOperationText" v-if="currentOperationText"></label>
+                <input
+                    v-if="currentOperationHasInput"
+                    :name="currentOperation"
+                    :placeholder="currentOperationPlaceholder"
+                    v-model:value="operationInput"
+                    type="text"
+                >
+                <button
+                    :class="(currentOperation === 'delete' ? 'negative-1' : 'positive-1')"
+                    @click="confirmOperation">
+                    <div v-text="'Confirm'"></div>
+                </button>
+                <button class="cancel-1" @click="cancelOperation">
+                    <div v-text="'Cancel'"></div>
+                </button>
+            </div>
+
+            <div is="search-list"
+                 v-if="currentMode==='search'"
+                 :api-url="url"
+                 api-action="%%API_GET_ACTION%%"
+                 :extra-params="extraParams"
+                 :page="page"
+                 :limit="limit"
+                 :total="total"
+                 :items="items"
+                 :initiate="!initiated"
+                 :columns="columns"
+                 :filters="filters"
+                 :selected="selected"
+                 :test="test"
+                 :verbose="verbose"
+                 identifier="search"
+            ></div>
+
+            %%IF(HAS_EDITOR)
+            <div is="%%COMPONENT_NAME%%"
+                 v-if="currentMode==='edit'"
+                 :mode="currentMode"
+                 identifier="editor" %%IF(PASS_ID)
+                 :id="currentMode === 'create' ? undefined : currentlySelected.identifier"%% %%IF(PASS_ITEM)
+                 :item="currentMode === 'create' ? undefined : currentlySelected"%%
+                 :passed-common-text="commonTextEditor"
+                 :test="test"
+                 :verbose="verbose"
+                ></div>%%
+        </div>
+    `
 });

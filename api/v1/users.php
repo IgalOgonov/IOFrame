@@ -1,6 +1,7 @@
 <?php
 /* This the the API that handles all the user related functions.
  * Many of the procedures here are timing safe, meaning they will return in constant times (well, constant intervals)
+ * //TODO Add security setting that lets "mail doesnt exist" return a generic response
  *
  *      See standard return values at defaultInputResults.php
  *_________________________________________________
@@ -13,12 +14,12 @@
  *      'rankAtMost' => int, defaults to null - if set, Returns users with rank equal or smaller than this
  *      'usernameLike' => String, default null - returns results where username  matches a regex.
  *      'emailLike' => String, email, default null - returns results where email matches a regex.
- *      'isActive' => bool, defaults to null - if set, Returns users which are either active or inactive (true or false).
- *      'isBanned' => bool, defaults to null - if set, Returns users which are either banned or not banned (true or false).
+ *      'isActive' => bool, defaults to null - if set, Returns users which are either active or inactive.
+ *      'isBanned' => bool, defaults to null - if set, Returns users which are either banned or not banned.
  *      'isSuspicious' => bool, defaults to null - if set, Returns users which are either suspicious or unsuspicious (true or false).
  *      'createdBefore' => String, Unix timestamp, default null - only returns results created before this date.
  *      'createdAfter' => String, Unix timestamp, default null - only returns results created after this date.
- *      'orderBy'            - string, defaults to null. Possible values include 'Created_On', 'Email', 'Username',
+ *      'orderBy'            - string, defaults to null. Possible values include 'Created', 'Email', 'Username',
  *                             and 'ID' (default)
  *      'orderType'          - bool, defaults to null.  0 for 'ASC', 1 for 'DESC'
  *      'limit' => typical SQL parameter
@@ -31,7 +32,7 @@
  *                      'username'=><string>,
  *                      'email'=><string>,
  *                      'phone'=><string>,
- *                      'active'=><bool, whether the account is active>,
+ *                      'active'=><int, whether the account is active, and trust level if above 1>,
  *                      'require2FA'=><bool, whether the account requires two factor authentication>,
  *                      'has2FAApp'=><bool, whether the account is paired with a 2FA app>,
  *                      'rank'=><int, authentication rank>,
@@ -56,7 +57,7 @@
  *               'username'=><string>,
  *               'email'=><string>,
  *               'phone'=><string>,
- *               'active'=><bool, whether the account is active>,
+ *               'active'=><int, whether the account is active, and trust level if above 1>,
  *               'require2FA'=><bool, whether the account requires two factor authentication>,
  *               'has2FAApp'=><bool, whether the account is paired with a 2FA app>,
  *               'rank'=><int, authentication rank>,
@@ -72,12 +73,14 @@
  *      'username' => String, default null - new username
  *      'email' => String, default null - new Email
  *      'phone' => String, default null - new Phone
- *      'active' => Bool, default null - whether the user is active or not
+ *      'active' => Int, default null - user trust level (0 - untrusted, 1 - trusted email, >=2 - per system implementation)
  *      'created' => Int, default null - Unix timestamp, user creation date.
  *      'bannedDate' => Int, default null - Unix timestamp until which the user is banned (0 to unban the user).
+ *      'lockedDate' => Int, default null - Unix timestamp until which the user is locked (0 to unlock the user).
  *      'suspiciousDate' => Int, default null - Unix timestamp until which the user is suspicious (0 to make the user not suspicious).
  *      'require2FA' => bool, default null - can manually set the "Requires 2FA" flag for a user.
  *      'reset2FA' => bool, will set the "Requires 2FA" flag AND 2FA app secret to false for a user.
+ *      'logUserOut' => bool, default null - if set, overrides logOut. If unset, logs out on "bannedDate", "suspiciousDate", "active", "email", "phone"
  *
  *      @returns Codes:
  *          -1 Server error
@@ -145,19 +148,17 @@
  *
  *       Examples: action=
  * _________________________________________________
- * requestSMS2FA TODO
- *      If supported by the system, and the user has a valid phone, will send an SMS to the user
+ * requestMail2FA
+ *      If supported by the system, and the user has confirmed their email, will request a 2FA code via email.
+ *      'language' => string - Language code. If a 2FA email template for the specified language exists, will use it, otherwise will use the default template.
+ *
  *
  *      @returns Codes:
+ *                  -1 - failure to either create code or send mail
+ *                  0 - success, code created and mail sent
+ *                  1 - User mail does not exist
  *
- *       Examples: action=
- * _________________________________________________
- * requestMail2FA TODO
- *      If supported by the system, will send an email to the user
- *
- *      @returns Codes:
- *
- *       Examples: action=
+ *       Examples: action=requestMail2FA&m=example@example.com
  *_________________________________________________
  * addUser [Rate Limited per IP]
  *      - Adds (registers) a user
@@ -199,6 +200,7 @@
  *              6 login would work, but 2FA code expired
  *              7 login would work, but user does not have it set up (no confirmed phone, no registered 2FA app, etc)
  *              8 login would work, but 2FA method is not supported
+ *              9 user is both suspicious and banned, so 2FA is disabled
  *              32-byte hex encoded session ID string - The token for your next automatic relog, if you logged automatically.
  *              JSON encoded array of the form {'iv'=><32-byte hex encoded string>,'sesID'=><32-byte hex encoded string>}
  *
@@ -306,7 +308,7 @@
  *
  *_________________________________________________
  * sendInviteMail [CSRF protected]
- *      - Sends an invite mail
+ *      - Sends an invite mail. May be used to create an invite token automatically.
  *        [required] mail: string, Email to send an invite to
  *        token: string, Specific token to use. Created automatically otherwise
  *        tokenUses: int, default 1 - How many uses a newly created token would have. Cannot be infinite, but can be 64 bit (so basically infinite)
@@ -341,7 +343,7 @@
  *
  *        Examples: action=checkInvite&mail=test@test.com&token=test_1
  *_________________________________________________
- * banUser [CSRF protected]
+ * banUser/lockUser/suspectUser [CSRF protected]
  *      - Bans user for a certain number of minutes
  *        minutes: How many minutes to ban for
  *        id: ID of the user to ban
@@ -353,18 +355,16 @@
  *
  * */
 
-if(!defined('coreInit'))
-    require __DIR__ . '/../../main/coreInit.php';
+if(!defined('IOFrameMainCoreInit'))
+    require __DIR__ . '/../../main/core_init.php';
+require_once __DIR__ . '/../../IOFrame/Util/TimingMeasurer.php';
+require_once __DIR__ . '/../../IOFrame/Managers/v1APIManager.php';
 
 require __DIR__ . '/../apiSettingsChecks.php';
 require __DIR__ . '/../defaultInputChecks.php';
 require __DIR__ . '/../defaultInputResults.php';
 require __DIR__ . '/../CSRF.php';
 require 'user_fragments/definitions.php';
-require __DIR__ . '/../../IOFrame/Util/timingManager.php';
-
-if(!checkApiEnabled('users',$apiSettings))
-    exit(API_DISABLED);
 
 if(!isset($_REQUEST["action"]))
     exit('Action not specified!');
@@ -372,21 +372,26 @@ $action = $_REQUEST["action"];
 if($test)
     echo 'Testing mode!'.EOL;
 
-if(!checkApiEnabled('users',$apiSettings,$_REQUEST['action']))
+if(!checkApiEnabled('users',$apiSettings,$SecurityHandler,$_REQUEST['action']))
     exit(API_DISABLED);
 
 //Handle inputs
 $inputs = [];
 
+$v1APIManager = new \IOFrame\Managers\v1APIManager($settings,$apiSettings,$defaultSettingsParams);
+
+require_once __DIR__ . '/../../IOFrame/Handlers/UsersHandler.php';
+$UsersHandler = new \IOFrame\Handlers\UsersHandler($settings,$defaultSettingsParams);
+
 //Timing manager
-$timingManager = new IOFrame\Util\timingManager();
+$timingMeasurer = new \IOFrame\Util\TimingMeasurer();
 //Most of the actions need to be timing safe
-$timingManager->start();
+$timingMeasurer->start();
 
 switch($action){
     case 'getUsers':
         $arrExpected = ['idAtLeast','idAtMost','rankAtLeast','rankAtMost','usernameLike','emailLike','isActive' ,
-            'isBanned','isSuspicious','createdBefore','createdAfter','orderBy','orderType', 'limit','offset' ];
+            'isBanned','isLocked','isSuspicious','createdBefore','createdAfter','orderBy','orderType', 'limit','offset' ];
 
         require __DIR__ . '/../setExpectedInputs.php';
         require 'user_fragments/getUsers_auth.php';
@@ -405,10 +410,10 @@ switch($action){
         break;
 
     case 'updateUser':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
-        $arrExpected = ['id','username','email','phone','active','created','bannedDate','suspiciousDate','require2FA','reset2FA'];
+        $arrExpected = ['id','username','email','phone','active','created','bannedDate','lockedDate','suspiciousDate','require2FA','reset2FA','logUserOut'];
 
         require __DIR__ . '/../setExpectedInputs.php';
         require 'user_fragments/updateUser_auth.php';
@@ -420,7 +425,7 @@ switch($action){
         break;
 
     case 'require2FA':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = ['id','require2FA'];
@@ -435,7 +440,7 @@ switch($action){
         break;
 
     case 'requestApp2FA':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         /*$arrExpected = ['code',];
@@ -449,7 +454,7 @@ switch($action){
         break;
 
     case 'confirmApp':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = ['code','require2FA'];
@@ -463,10 +468,81 @@ switch($action){
             unset($_SESSION['TEMP_2FASecret']);
 
         if($result === 0)
-            $UserHandler->logOut(['test'=>$test,'forgetMe'=>true]);
+            $UsersHandler->logOut(['test'=>$test,'forgetMe'=>true]);
 
         echo ($result === 0)?
             '0' : $result;
+        break;
+
+    case 'requestMail2FA':
+        if(!validateThenRefreshCSRFToken($SessionManager))
+            exit(WRONG_CSRF_TOKEN);
+
+        $arrExpected =["language"];
+
+        require __DIR__ . '/../setExpectedInputs.php';
+        $ipCheck = $v1APIManager->checkIP(['test'=>$test]);
+        if($ipCheck['error'])
+            exit(SECURITY_FAILURE);
+        require 'user_fragments/requestMail2FA_checks.php';
+
+        //AUTH 1
+        if(
+            !isset($_SESSION['Can_Request_Extra_2FA']) ||
+            ( time() > $_SESSION['Can_Request_Extra_2FA'] )
+        ){
+            if($test)
+                echo "Cannot request extra 2FA before providing correct login credentials at this API".EOL;
+            exit(AUTHENTICATION_FAILURE);
+        }
+
+        $userInfo = $SQLManager->selectFromTable(
+            $SQLManager->getSQLPrefix().'USERS',
+            ['Email',$_SESSION['Extra_2FA_Mail'],'=']
+            ,['ID','Active']
+        );
+        if(count($userInfo)>0){
+            (int)$userId = $userInfo[0]['ID'];
+            (bool)$active = $userInfo[0]['Active'];
+        }
+        else{
+            $userId = null;
+            $active = null;
+        }
+
+        //AUTH 2
+        if(empty($active)){
+            if($test)
+                echo "Cannot send mails to unverified addresses".EOL;
+            exit(AUTHENTICATION_FAILURE);
+        }
+
+        if($userId){
+            $limitCheck = $v1APIManager->checkRateLimits(
+                USERS_API_LIMITS[$action],
+                ['userId'=>$userId,'test'=>$test]
+            );
+            if($limitCheck['error'])
+                die( '-1' );
+            elseif($limitCheck['limit'])
+                die( RATE_LIMIT_REACHED.'@'.$limitCheck['limit']);
+
+            require 'user_fragments/requestMail2FA_execution.php';
+        }
+        else
+            $result = 1;
+
+        if($result === 0){
+            $v1APIManager->commitActions(
+                [ 'userAction' => USERS_API_LIMITS[$action]['userAction'] ],
+                ['userId'=> $userId, 'test'=>$test]
+            );
+        }
+
+        //This procedure can only return after N seconds exactly
+        $timingMeasurer->waitUntilIntervalElapsed(1);
+
+        echo json_encode($result);
         break;
 
     case 'addUser':
@@ -474,13 +550,23 @@ switch($action){
         $arrExpected =["u","m","p","token","language"];
 
         require __DIR__ . '/../setExpectedInputs.php';
-        require 'user_fragments/ip_check.php';
-        $identifier = $ip;
+        $ipCheck = $v1APIManager->checkIP(['test'=>$test]);
+        if($ipCheck['error'])
+            exit(SECURITY_FAILURE);
         require 'user_fragments/addUser_auth.php';
         require 'user_fragments/addUser_checks.php';
         if($apiSettings->getSetting('captchaFile'))
             require __DIR__.'/../'.$apiSettings->getSetting('captchaFile');
-        require 'user_fragments/limit_rate_check.php';
+
+        $limitCheck = $v1APIManager->checkRateLimits(
+            USERS_API_LIMITS[$action],
+            ['rateId'=>$ipCheck['ip'],'test'=>$test]
+        );
+        if($limitCheck['error'])
+            die( '-1' );
+        elseif($limitCheck['limit'])
+            die( RATE_LIMIT_REACHED.'@'.$limitCheck['limit']);
+
         require 'user_fragments/addUser_execution.php';
 
         echo ($result === 0)?
@@ -500,34 +586,125 @@ switch($action){
         $arrExpected =["userID","m","p","sesKey","language","2FAType","2FACode"];
 
         require __DIR__ . '/../setExpectedInputs.php';
+
         if($inputs['log']!='out'){
-            require 'user_fragments/ip_check.php';
+            $ipCheck = $v1APIManager->checkIP(['test'=>$test]);
+            /* TODO Add a way to validate individual calls from blacklisted IPs.
+               This is required in case an attacker shares the subnet with legitimate users, since we
+               only look at the final IP, so we'd want a way to provide IRL-validated users some sort of token,
+               or allow such traffic under more strict conditions (multi-step advanced Capchas, etc).
+            */
+            if($ipCheck['error'])
+                exit(SECURITY_FAILURE);
         }
+
         require 'user_fragments/logUser_pre_checks_auth.php';
         require 'user_fragments/logUser_checks.php';
+
         if($inputs['log']!=='out'){
             if( ($inputs['log']==='temp') && ($inputs['userID']!== null) )
-                $userId = $inputs['userID'];
+                $userId = (int)$inputs['userID'];
             elseif($inputs['m']){
-                $userId = $SQLHandler->selectFromTable($SQLHandler->getSQLPrefix().'USERS',['Email',$inputs['m'],'='],['ID'],[]);
-                if(count($userId)>0)
-                    $userId = $userId[0]['ID'];
-                else
+                $userDetails = $SQLManager->selectFromTable(
+                    $SQLManager->getSQLPrefix().'USERS',
+                    ['Email',$inputs['m'],'='],
+                    ['ID','Active']
+                );
+                if(count($userDetails)>0){
+                    $userId = (int)$userDetails[0]['ID'];
+                    $active = (int)$userDetails[0]['Active'];
+                }
+                else{
                     $userId = null;
+                    $active = null;
+                }
             }
-            $identifier = !empty($userId)? $userId : null;
         }
-        require 'user_fragments/limit_rate_check.php';
+
+        $limitCheck = $v1APIManager->checkRateLimits(
+            USERS_API_LIMITS[$action],
+            ['ip'=>$ipCheck['ip'],'rateId'=>$ipCheck['ip'],'test'=>$test]
+        );
+        if($limitCheck['error'] && !$limitCheck['limit'])
+            die( '-1' );
+        elseif($limitCheck['limit'])
+            die( RATE_LIMIT_REACHED.'@'.$limitCheck['limit']);
+
         require 'user_fragments/logUser_post_checks_auth.php';
         require 'user_fragments/logUser_execution.php';
 
-        if($result === 1 || $result === 5){
-            $shouldCommitActions = true;
-            require 'user_fragments/limit_success_check.php';
+        if($result === 4){
+            $_SESSION['Can_Request_Extra_2FA'] = time()+USER_2FA_AFTER_VALID_LOGIN_CREDENTIALS;
+            $_SESSION['Extra_2FA_Mail'] = $inputs['m'];
+        }
+        elseif($result === 1 || $result === 5){
+            $actions = [
+                'userActions'=>[],
+                'ipActions'=>[ USERS_API_LIMITS[$action]['ipAction']],
+            ];
+            if($result === 1){
+                $actions['userActions'][] = USERS_API_LIMITS[$action]['userAction'];
+            }
+            else{
+
+                $logger = new \Monolog\Logger(\IOFrame\Definitions::LOG_GENERAL_SECURITY_CHANNEL);
+                $loggerHandler = new \IOFrame\Managers\Integrations\Monolog\IOFrameHandler($settings);
+                $logger->pushHandler($loggerHandler);
+                if($active > 1){
+                    $alsoFailedMail = false;
+                    $reportLimitCheck = $v1APIManager->checkRateLimits(
+                        ['rate'=>USERS_API_LIMITS[$action]['failed2FAReportingRate']],
+                        ['rateId'=>'report_'.$userId,'test'=>$test]
+                    );
+                    if($inputs['m'] && !$reportLimitCheck['error'] && !$reportLimitCheck['limit']){
+                        try{
+                            $mail = new \IOFrame\Managers\MailManager($settings,array_merge($defaultSettingsParams,['$verbose'=>$test]));
+                            $mail->sendMailAsync(
+                                [
+                                    'to'=>[$inputs['m']=>null],
+                                    'from'=>null,
+                                    'subject'=>$UsersHandler->userSettings->getSetting('emailSusTitle_'.$inputs['language']) ?? $UsersHandler->userSettings->getSetting('emailSusTitle'),
+                                    'template'=>$UsersHandler->userSettings->getSetting('emailSusTemplate_'.$inputs['language']) ?? $UsersHandler->userSettings->getSetting('emailSusTemplate'),
+                                    'varArray'=>['siteName'=>$siteSettings->getSetting('siteName')]
+                                ],
+                                ['successQueue'=>true,'failureQueue'=>true,'test'=>$test]
+                            );
+                        }
+                        catch (\Exception $e){
+                            $alsoFailedMail = true;
+                        }
+                    }
+                    $logger->critical('User tried to login with incorrect 2FA',['id'=>$userId,'ip'=>$ipCheck['ip'],'alsoFailedToSendWarningMail'=>$alsoFailedMail]);
+                }
+                else{
+                    $logger->warning('User tried to login with incorrect 2FA',['id'=>$userId,'ip'=>$ipCheck['ip']]);
+                }
+
+                $actions['userActions'][] = USERS_API_LIMITS[$action]['userAction2FA'];
+                $actions['ipActions'][] = USERS_API_LIMITS[$action]['ipAction2FA'];
+            }
+
+            $v1APIManager->commitActions(
+                $actions,
+                ['ip'=>$ipCheck['ip'],'userId'=>$userId, 'test'=>$test]
+            );
+        }
+        elseif(($result === 9) && $userId){
+            $accLimited = $SQLManager->selectFromTable(
+                $SQLManager->getSQLPrefix().'USERS_EXTRA',
+                ['ID',$userId,'='],
+                ['Banned_Until','Suspicious_Until','Locked_Until']
+            );
+            if(count($accLimited)>0){
+                $bannedUntil = (int)$accLimited[0]['Banned_Until'];
+                $susUntil = (int)$accLimited[0]['Suspicious_Until'];
+                $lockedUntil = (int)$accLimited[0]['Locked_Until'];
+                die( RATE_LIMIT_REACHED.'@'.max( min( $susUntil-time(),$susUntil-time() ) , $lockedUntil-time() ) );
+            }
         }
 
         //This procedure can only return after N seconds exactly
-        $timingManager->waitUntilIntervalElapsed(1);
+        $timingMeasurer->waitUntilIntervalElapsed(1);
 
         if(is_array($result))
             $result = json_encode($result);
@@ -537,86 +714,100 @@ switch($action){
         break;
 
     case 'pwdReset':
-
-        $arrExpected =["id","code","mail","async","language"];
-
-        require __DIR__ . '/../setExpectedInputs.php';
-        require 'user_fragments/ip_check.php';
-        require 'user_fragments/reset_checks.php';
-        if(isset($inputs['mail'])){
-            $identifier = $inputs['mail'];
-            require 'user_fragments/reset_mail_limit_rate_check.php';
-        }
-        require 'user_fragments/pwdReset_execution.php';
-        require 'user_fragments/reset_mail_limit_success.php';
-
-
-        //This procedure can only return after N seconds exactly
-        $timingManager->waitUntilIntervalElapsed(1);
-        $pageSettings = new \IOFrame\Handlers\SettingsHandler($rootFolder.'/localFiles/pageSettings/',$defaultSettingsParams);
-        if($inputs['mail'] !== null || $inputs['async'] !== null || !$pageSettings->getSetting('pwdReset'))
-            echo ($result === 0)?
-                '0' : $result;
-
-        break;
-
-    case 'changePassword':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
-            exit(WRONG_CSRF_TOKEN);
-
-        $arrExpected =["newPassword"];
-
-        require __DIR__ . '/../setExpectedInputs.php';
-        require 'user_fragments/changePassword_auth.php';
-        require 'user_fragments/changePassword_checks.php';
-        require 'user_fragments/changePassword_execution.php';
-
-        echo ($result === 0)?
-            '0' : $result;
-        break;
-
+    case 'mailReset':
     case 'regConfirm':
 
-        $arrExpected =["id","code","mail","language"];
+        switch ($action){
+            case 'pwdReset':
+            case 'mailReset':
+                $arrExpected =["id","code","mail","async","language"];
+                break;
+            case 'regConfirm':
+                $arrExpected =["id","code","mail","language"];
+                break;
+        }
 
         require __DIR__ . '/../setExpectedInputs.php';
-        require 'user_fragments/regConfirm_checks.php';
-        if(isset($inputs['mail'])){
-            $identifier = $inputs['mail'];
-            require 'user_fragments/reset_mail_limit_rate_check.php';
-        }
-        require 'user_fragments/regConfirm_execution.php';
-        require 'user_fragments/reset_mail_limit_success.php';
 
-        echo ($result === 0)?
-            '0' : $result;
+        $ipCheck = $v1APIManager->checkIP(['test'=>$test]);
+        if($ipCheck['error'])
+            exit(SECURITY_FAILURE);
+
+        switch ($action){
+            case 'pwdReset':
+            case 'mailReset':
+                require 'user_fragments/reset_checks.php';
+                break;
+            case 'regConfirm':
+                require 'user_fragments/regConfirm_checks.php';
+                break;
+        }
+
+        if(isset($inputs['mail'])){
+            $userId = $SQLManager->selectFromTable($SQLManager->getSQLPrefix().'USERS',['Email',$inputs['mail'],'='],['ID']);
+            if(count($userId)>0)
+                $userId = (int)$userId[0]['ID'];
+            else
+                $userId = null;
+            if($userId){
+                $limitCheck = $v1APIManager->checkRateLimits(
+                    USERS_API_LIMITS[$action],
+                    ['userId'=>$userId,'rateId'=>$inputs['mail'],'test'=>$test]
+                );
+                if($limitCheck['error'])
+                    die( '-1' );
+                elseif($limitCheck['limit'])
+                    die( RATE_LIMIT_REACHED.'@'.$limitCheck['limit']);
+            }
+        }
+
+        switch ($action){
+
+            case 'mailReset':
+            case 'pwdReset':
+
+                if($action === 'pwdReset')
+                    require 'user_fragments/pwdReset_execution.php';
+                else
+                    require 'user_fragments/mailReset_execution.php';
+
+                if(isset($inputs['mail']) && $userId && $result === 0){
+                    $v1APIManager->commitActions(
+                        [ 'userAction' => USERS_API_LIMITS[$action]['userAction'] ],
+                        ['userId'=> $userId, 'test'=>$test]
+                    );
+                }
+
+                //This procedure can only return after N seconds exactly
+                $timingMeasurer->waitUntilIntervalElapsed(1);
+
+                $pageSettings = new \IOFrame\Handlers\SettingsHandler($rootFolder.'/localFiles/pageSettings/',$defaultSettingsParams);
+                if( !empty($inputs['mail']) || !empty($inputs['async']) || !$pageSettings->getSetting($action))
+                    echo ($result === 0)?
+                        '0' : $result;
+
+                break;
+
+            case 'regConfirm':
+
+                require 'user_fragments/regConfirm_execution.php';
+
+                if(isset($inputs['mail']) && $result === 0){
+                    $v1APIManager->commitActions(
+                        [ 'userAction' => USERS_API_LIMITS[$action]['userAction'] ],
+                        ['userId'=> $userId,'rateId'=>$inputs['mail'], 'test'=>$test]
+                    );
+                }
+
+                echo ($result === 0)?
+                    '0' : $result;
+        }
+
         break;
 
-    case 'mailReset':
-
-        $arrExpected =["id","code","mail","language","async"];
-
-        require __DIR__ . '/../setExpectedInputs.php';
-        require 'user_fragments/ip_check.php';
-        require 'user_fragments/reset_checks.php';
-        if(isset($inputs['mail'])){
-            $identifier = $inputs['mail'];
-            require 'user_fragments/reset_mail_limit_rate_check.php';
-        }
-        require 'user_fragments/mailReset_execution.php';
-        require 'user_fragments/reset_mail_limit_success.php';
-
-        //This procedure can only return after N seconds exactly
-        $timingManager->waitUntilIntervalElapsed(1);
-
-        $pageSettings = new \IOFrame\Handlers\SettingsHandler($rootFolder.'/localFiles/pageSettings/',$defaultSettingsParams);
-        if($inputs['mail'] !== null || $inputs['async'] !== null || !$pageSettings->getSetting('mailReset'))
-            echo ($result === 0)?
-                '0' : $result;
-        break;
 
     case 'changeMail':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["newMail"];
@@ -630,9 +821,24 @@ switch($action){
             '0' : $result;
         break;
 
+    case 'changePassword':
+        if(!validateThenRefreshCSRFToken($SessionManager))
+            exit(WRONG_CSRF_TOKEN);
+
+        $arrExpected =["newPassword"];
+
+        require __DIR__ . '/../setExpectedInputs.php';
+        require 'user_fragments/changePassword_auth.php';
+        require 'user_fragments/changePassword_checks.php';
+        require 'user_fragments/changePassword_execution.php';
+
+        echo ($result === 0)?
+            '0' : $result;
+        break;
+
     case 'sendInviteMail':
     case 'createUserInvite':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["mail","extraTemplateArguments","tokenUses","token","tokenTTL","language","overwrite","update"];
@@ -665,16 +871,18 @@ switch($action){
         break;
 
     case 'banUser':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+    case 'suspectUser':
+    case 'lockUser':
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["minutes","id"];
 
         require __DIR__ . '/../setExpectedInputs.php';
-        require 'user_fragments/banUser_pre_checks_auth.php';
-        require 'user_fragments/banUser_checks.php';
-        require 'user_fragments/banUser_post_checks_auth.php';
-        require 'user_fragments/banUser_execution.php';
+        require 'user_fragments/limitUser_pre_checks_auth.php';
+        require 'user_fragments/limitUser_checks.php';
+        require 'user_fragments/limitUser_post_checks_auth.php';
+        require 'user_fragments/limitUser_execution.php';
         echo ($result === 0)?
             '0' : $result;
         break;
@@ -686,5 +894,3 @@ switch($action){
     default:
         exit('Specified action is not recognized');
 }
-
-?>

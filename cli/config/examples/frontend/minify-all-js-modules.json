@@ -1,0 +1,9 @@
+{
+	"minificationType":"js",
+	"minificationTargets":["modules"],
+	"minificationProperties":{
+	},
+	"minificationIncludeOptions":{
+		"subFolders":true
+	}
+}

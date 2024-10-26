@@ -1,0 +1,36 @@
+
+.language-selector{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.language-selector .flag{
+    width: 50px;
+    height: 40px;
+    background-size: 40px 40px;
+    background-repeat: no-repeat;
+    background-position: center center;
+}
+
+.language-selector select{
+    width: 50px;
+    height: 40px;
+    background-size: 40px 40px;
+    background-repeat: no-repeat;
+    background-position: center center;
+    cursor: auto;
+}
+.language-selector select option{
+    color: black;
+}
+
+.language-selector:not(.no-text) .language-selection{
+    min-width: 100px;
+    width: auto;
+    padding: 0px 5px;
+    text-align: center;
+}
+
+.language-selector.no-text select{
+    color: transparent;
+}

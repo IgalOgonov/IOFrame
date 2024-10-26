@@ -1,40 +1,34 @@
 <?php
 namespace IOFrame\Handlers{
-    use IOFrame;
-    define('SecurityHandler',true);
-    if(!defined('abstractDBWithCache'))
-        require 'abstractDBWithCache.php';
-    if(!defined('IPHandler'))
-        require 'IPHandler.php';
+    define('IOFrameHandlersSecurityHandler',true);
 
     /* Means to handle general security functions related to the framework.
      * @author Igal Ogonov <igal1333@hotmail.com>
-     * @license LGPL
      * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
      * */
-    class SecurityHandler extends IOFrame\abstractDBWithCache{
+    class SecurityHandler extends \IOFrame\Abstract\DBWithCache{
 
 
         /**
          * @var string The table name for the events table
          */
-        protected $rulebookTableName = 'EVENTS_RULEBOOK';
+        protected string $rulebookTableName = 'EVENTS_RULEBOOK';
 
         /**
          * @var string The cache name for single events (type + category)
          */
-        protected $rulebookCacheName = 'ioframe_events_rulebook_event_';
+        protected string $rulebookCacheName = 'ioframe_events_rulebook_event_';
 
         /**
          * @var array Extra columns to get/set from/to the DB (for normal resources)
          */
-        protected $extraRulebookColumns = [];
+        protected array $extraRulebookColumns = [];
 
         /**
          * @var array An associative array for each extra column defining how it can be set on setResource
          *            For each column, if a matching input isn't set (or is null), it cannot be set.
          */
-        protected $extraRulebookInputs = [
+        protected array $extraRulebookInputs = [
             /**Each extra input is null, or an associative array of the form
              * '<column name>' => [
              *      'input' => <string, name of expected input>,
@@ -46,31 +40,31 @@ namespace IOFrame\Handlers{
         /**
          * @var string The table name for the events meta table
          */
-        protected $eventsMetaTableName = 'EVENTS_META';
+        protected string $eventsMetaTableName = 'EVENTS_META';
 
         /**
          * @var string The cache name for single events meta (type + category)
          */
-        protected $eventsMetaCacheName = 'ioframe_events_meta_';
+        protected string $eventsMetaCacheName = 'ioframe_events_meta_';
 
         /**
          * @var array Similar to $extraRulebookColumns
          */
-        protected $extraMetaColumns = [];
+        protected array $extraMetaColumns = [];
 
         /**
          * @var array Similar to $extraRulebookInputs
          */
-        protected $extraMetaInputs = [
+        protected array $extraMetaInputs = [
         ];
 
-        /** @var IPHandler $IPHandler
+        /** @var \IOFrame\Handlers\IPHandler $IPHandler
          */
-        public $IPHandler;
+        public \IOFrame\Handlers\IPHandler $IPHandler;
 
         //Default constructor
         function __construct(SettingsHandler $localSettings,  $params = []){
-            parent::__construct($localSettings,$params);
+            parent::__construct($localSettings,array_merge($params,['logChannel'=>\IOFrame\Definitions::LOG_GENERAL_SECURITY_CHANNEL]));
 
             if(isset($params['rulebookTableName']))
                 $this->rulebookTableName = $params['rulebookTableName'];
@@ -99,8 +93,8 @@ namespace IOFrame\Handlers{
             if(isset($params['siteSettings']))
                 $this->siteSettings = $params['siteSettings'];
             else
-                $this->siteSettings = new SettingsHandler(
-                    $localSettings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/siteSettings/',
+                $this->siteSettings = new \IOFrame\Handlers\SettingsHandler(
+                    $localSettings->getSetting('absPathToRoot').'/'.\IOFrame\Handlers\SettingsHandler::SETTINGS_DIR_FROM_ROOT.'/siteSettings/',
                     $this->defaultSettingsParams
                 );
 
@@ -116,47 +110,37 @@ namespace IOFrame\Handlers{
                 );
         }
 
-        //TODO Implement this properly
-        function checkBanned($type = "default"){
-            switch($type) {
-                default:
-                    if (isset($_SESSION['details'])) {
-                        $details = json_decode($_SESSION['details'], true);
-                        if ($details['Banned_Until']!= null && $details['Banned_Until'] > time()) {
-                            return 'User is banned until '.date("Y-m-d, H:i:s",$details['Banned_Until'])
-                            .', while now is '.date("Y-m-d, H:i:s")."<br>";
-                        }
-                    }
+        /** Check the session to see whether the user is banned.
+         * @returns bool|string, returns false if the user isn't banned, or the timestamp of until when he is banned.
+         */
+        function checkBanned(){
+            if (isset($_SESSION['details'])) {
+                $details = json_decode($_SESSION['details'], true);
+                if ($details['Banned_Until']!= null && $details['Banned_Until'] > time()) {
+                    return $details['Banned_Until'];
+                }
             }
-            return 'ok';
+            return false;
         }
 
         /** Commits an action by an IP to the IP_ACTIONS table.
          * @param int $eventCode The code of the action
-         * @param array $params of the form:
-         *                      'IP' => String representing user IP
-         *                      'fullIP' => String representing full IP - defaults to IP if not given
-         *                      'isTrueIP' => Boolean, whether provided IP should be considered reliable
-         *                      'weight' => int, default 1 - how much the action is "worth" in terms of violations
-         *                      'markOnLimit' => boolean, default true - whether to blacklist the IP when action limit is reached
-         *              If IP isn't provided, defaults to getting it from IPHandler
-         *              If an IP is provided and isTrueIP is not, isTrueIP defaults to 'true'.
-         *              If only isTrueIP is provided, it's ignored.
          * @param array $params
          *
-         * @returns bool true if action succeeds, false if it fails (e.g. because the IP is invalid)
+         * @return bool
+         * @throws \Exception
          */
-        function commitEventIP($eventCode, $params = []){
+        function commitEventIP(int $eventCode, array $params = []): bool {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
-            $weight = isset($params['weight'])? $params['weight'] : 1;
-            $markOnLimit = isset($params['markOnLimit'])? $params['markOnLimit'] : true;
+            $weight = $params['weight'] ?? 1;
+            $markOnLimit = $params['markOnLimit'] ?? true;
 
             if(isset($params['IP'])){
                 $IP = $params['IP'];
-                $fullIP = isset($params['fullIP'])? $params['fullIP'] : $IP;
-                $isTrueIP = isset($params['isTrueIP'])? $params['isTrueIP'] : true;
+                $fullIP = $params['fullIP'] ?? $IP;
+                $isTrueIP = $params['isTrueIP'] ?? true;
             }
             else{
                 $IP = $this->IPHandler->directIP;
@@ -167,47 +151,52 @@ namespace IOFrame\Handlers{
             if(!filter_var($IP,FILTER_VALIDATE_IP))
                 return false;
 
-            $query = 'SELECT '.$this->SQLHandler->getSQLPrefix().'commitEventIP("'.$IP.'",'.(int)$eventCode.','.(bool)$isTrueIP.',"'.$fullIP.'",'.(int)$weight.','.(bool)$markOnLimit.')';
+            $query = 'SELECT '.$this->SQLManager->getSQLPrefix().'commitEventIP("'.$IP.'",'.(int)$eventCode.','.(bool)$isTrueIP.',"'.$fullIP.'",'.(int)$weight.','.(bool)$markOnLimit.')';
 
-            if(!$test)
-                return $this->SQLHandler->exeQueryBindParam(
-                    $query,
-                    []
-                );
             if($verbose){
                 echo 'Query to send: '.$query.EOL;
-                return true;
             }
+            $result = $test || $this->SQLManager->exeQueryBindParam( $query );
+            if(!$result)
+                $this->logger->critical('failed-to-commit-ip-event',['code'=>$eventCode,'ip'=>$IP,'fullIP'=>$fullIP,'isTrueIP'=>$isTrueIP,'params'=>$params]);
+            return true;
         }
 
         /**  Commits an action by/on a user to the USER_ACTIONS table.
-         * @param int $eventCode   The code of the event
-         * @param int $id           The user ID
+         * @param int $eventCode The code of the event
+         * @param int $id The user ID
          * @param array $params
          *                      'weight' => int, default 1 - how much the action is "worth" in terms of violations
          *                      'susOnLimit' => boolean, default true - whether to mark user as suspicious when action limit is reached
          *                      'banOnLimit' => boolean, default false - whether to ban user when action limit is reached
+         *                      'lockOnLimit' => boolean, default false - whether to lock user when action limit is reached
          * @returns bool
+         * @throws \Exception
+         * @throws \Exception
          */
-        function commitEventUser($eventCode, $id, array $params = []){
+        function commitEventUser(int $eventCode, int $id, array $params = []): bool {
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
-            $weight = isset($params['weight'])? $params['weight'] : 1;
-            $susOnLimit = isset($params['susOnLimit'])? $params['susOnLimit'] : true;
-            $banOnLimit = isset($params['banOnLimit'])? $params['banOnLimit'] : false;
+            $weight = $params['weight'] ?? 1;
+            $susOnLimit = $params['susOnLimit'] ?? true;
+            $banOnLimit = $params['banOnLimit'] ?? false;
+            $lockOnLimit = $params['lockOnLimit'] ?? false;
 
-            $query = 'SELECT '.$this->SQLHandler->getSQLPrefix().'commitEventUser('.(int)$id.','.(int)$eventCode.','.(int)$weight.','.(int)$susOnLimit.','.(int)$banOnLimit.')';
+            $query = 'SELECT '.$this->SQLManager->getSQLPrefix().'commitEventUser('.(int)$id.','.(int)$eventCode.','.(int)$weight.','.(int)$susOnLimit.','.(int)$banOnLimit.','.(int)$lockOnLimit.')';
 
-            if(!$test)
-                return $this->SQLHandler->exeQueryBindParam(
-                    $query,
-                    [],
-                    ['returnError'=>$verbose]
-                );
             if($verbose){
                 echo 'Query to send: '.$query.EOL;
                 return true;
             }
+            $result = $test || $this->SQLManager->exeQueryBindParam(
+                $query,
+                [],
+                ['returnError'=>$verbose]
+            );
+            if(!$result)
+                $this->logger->critical('failed-to-commit-user-event',['code'=>$eventCode,'id'=>$id,'params'=>$params]);
+
+            return $result;
         }
 
 
@@ -223,14 +212,14 @@ namespace IOFrame\Handlers{
          *              ...
          *          ]
          */
-        function getRulebookCategories( array $params = []){
+        function getRulebookCategories( array $params = []): array {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
-            $includeMeta = isset($params['includeMeta'])? $params['includeMeta'] : true;
+            $includeMeta = !isset($params['includeMeta']) || $params['includeMeta'];
 
-            $res = $this->SQLHandler->selectFromTable(
-                $this->SQLHandler->getSQLPrefix().$this->rulebookTableName,
+            $res = $this->SQLManager->selectFromTable(
+                $this->SQLManager->getSQLPrefix().$this->rulebookTableName,
                 [],
                 ['Event_Category'],
                 array_merge($params,['DISTINCT'=>true])
@@ -243,8 +232,8 @@ namespace IOFrame\Handlers{
                 foreach($res as $result){
                     $results[(string)$result['Event_Category']] = [
                     ];
-                    array_push($eventCategories,['category'=>$result['Event_Category']]);
-                };
+                    $eventCategories[] = ['category' => $result['Event_Category']];
+                }
                 if($includeMeta){
                     $meta = $this->getEventsMeta(
                         $eventCategories,
@@ -257,7 +246,7 @@ namespace IOFrame\Handlers{
                                 continue;
                             else
                                 $results[(string)$arr['Event_Category']]['@'] = $arr['Meta'];
-                        };
+                        }
                 }
                 return $results;
             }
@@ -302,16 +291,16 @@ namespace IOFrame\Handlers{
          *              ]
          *          ]
          */
-        function getRulebookRules( array $params = []){
+        function getRulebookRules( array $params = []): array {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
-            $category = isset($params['category'])? $params['category'] : null;
-            $type = isset($params['type'])? $params['type'] : null;
-            $extraDBFilters = isset($params['extraDBFilters'])? $params['extraDBFilters'] : [];
-            $extraCacheFilters = isset($params['extraCacheFilters'])? $params['extraCacheFilters'] : [];
-            $safeStr = isset($params['safeStr'])? $params['safeStr'] : true;
-            $includeMeta = isset($params['includeMeta'])? $params['includeMeta'] : true;
+            $category = $params['category'] ?? null;
+            $type = $params['type'] ?? null;
+            $extraDBFilters = $params['extraDBFilters'] ?? [];
+            $extraCacheFilters = $params['extraCacheFilters'] ?? [];
+            $safeStr = !isset($params['safeStr']) || $params['safeStr'];
+            $includeMeta = !isset($params['includeMeta']) || $params['includeMeta'];
 
             $retrieveParams = $params;
             $extraDBConditions = [];
@@ -325,32 +314,32 @@ namespace IOFrame\Handlers{
 
             if($category!== null){
                 $cond = ['Event_Category',$category,'='];
-                array_push($extraCacheConditions,$cond);
-                array_push($extraDBConditions,$cond);
+                $extraCacheConditions[] = $cond;
+                $extraDBConditions[] = $cond;
             }
 
             if($type!== null){
                 $cond = ['Event_Type',$type,'='];
-                array_push($extraCacheConditions,$cond);
-                array_push($extraDBConditions,$cond);
+                $extraCacheConditions[] = $cond;
+                $extraDBConditions[] = $cond;
             }
 
             $extraDBConditions = array_merge($extraDBConditions,$extraDBFilters);
             $extraCacheConditions = array_merge($extraCacheConditions,$extraCacheFilters);
 
             if($extraCacheConditions!=[]){
-                array_push($extraCacheConditions,'AND');
+                $extraCacheConditions[] = 'AND';
                 $retrieveParams['columnConditions'] = $extraCacheConditions;
             }
             if($extraDBConditions!=[]){
-                array_push($extraDBConditions,'AND');
+                $extraDBConditions[] = 'AND';
                 $retrieveParams['extraConditions'] = $extraDBConditions;
             }
 
             if(!$retrieveParams['useCache']){
                 $results = [];
-                $res = $this->SQLHandler->selectFromTable(
-                    $this->SQLHandler->getSQLPrefix().$this->rulebookTableName,
+                $res = $this->SQLManager->selectFromTable(
+                    $this->SQLManager->getSQLPrefix().$this->rulebookTableName,
                     $extraDBConditions,
                     $columns,
                     $retrieveParams
@@ -364,7 +353,7 @@ namespace IOFrame\Handlers{
                             unset($resultArray[$i]);
 
                         if($safeStr && $resultArray['Meta'] !== null)
-                            $resultArray['Meta'] = IOFrame\Util\safeStr2Str($resultArray['Meta']);
+                            $resultArray['Meta'] = \IOFrame\Util\SafeSTRFunctions::safeStr2Str($resultArray['Meta']);
                         if(!isset($results[$resultArray['Event_Category'].'/'.$resultArray['Event_Type']]))
                             $results[$resultArray['Event_Category'].'/'.$resultArray['Event_Type']] = [];
                         //I know this includes redundant information, but it hardly matters
@@ -386,9 +375,11 @@ namespace IOFrame\Handlers{
                 $eventTypes = [];
                 foreach($results as $key => $sequences){
                     $keyArr = explode('/',$key);
+                    if(count($keyArr) < 2)
+                        continue;
                     $category = $keyArr[0];
                     $type = $keyArr[1];
-                    array_push($eventTypes,['category'=>$category,'type'=>$type]);
+                    $eventTypes[] = ['category' => $category, 'type' => $type];
                 }
                 $meta = $this->getEventsMeta($eventTypes);
                 if($meta)
@@ -415,7 +406,7 @@ namespace IOFrame\Handlers{
          *              'override' => bool, default true, Will override existing events (defined by 'category','type' and 'sequence')
          *              'update' => bool, default false, Will only update existing events (defined by 'category','type' and 'sequence')
          *              'safeStr'           - bool, default true. Whether to convert Meta to a safe string
-         * @return Array of codes of the form:
+         * @return array of codes of the form:
          *          [
          *              <int, event category>/<int, event type>/<int, sequence number> => <int Code>
          *          ]
@@ -425,12 +416,13 @@ namespace IOFrame\Handlers{
          *           1 rule exists and 'override' is false
          *           2 rule does not exist and 'update' is true
          */
-        function setRulebookRules(array $inputs, array $params = []){
+        function setRulebookRules(array $inputs, array $params = []): array {
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
-            $override = isset($params['override'])? $params['override'] : true;
-            $update = isset($params['update'])? $params['update'] : false;
-            $safeStr = isset($params['safeStr'])? $params['safeStr'] : true;
+            $override = $params['override'] ?? true;
+            $update = $params['update'] ?? false;
+            $safeStr = !isset($params['safeStr']) || $params['safeStr'];
+            $useCache = $params['useCache'] ?? $this->defaultSettingsParams['useCache'];
 
             $relevantCategories = [];
             $relevantTypes = [];
@@ -441,20 +433,20 @@ namespace IOFrame\Handlers{
             //Figure out which extra columns to set, and what is their input
             $extraColumns = [];
             $extraInputs = [];
-            foreach($this->extraRulebookColumns as $index => $extraColumn){
+            foreach($this->extraRulebookColumns as $extraColumn){
                 if($this->extraRulebookInputs[$extraColumn]){
-                    array_push($extraColumns,$extraColumn);
-                    array_push($extraInputs,[
-                        'input'=>$this->extraRulebookInputs[$extraColumn]['input'],
-                        'default'=>isset($this->extraRulebookInputs[$extraColumn]['default'])?$this->extraRulebookInputs[$extraColumn]['default']:null
-                    ]);
+                    $extraColumns[] = $extraColumn;
+                    $extraInputs[] = [
+                        'input' => $this->extraRulebookInputs[$extraColumn]['input'],
+                        'default' => $this->extraRulebookInputs[$extraColumn]['default'] ?? null
+                    ];
                 }
             }
 
             //See if we can at least limit our fetch to a single category or
             foreach($inputs as $inputArray){
-                array_push($relevantCategories,$inputArray['category']);
-                array_push($relevantTypes,$inputArray['type']);
+                $relevantCategories[] = $inputArray['category'];
+                $relevantTypes[] = $inputArray['type'];
                 //Here, we save the NUMBER OF SEQUENCES each category/type combo has left.
                 if(!isset($updatedIdentifiers[$inputArray['category'].'/'.$inputArray['type']]))
                     $updatedIdentifiers[$inputArray['category'].'/'.$inputArray['type']] = 1;
@@ -475,7 +467,7 @@ namespace IOFrame\Handlers{
             foreach($inputs as $index => $inputArray){
                 $identifier = $inputArray['category'].'/'.$inputArray['type'];
                 //Either identifier AND RELEVANT SEQUENCE exist
-                if(isset($existing[$identifier]) && isset($existing[$identifier][$inputArray['sequence']])){
+                if(isset($existing[$identifier][$inputArray['sequence']])){
 
                     if(!$override){
                         $res[$inputArray['category'].'/'.$inputArray['type'].'/'.$inputArray['sequence']] = 1;
@@ -488,7 +480,7 @@ namespace IOFrame\Handlers{
                     }
 
                     //defaults
-                    if(!isset($inputs[$index]['addTTL']))
+                    if(!isset($inputArray['addTTL']))
                         $inputs[$index]['addTTL'] = $existing[$identifier][$inputArray['sequence']]['Add_TTL'];
                     //blacklistFor
                     if(!isset($inputs[$index]['blacklistFor']))
@@ -498,8 +490,8 @@ namespace IOFrame\Handlers{
                         $inputs[$index]['meta'] = $existing[$identifier][$inputArray['sequence']]['Meta'];
                     else{
                         //This is where we merge the arrays as JSON if they are both valid json
-                        if( IOFrame\Util\is_json($inputs[$index]['meta']) &&
-                            IOFrame\Util\is_json($existing[$identifier][$inputArray['sequence']]['Meta'])
+                        if( \IOFrame\Util\PureUtilFunctions::is_json($inputs[$index]['meta']) &&
+                            \IOFrame\Util\PureUtilFunctions::is_json($existing[$identifier][$inputArray['sequence']]['Meta'])
                         ){
                             $inputJSON = json_decode($inputs[$index]['meta'],true);
                             $existingJSON = json_decode($existing[$identifier][$inputArray['sequence']]['Meta'],true);
@@ -508,13 +500,13 @@ namespace IOFrame\Handlers{
                             if($existingJSON == null)
                                 $existingJSON = [];
                             $inputs[$index]['meta'] =
-                                json_encode(IOFrame\Util\array_merge_recursive_distinct($existingJSON,$inputJSON,['deleteOnNull'=>true]));
+                                json_encode(\IOFrame\Util\PureUtilFunctions::array_merge_recursive_distinct($existingJSON,$inputJSON,['deleteOnNull'=>true]));
                             if($inputs[$index]['meta'] == '[]')
                                 $inputs[$index]['meta'] = null;
                         }
                         //Here we convert back to safeString
                         if($safeStr && $inputs[$index]['meta'] !== null)
-                            $inputs[$index]['meta'] = IOFrame\Util\str2SafeStr($inputs[$index]['meta']);
+                            $inputs[$index]['meta'] = \IOFrame\Util\SafeSTRFunctions::str2SafeStr($inputs[$index]['meta']);
                     }
 
                     $arrayToSet = [
@@ -528,10 +520,10 @@ namespace IOFrame\Handlers{
                     foreach($extraInputs as $extraInputArr){
                         if(!isset($inputs[$index][$extraInputArr['input']]))
                             $inputs[$index][$extraInputArr['input']] = $extraInputArr['default'];
-                        array_push($arrayToSet,[$inputs[$index][$extraInputArr['input']],'STRING']);
+                        $arrayToSet[] = [$inputs[$index][$extraInputArr['input']], 'STRING'];
                     }
                     //Add the resource to the array to set
-                    array_push($stuffToSet,$arrayToSet);
+                    $stuffToSet[] = $arrayToSet;
                 }
                 //Or identifier / sequence does not exist
                 else{
@@ -548,7 +540,7 @@ namespace IOFrame\Handlers{
 
                     //defaults
                     //addTTL
-                    if(!isset($inputs[$index]['addTTL']))
+                    if(!isset($inputArray['addTTL']))
                         $inputs[$index]['addTTL'] = 0;
                     //blacklistFor
                     if(!isset($inputs[$index]['blacklistFor']))
@@ -556,8 +548,8 @@ namespace IOFrame\Handlers{
                     //meta
                     if(!isset($inputs[$index]['meta']))
                         $inputs[$index]['meta'] = null;
-                    elseif($safeStr && $inputs[$index]['meta'] !== null)
-                        $inputs[$index]['meta'] = IOFrame\Util\str2SafeStr($inputs[$index]['meta']);
+                    elseif($safeStr)
+                        $inputs[$index]['meta'] = \IOFrame\Util\SafeSTRFunctions::str2SafeStr($inputs[$index]['meta']);
 
                     $arrayToSet = [
                         $inputs[$index]['category'],
@@ -570,10 +562,10 @@ namespace IOFrame\Handlers{
                     foreach($extraInputs as $extraInputArr){
                         if(!isset($inputs[$index][$extraInputArr['input']]))
                             $inputs[$index][$extraInputArr['input']] = $extraInputArr['default'];
-                        array_push($arrayToSet,[$inputs[$index][$extraInputArr['input']],'STRING']);
+                        $arrayToSet[] = [$inputs[$index][$extraInputArr['input']], 'STRING'];
                     }
                     //Add the resource to the array to set
-                    array_push($stuffToSet,$arrayToSet);
+                    $stuffToSet[] = $arrayToSet;
                 }
             }
 
@@ -581,8 +573,8 @@ namespace IOFrame\Handlers{
             if($stuffToSet==[])
                 return $res;
 
-            $query = $this->SQLHandler->insertIntoTable(
-                $this->SQLHandler->getSQLPrefix().$this->rulebookTableName,
+            $query = $this->SQLManager->insertIntoTable(
+                $this->SQLManager->getSQLPrefix().$this->rulebookTableName,
                 array_merge(['Event_Category','Event_Type','Sequence_Number','Blacklist_For','Add_TTL','Meta'],$extraColumns),
                 $stuffToSet,
                 array_merge($params,['onDuplicateKey'=>true])
@@ -597,16 +589,18 @@ namespace IOFrame\Handlers{
                 if($updatedIdentifiers != []){
                     $arrayOfIdentifiers = [];
                     foreach($updatedIdentifiers as $identifier => $timesAffected){
-                        array_push($arrayOfIdentifiers,$this->rulebookCacheName.$identifier);
+                        $arrayOfIdentifiers[] = $this->rulebookCacheName . $identifier;
                     }
 
                     if($verbose)
                         echo 'Deleting rulebook events '.json_encode($arrayOfIdentifiers).' from cache!'.EOL;
 
-                    if(!$test)
-                        $this->RedisHandler->call('del',[$arrayOfIdentifiers]);
+                    if(!$test && $useCache)
+                        $this->RedisManager->call('del',[$arrayOfIdentifiers]);
                 }
             }
+            else
+                $this->logger->error('Failed to insert rulebook events into table',['items'=>$stuffToSet]);
 
             return $res;
         }
@@ -622,10 +616,11 @@ namespace IOFrame\Handlers{
          *          -1 server error (would be the same for all)
          *           0 success (does not check if items do not exist)
          */
-        function deleteRulebookRules(array $inputs, array $params = []){
+        function deleteRulebookRules(array $inputs, array $params = []): int {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
+            $useCache = $params['useCache'] ?? $this->defaultSettingsParams['useCache'];
 
             $relevantTypes = [];
             $eventTypesToDelete = [];
@@ -638,9 +633,9 @@ namespace IOFrame\Handlers{
                     continue;
 
                 if(isset($inputArray['sequence']))
-                    array_push($sequencesToDelete,[$inputArray['category'],$inputArray['type'],$inputArray['sequence']]);
+                    $sequencesToDelete[] = [$inputArray['category'], $inputArray['type'], $inputArray['sequence']];
                 else
-                    array_push($eventTypesToDelete,[$inputArray['category'],$inputArray['type']]);
+                    $eventTypesToDelete[] = [$inputArray['category'], $inputArray['type']];
 
                 $relevantTypes[$inputArray['category'].'/'.$inputArray['type']] = true;
             }
@@ -651,40 +646,36 @@ namespace IOFrame\Handlers{
 
             $conds = [];
             if(count($sequencesToDelete)){
-                array_push($sequencesToDelete,'CSV');
-                array_push($conds,
+                $sequencesToDelete[] = 'CSV';
+                $conds[] = [
                     [
-                        [
-                            'Event_Category',
-                            'Event_Type',
-                            'Sequence_Number',
-                            'CSV'
-                        ],
-                        $sequencesToDelete,
-                        'IN'
-                    ]
-                );
+                        'Event_Category',
+                        'Event_Type',
+                        'Sequence_Number',
+                        'CSV'
+                    ],
+                    $sequencesToDelete,
+                    'IN'
+                ];
             }
             if(count($eventTypesToDelete)){
-                array_push($eventTypesToDelete,'CSV');
-                array_push($conds,
+                $eventTypesToDelete[] = 'CSV';
+                $conds[] = [
                     [
-                        [
-                            'Event_Category',
-                            'Event_Type',
-                            'CSV'
-                        ],
-                        $eventTypesToDelete,
-                        'IN'
-                    ]
-                );
+                        'Event_Category',
+                        'Event_Type',
+                        'CSV'
+                    ],
+                    $eventTypesToDelete,
+                    'IN'
+                ];
             }
 
             if(count($conds) > 1)
-                array_push($conds,'OR');
+                $conds[] = 'OR';
 
-            $query = $this->SQLHandler->deleteFromTable(
-                $this->SQLHandler->getSQLPrefix().$this->rulebookTableName,
+            $query = $this->SQLManager->deleteFromTable(
+                $this->SQLManager->getSQLPrefix().$this->rulebookTableName,
                 $conds,
                 $params
             );
@@ -696,19 +687,21 @@ namespace IOFrame\Handlers{
                     $arrayOfIdentifiers = [];
 
                     foreach($relevantTypes as $identifier => $yes){
-                        array_push($arrayOfIdentifiers,$this->rulebookCacheName.$identifier);
+                        $arrayOfIdentifiers[] = $this->rulebookCacheName . $identifier;
                     }
 
                     if($verbose)
                         echo 'Deleting rulebook events '.json_encode($arrayOfIdentifiers).' from cache!'.EOL;
 
-                    if(!$test)
-                        $this->RedisHandler->call('del',[$arrayOfIdentifiers]);
+                    if(!$test && $useCache)
+                        $this->RedisManager->call('del',[$arrayOfIdentifiers]);
                 }
                 return 0;
             }
-            else
+            else{
+                $this->logger->error('Failed to delete rulebook events from table',['conditions'=>$conds]);
                 return -1;
+            }
         }
 
 
@@ -741,19 +734,17 @@ namespace IOFrame\Handlers{
          *              ]
          *          ]
          */
-        function getEventsMeta(array $inputs = [], array $params = []){
+        function getEventsMeta(array $inputs = [], array $params = []): array {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
-            $safeStr = isset($params['safeStr'])? $params['safeStr'] : true;
+            $safeStr = !isset($params['safeStr']) || $params['safeStr'];
 
             $retrieveParams = $params;
-            $retrieveParams['useCache'] = true;
             $keyCol = ['Event_Category','Event_Type'];
 
             $columns = array_merge(['Event_Category','Event_Type','Meta'],$this->extraMetaColumns);
 
-            $categoriesToGet = [];
             $stuffToGet = [];
 
             foreach($inputs as $input){
@@ -761,23 +752,23 @@ namespace IOFrame\Handlers{
                     continue;
                 if(!isset($input['type']) || $input['type'] < 0)
                     $input['type'] = -1;
-                array_push($stuffToGet,[ $input['category'], $input['type'] ]);
+                $stuffToGet[] = [$input['category'], $input['type']];
             }
 
             if($inputs == []){
                 $results = [];
-                $res = $this->SQLHandler->selectFromTable(
-                    $this->SQLHandler->getSQLPrefix().$this->eventsMetaTableName,
+                $res = $this->SQLManager->selectFromTable(
+                    $this->SQLManager->getSQLPrefix().$this->eventsMetaTableName,
                     [],
                     $columns,
                     $params
                 );
                 if(is_array($res)){
-                    $count = $this->SQLHandler->selectFromTable(
-                        $this->SQLHandler->getSQLPrefix().$this->eventsMetaTableName,
+                    $count = $this->SQLManager->selectFromTable(
+                        $this->SQLManager->getSQLPrefix().$this->eventsMetaTableName,
                         [],
                         ['COUNT(*)'],
-                        array_merge($params,['limit'=>0])
+                        array_merge($params,['limit'=>null])
                     );
 
                     $resCount = isset($res[0]) ? count($res[0]) : 0;
@@ -785,13 +776,14 @@ namespace IOFrame\Handlers{
                         for($i = 0; $i<$resCount/2; $i++)
                             unset($resultArray[$i]);
                         if($safeStr && $resultArray['Meta'] !== null)
-                            $resultArray['Meta'] = IOFrame\Util\safeStr2Str($resultArray['Meta']);
+                            $resultArray['Meta'] = \IOFrame\Util\SafeSTRFunctions::safeStr2Str($resultArray['Meta']);
                         $results[$resultArray['Event_Category'].'/'.$resultArray['Event_Type']] = $resultArray;
                     }
                     $results['@'] = array('#' => $count[0][0]);
                 }
             }
             else{
+
                 $results = $this->getFromCacheOrDB(
                     $stuffToGet,
                     $keyCol,
@@ -803,7 +795,7 @@ namespace IOFrame\Handlers{
                 if($safeStr){
                     foreach($results as $identifier => $arr)
                         if(is_array($arr))
-                            $results[$identifier]['Meta'] = IOFrame\Util\safeStr2Str($results[$identifier]['Meta']);
+                            $results[$identifier]['Meta'] = \IOFrame\Util\SafeSTRFunctions::safeStr2Str($arr['Meta']);
                 }
             }
 
@@ -820,7 +812,7 @@ namespace IOFrame\Handlers{
          *              'override' => bool, default true, Will override existing events (defined by 'category' and optionally 'type' )
          *              'update' => bool, default false, Will only update existing events (defined by 'category' and optionally 'type' )
          *              'safeStr'           - bool, default true. Whether to convert Meta to a safe string
-         * @return Array of codes of the form:
+         * @return array of codes of the form:
          *          [
          *              <int, event category>[/<int, event type>] => <int Code>
          *          ]
@@ -830,13 +822,14 @@ namespace IOFrame\Handlers{
          *           1 item does not exist and 'update' is true
          *           2 item exists and 'override' is false
          */
-        function setEventsMeta(array $inputs, array $params = []){
+        function setEventsMeta(array $inputs, array $params = []): array {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
-            $override = isset($params['override'])? $params['override'] : true;
-            $update = isset($params['update'])? $params['update'] : false;
-            $safeStr = isset($params['safeStr'])? $params['safeStr'] : true;
+            $useCache = $params['useCache'] ?? $this->defaultSettingsParams['useCache'];
+            $override = $params['override'] ?? true;
+            $update = $params['update'] ?? false;
+            $safeStr = !isset($params['safeStr']) || $params['safeStr'];
 
             $relevantItems = [];
             $updatedIdentifiers = [];
@@ -846,13 +839,13 @@ namespace IOFrame\Handlers{
             //Figure out which extra columns to set, and what is their input
             $extraColumns = [];
             $extraInputs = [];
-            foreach($this->extraMetaColumns as $index => $extraColumn){
+            foreach($this->extraMetaColumns as $extraColumn){
                 if($this->extraMetaInputs[$extraColumn]){
-                    array_push($extraColumns,$extraColumn);
-                    array_push($extraInputs,[
-                        'input'=>$this->extraMetaInputs[$extraColumn]['input'],
-                        'default'=>isset($this->extraMetaInputs[$extraColumn]['default'])?$this->extraMetaInputs[$extraColumn]['default']:null
-                    ]);
+                    $extraColumns[] = $extraColumn;
+                    $extraInputs[] = [
+                        'input' => $this->extraMetaInputs[$extraColumn]['input'],
+                        'default' => $this->extraMetaInputs[$extraColumn]['default'] ?? null
+                    ];
                 }
             }
 
@@ -860,17 +853,13 @@ namespace IOFrame\Handlers{
             foreach($inputs as $index => $inputArray){
                 if(!isset($inputArray['type']) || $inputArray['type'] < 0)
                     $inputs[$index]['type'] = -1;
-                array_push($relevantItems,['category'=>$inputArray['category'],'type'=>$inputs[$index]['type']]);
-                array_push($updatedIdentifiers,$inputArray['category'].'/'.$inputs[$index]['type']);
+                $relevantItems[] = ['category' => $inputArray['category'], 'type' => $inputs[$index]['type']];
+                $updatedIdentifiers[] = $inputArray['category'] . '/' . $inputs[$index]['type'];
                 $res[$inputArray['category'].'/'.$inputs[$index]['type']] = -1;
 
             }
 
-            if(isset($params['existing']))
-                $existing = $params['existing'];
-            else{
-                $existing = $this->getEventsMeta($relevantItems,$params);
-            }
+            $existing = $params['existing'] ?? $this->getEventsMeta($relevantItems, $params);
             //See which rules exist
             foreach($inputs as $index => $inputArray){
                 $identifier = $inputArray['category'].'/'.$inputArray['type'];
@@ -884,27 +873,27 @@ namespace IOFrame\Handlers{
                         continue;
                     }
 
-                    if(!isset($inputs[$index]['meta']))
+                    if(!isset($inputArray['meta']))
                         $inputs[$index]['meta'] = $existing[$identifier]['Meta'];
                     else{
                         //This is where we merge the arrays as JSON if they are both valid json
-                        if( IOFrame\Util\is_json($inputs[$index]['meta']) &&
-                            IOFrame\Util\is_json($existing[$identifier]['Meta'])
+                        if( \IOFrame\Util\PureUtilFunctions::is_json($inputArray['meta']) &&
+                            \IOFrame\Util\PureUtilFunctions::is_json($existing[$identifier]['Meta'])
                         ){
-                            $inputJSON = json_decode($inputs[$index]['meta'],true);
+                            $inputJSON = json_decode($inputArray['meta'],true);
                             $existingJSON = json_decode($existing[$identifier]['Meta'],true);
                             if($inputJSON == null)
                                 $inputJSON = [];
                             if($existingJSON == null)
                                 $existingJSON = [];
                             $inputs[$index]['meta'] =
-                                json_encode(IOFrame\Util\array_merge_recursive_distinct($existingJSON,$inputJSON,['deleteOnNull'=>true]));
+                                json_encode(\IOFrame\Util\PureUtilFunctions::array_merge_recursive_distinct($existingJSON,$inputJSON,['deleteOnNull'=>true]));
                             if($inputs[$index]['meta'] == '[]')
                                 $inputs[$index]['meta'] = null;
                         }
                         //Here we convert back to safeString
                         if($safeStr && $inputs[$index]['meta'] !== null)
-                            $inputs[$index]['meta'] = IOFrame\Util\str2SafeStr($inputs[$index]['meta']);
+                            $inputs[$index]['meta'] = \IOFrame\Util\SafeSTRFunctions::str2SafeStr($inputs[$index]['meta']);
                     }
 
                     $arrayToSet = [
@@ -915,10 +904,10 @@ namespace IOFrame\Handlers{
                     foreach($extraInputs as $extraInputArr){
                         if(!isset($inputs[$index][$extraInputArr['input']]))
                             $inputs[$index][$extraInputArr['input']] = $extraInputArr['default'];
-                        array_push($arrayToSet,[$inputs[$index][$extraInputArr['input']],'STRING']);
+                        $arrayToSet[] = [$inputs[$index][$extraInputArr['input']], 'STRING'];
                     }
                     //Add the resource to the array to set
-                    array_push($stuffToSet,$arrayToSet);
+                    $stuffToSet[] = $arrayToSet;
                 }
                 //If the meta information does not exist
                 else{
@@ -934,10 +923,10 @@ namespace IOFrame\Handlers{
 
                     //defaults
                     //meta
-                    if(!isset($inputs[$index]['meta']))
+                    if(!isset($inputArray['meta']))
                         $inputs[$index]['meta'] = null;
-                    elseif($safeStr && $inputs[$index]['meta'] !== null)
-                        $inputs[$index]['meta'] = IOFrame\Util\str2SafeStr($inputs[$index]['meta']);
+                    elseif($safeStr)
+                        $inputs[$index]['meta'] = \IOFrame\Util\SafeSTRFunctions::str2SafeStr($inputArray['meta']);
 
                     $arrayToSet = [
                         $inputs[$index]['category'],
@@ -947,10 +936,10 @@ namespace IOFrame\Handlers{
                     foreach($extraInputs as $extraInputArr){
                         if(!isset($inputs[$index][$extraInputArr['input']]))
                             $inputs[$index][$extraInputArr['input']] = $extraInputArr['default'];
-                        array_push($arrayToSet,[$inputs[$index][$extraInputArr['input']],'STRING']);
+                        $arrayToSet[] = [$inputs[$index][$extraInputArr['input']], 'STRING'];
                     }
                     //Add the resource to the array to set
-                    array_push($stuffToSet,$arrayToSet);
+                    $stuffToSet[] = $arrayToSet;
                 }
             }
 
@@ -958,8 +947,8 @@ namespace IOFrame\Handlers{
             if($stuffToSet==[])
                 return $res;
 
-            $query = $this->SQLHandler->insertIntoTable(
-                $this->SQLHandler->getSQLPrefix().$this->eventsMetaTableName,
+            $query = $this->SQLManager->insertIntoTable(
+                $this->SQLManager->getSQLPrefix().$this->eventsMetaTableName,
                 array_merge(['Event_Category','Event_Type','Meta'],$extraColumns),
                 $stuffToSet,
                 array_merge($params,['onDuplicateKey'=>true])
@@ -978,11 +967,14 @@ namespace IOFrame\Handlers{
                     }
 
                     if($verbose)
-                        echo 'Deleting rulebook events '.json_encode($updatedIdentifiers).' from cache!'.EOL;
+                        echo 'Deleting rulebook meta '.json_encode($updatedIdentifiers).' from cache!'.EOL;
 
-                    if(!$test)
-                        $this->RedisHandler->call('del',[$updatedIdentifiers]);
+                    if(!$test && $useCache)
+                        $this->RedisManager->call('del',[$updatedIdentifiers]);
                 }
+            }
+            else{
+                $this->logger->error('Failed to set events meta',['items'=>$stuffToSet]);
             }
 
             return $res;
@@ -997,10 +989,11 @@ namespace IOFrame\Handlers{
          *          -1 server error (would be the same for all)
          *           0 success (does not check if items do not exist)
          */
-        function deleteEventsMeta(array $inputs, array $params = []){
+        function deleteEventsMeta(array $inputs, array $params = []): Int {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
+            $useCache = $params['useCache'] ?? $this->defaultSettingsParams['useCache'];
 
             $relevantTypes = [];
             $eventTypesToDelete = [];
@@ -1014,7 +1007,7 @@ namespace IOFrame\Handlers{
                 if(!isset($inputArray['type']) || $inputArray['type'] < 0)
                     $inputs[$index]['type'] = -1;
 
-                array_push($eventTypesToDelete,[$inputArray['category'],$inputs[$index]['type']]);
+                $eventTypesToDelete[] = [$inputArray['category'], $inputs[$index]['type']];
 
                 $relevantTypes[$inputArray['category'].'/'.$inputs[$index]['type']] = true;
             }
@@ -1024,24 +1017,22 @@ namespace IOFrame\Handlers{
                 return 0;
 
             $conds = [];
-            array_push($eventTypesToDelete,'CSV');
-            array_push($conds,
+            $eventTypesToDelete[] = 'CSV';
+            $conds[] = [
                 [
-                    [
-                        'Event_Category',
-                        'Event_Type',
-                        'CSV'
-                    ],
-                    $eventTypesToDelete,
-                    'IN'
-                ]
-            );
+                    'Event_Category',
+                    'Event_Type',
+                    'CSV'
+                ],
+                $eventTypesToDelete,
+                'IN'
+            ];
 
             if(count($conds) > 1)
-                array_push($conds,'OR');
+                $conds[] = 'OR';
 
-            $query = $this->SQLHandler->deleteFromTable(
-                $this->SQLHandler->getSQLPrefix().$this->eventsMetaTableName,
+            $query = $this->SQLManager->deleteFromTable(
+                $this->SQLManager->getSQLPrefix().$this->eventsMetaTableName,
                 $conds,
                 $params
             );
@@ -1053,24 +1044,24 @@ namespace IOFrame\Handlers{
                     $arrayOfIdentifiers = [];
 
                     foreach($relevantTypes as $identifier => $yes){
-                        array_push($arrayOfIdentifiers,$this->eventsMetaCacheName.$identifier);
+                        $arrayOfIdentifiers[] = $this->eventsMetaCacheName . $identifier;
                     }
 
                     if($verbose)
                         echo 'Deleting rulebook events '.json_encode($arrayOfIdentifiers).' from cache!'.EOL;
 
-                    if(!$test)
-                        $this->RedisHandler->call('del',[$arrayOfIdentifiers]);
+                    if($useCache && !$test)
+                        $this->RedisManager->call('del',[$arrayOfIdentifiers]);
                 }
                 return 0;
             }
-            else
+            else{
+                $this->logger->error('Failed to delete events meta',['conditions'=>$conds]);
                 return -1;
+            }
         }
 
 
     }
 
 }
-
-?>

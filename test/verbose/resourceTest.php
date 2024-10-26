@@ -1,5 +1,5 @@
 <?php
-$ResourceHandler = new IOFrame\Handlers\ResourceHandler($settings,$defaultSettingsParams);
+$ResourceHandler = new \IOFrame\Handlers\ResourceHandler($settings,$defaultSettingsParams);
 $IOFrameJSRoot = 'front/ioframe/js/';
 $IOFrameCSSRoot = 'front/ioframe/css/';
 

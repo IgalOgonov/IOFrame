@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('article-block-editor', {
     mixins: [componentSize,sourceURL,eventHubManager,IOFrameCommons],
     props: {
@@ -92,43 +89,22 @@ Vue.component('article-block-editor', {
                     type: "number",
                     required:true,
                     onUpdate: {
-                        //bool, default false - do no send this key on update
+                        //bool, default false - do not send this key on update
                         ignore: true
                     }
                 },
                 type:{
                     title:'Block Type',
                     type: 'select',
-                    list:[
-                        {
-                            title:'Markdown',
-                            value:'markdown',
-                        },
-                        {
-                            title:'Image',
-                            value:'image',
-                        },
-                        {
-                            title:'Cover',
-                            value:'cover',
-                        },
-                        {
-                            title:'Video',
-                            value:'video',
-                        },
-                        {
-                            title:'Youtube',
-                            value:'youtube',
-                        },
-                        {
-                            title:'Gallery',
-                            value:'gallery'
-                        },
-                        {
-                            title:'Article',
-                            value:'article'
-                        },
-                    ],
+                    list:{
+                        'markdown':'Markdown',
+                        'image':'Image',
+                        'cover':'Cover',
+                        'video':'Video',
+                        'youtube':'Youtube',
+                        'gallery':'Gallery',
+                        'article':'Article',
+                    },
                     edit: true,
                     required:true
                 },
@@ -406,6 +382,23 @@ Vue.component('article-block-editor', {
                         return newVal;
                     }
                 },
+                'meta.highlightCode':{
+                    ignore: true,
+                    title: 'Highlight Code?',
+                    type: 'boolean',
+                    onUpdate: {
+                        setName: 'highlightCode'
+                    },
+                    parseOnGet: function(item){
+                        return item === undefined || item === null ? false : item;
+                    },
+                    parseOnChange:function(newVal,currentBlock){
+                        if(currentBlock.meta === undefined)
+                            currentBlock.meta = {};
+                        currentBlock.meta.highlightCode = newVal;
+                        return newVal;
+                    }
+                },
                 created:{
                     ignore: true,
                     title:'Created At',
@@ -439,7 +432,7 @@ Vue.component('article-block-editor', {
                             },
                             smartLists: true
                         });
-                        return  marked(context.currentBlock.text);
+                        return DOMPurify.sanitize(marked.parse(context.currentBlock.text));
                     }
                 },
                 'image':{
@@ -578,7 +571,7 @@ Vue.component('article-block-editor', {
                 'article':{
                     checkedChanges: false,
                     linkFunction: function(url){
-                        return document.pathToRoot + 'articles/'+url
+                        return document.ioframe.pathToRoot + 'articles/'+url
                     },
                     render: function(context = this){
                         let otherArticle = context.currentBlock.otherArticle;
@@ -597,7 +590,7 @@ Vue.component('article-block-editor', {
                         let article = `
                         <a href="`+context.currentOptions.article.linkFunction(otherArticle.address)+`">
                             <h3 class="title">`+otherArticle.title+`</h3>
-                            <img class="thumbnail" src="`+(otherArticle.thumbnail.address? context.extractMediaAddress(otherArticle.thumbnail) : context.sourceURL()+'img/icons/image-generic.svg')+`">
+                            <img class="thumbnail `+(otherArticle.thumbnail.address?'':'image-generic')+`" src="`+(otherArticle.thumbnail.address? context.extractMediaAddress(otherArticle.thumbnail) : context.sourceURL()+'img/icons/image-generic.svg')+`">
                             `+creator+`
 
                         </a>`;
@@ -616,6 +609,10 @@ Vue.component('article-block-editor', {
             //Modes, and array of available operations in each mode
             modes: ['view','create','update'],
             currentMode: this.mode.toString(),
+            imageOptions: {
+                fullScreen: false,
+                high: false
+            },
             componentSize: {
                 disable: this.block.type !== 'gallery'
             },
@@ -635,7 +632,7 @@ Vue.component('article-block-editor', {
                 open:false,
                 newItem:null,
                 searchList:{
-                    url:document.rootURI + 'api/v1/media',
+                    url:document.ioframe.rootURI + 'api/v1/media',
                     action:'getGalleries',
                     filters:[
                         {
@@ -706,8 +703,8 @@ Vue.component('article-block-editor', {
                             title:'Gallery Name',
                             custom:true,
                             parser:function(item){
-                                if(document.selectedLanguage && (item[document.selectedLanguage+'_name'] !== undefined) )
-                                    return item[document.selectedLanguage+'_name'];
+                                if(document.ioframe.selectedLanguage && (item[document.ioframe.selectedLanguage+'_name'] !== undefined) )
+                                    return item[document.ioframe.selectedLanguage+'_name'];
                                 return item.identifier;
                             }
                         },
@@ -716,7 +713,7 @@ Vue.component('article-block-editor', {
                             title:'Other Names?',
                             custom:true,
                             parser:function(item){
-                                let possibleNames = JSON.parse(JSON.stringify(document.languages));
+                                let possibleNames = JSON.parse(JSON.stringify(document.ioframe.languages));
                                 possibleNames =possibleNames.map(function(x) {
                                     return x+'_name';
                                 });
@@ -876,10 +873,10 @@ Vue.component('article-block-editor', {
                                                 title:'Default'
                                             }
                                         ];
-                                        for(let i in document.languages){
+                                        for(let i in document.ioframe.languages){
                                             list.push({
-                                                value:document.languages[i],
-                                                title:document.languages[i]
+                                                value:document.ioframe.languages[i],
+                                                title:document.ioframe.languages[i]
                                             });
                                         }
                                         return list;
@@ -942,11 +939,11 @@ Vue.component('article-block-editor', {
                                     return 'None';
                                 let src;
                                 if(item.thumbnail.local){
-                                    src = document.rootURI+document.imagePathLocal+item.thumbnail.address;
+                                    src = document.ioframe.rootURI+document.ioframe.imagePathLocal+item.thumbnail.address;
                                 }
                                 else
                                     src = item.thumbnail.dataType?
-                                        (document.rootURI+'api/v1/media?action=getDBMedia&address='+item.thumbnail.address+'&lastChanged='+item.thumbnail.updated)
+                                        (document.ioframe.rootURI+'api/v1/media?action=getDBMedia&address='+item.thumbnail.address+'&lastChanged='+item.thumbnail.updated)
                                         :
                                         item.thumbnail.address;
                                 let alt = item.meta.alt? item.meta.alt : (item.thumbnail.meta.alt? item.thumbnail.meta.alt : '');
@@ -995,7 +992,7 @@ Vue.component('article-block-editor', {
                         }
                     ],
                     //SearchList API (and probably the only relevant API) URL
-                    url: document.pathToRoot+ 'api/v1/articles',
+                    url: document.ioframe.pathToRoot+ 'api/v1/articles',
                     //Current page
                     page:0,
                     //Go to page
@@ -1061,10 +1058,19 @@ Vue.component('article-block-editor', {
         this.$forceUpdate();
     },
     mounted:function(){
-        if(this.currentMode === 'view' && this.currentBlock.type === 'markdown' && (window.hljs !==undefined))
+        if(
+            (this.currentMode === 'view') &&
+            (this.currentBlock.type === 'markdown') &&
+            this.currentBlock.meta.highlightCode &&
+            (window.hljs !==undefined)
+        ){
+            let context = this;
             this.$el.querySelectorAll('pre code').forEach((block) => {
-                hljs.highlightBlock(block);
-            });
+                if(context.verbose)
+                    console.log('Highlighting code in block',block);
+                window.hljs.highlightBlock(block);
+            })
+        }
     },
     updated: function(){
         if(this.currentMode === 'view' && !this.currentOptions[this.currentBlock.type].checkedChanges){
@@ -1073,14 +1079,19 @@ Vue.component('article-block-editor', {
             };
             switch (this.currentBlock.type){
                 case 'markdown':
-                    let context = this;
-                    //TODO fix dirty hack later
-                    if(window.hljs !==undefined)
+                    if(this.currentBlock.meta.highlightCode && (window.hljs !==undefined)){
+                        //TODO fix dirty hack later
+                        let context = this;
                         setTimeout(function(){
+                            if(context.verbose)
+                                console.log('Highlighting code in 0.5s...');
                             context.$el.querySelectorAll('pre code').forEach((block) => {
-                                hljs.highlightBlock(block);
+                                if(context.verbose)
+                                    console.log('Highlighting code in block',block);
+                                window.hljs.highlightBlock(block);
                             })
                         },500);
+                    }
                     break;
                 case 'cover':
                 case 'image':
@@ -1156,6 +1167,35 @@ Vue.component('article-block-editor', {
             if(this.currentOptions[this.currentBlock.type] === undefined)
                 return '<!---->';
             return this.currentOptions[this.currentBlock.type].render(this);
+        },
+        onClickFunction: function (){
+            let context = this;
+            if(this.currentBlock.type !== 'image')
+                return function (){};
+            else
+                return function(e){
+                    if( (e.target.tagName !== 'IMG') && !context.imageOptions.fullScreen)
+                        return;
+                    let high = e.target.offsetHeight - window.innerHeight > 0;
+                    if(context.verbose)
+                        console.log('Toggling image full screen, height:', high);
+                    context.imageOptions.fullScreen = !context.imageOptions.fullScreen;
+                    context.imageOptions.high = high;
+                };
+        },
+        dynamicClasses: function (){
+
+            if(this.currentBlock.type !== 'image')
+                return [];
+            else{
+                let classes = [];
+                if(this.imageOptions.fullScreen){
+                    classes.push('full-screen');
+                    if(this.imageOptions.high)
+                        classes.push('high');
+                }
+                return classes;
+            }
         },
         //Default gallery options, overwritten by provided ones
         galleryOptions: function(){
@@ -1247,7 +1287,12 @@ Vue.component('article-block-editor', {
 
             response = response.content;
 
-            switch(response){
+            if(typeof response !== 'object'){
+                alertLog('Unknown response '+response,'error',this.$el);
+                return;
+            }
+
+            switch(response.error??null){
                 case 'INPUT_VALIDATION_FAILURE':
                     alertLog('Input validation error!','error',this.$el);
                     return;
@@ -1261,13 +1306,9 @@ Vue.component('article-block-editor', {
                 case 'SECURITY_FAILURE':
                     alertLog('Security related operation failure.','warning',this.$el);
                     return;
+                default:
             }
-
-            if(typeof response !== 'object'){
-                alertLog('Unknown response '+response,'error',this.$el);
-                return;
-            }
-
+            response = response.response;
             let blockRes = response.block;
             let orderRes = response.order;
             let blockResCorrect = !permanent;
@@ -1306,7 +1347,7 @@ Vue.component('article-block-editor', {
             if(!orderResCorrect)
                 return;
 
-            alertLog('Block '+(permanent?this.block.blockId+' deleted!': this.index+' hidden!'),'success',this.$el);
+            alertLog('Block '+(permanent?this.block.blockId+' deleted!': this.index+' hidden!'),'success',this.$el,{autoDismiss:2000});
             eventHub.$emit('deleteBlock',{
                 from:this.identifier,
                 content:{
@@ -1325,7 +1366,7 @@ Vue.component('article-block-editor', {
 
             response = response.content;
 
-            switch(response){
+            switch(response.error ?? null){
                 case 'INPUT_VALIDATION_FAILURE':
                     alertLog('Input validation error!','error',this.$el);
                     return;
@@ -1339,13 +1380,18 @@ Vue.component('article-block-editor', {
                 case 'SECURITY_FAILURE':
                     alertLog('Security related operation failure.','warning',this.$el);
                     return;
+                default:
+                    if(response.error){
+                        alertLog('Unknown error of type '+response.error+(response.message? (': '+response.message) : ''),'error',this.$el);
+                        return;
+                    }
             }
 
             if(typeof response !== 'object'){
                 alertLog('Unknown response '+response,'error',this.$el);
                 return;
             }
-
+            response = response.response;
             let blockRes = response.block;
             let orderRes = response.order;
             let blockResCorrect = false;
@@ -1428,7 +1474,7 @@ Vue.component('article-block-editor', {
             if(this.currentMode === 'create')
                 this.resetCreation();
         },
-        //Tries do delete the block
+        //Tries to delete the block
         deleteItem: function(permanent = true){
             if(this.updating){
                 if(this.verbose)
@@ -1437,29 +1483,25 @@ Vue.component('article-block-editor', {
             }
 
             //Data to be sent
-            let data = new FormData();
-            let sendParams = {
-                action: 'deleteArticleBlocks',
-                articleId: this.articleId,
-                permanentDeletion: permanent,
-                deletionTargets: JSON.stringify([(permanent ? this.block.blockId : this.index)])
+            let queryParams = {
+                permanent: permanent,
+                targets: (permanent ? this.block.blockId : this.index)
             };
-            for(let i in sendParams){
-                data.append(i,sendParams[i]);
-            }
             if(this.test)
-                data.append('req','test');
+                queryParams.req = "test";
 
             if(this.verbose)
-                console.log('Deleting item with parameters ',sendParams);
+                console.log('Deleting item with parameters ',queryParams);
 
             this.updating = true;
 
             this.apiRequest(
-                data,
-                'api/v1/articles',
+                null,
+                'api/v2/articles/'+this.articleId+'/blocks',
                 this.identifier+(permanent?'-delete-response':'-hide-response'),
                 {
+                    'method': 'delete',
+                    'queryParams':queryParams,
                     'verbose': this.verbose,
                     'parseJSON':true,
                     'identifier':this.identifier
@@ -1476,14 +1518,15 @@ Vue.component('article-block-editor', {
 
             //Data to be sent
             let data = new FormData();
-            data.append('action', 'setArticleBlock');
-            data.append('create', this.currentMode === 'create');
             if(this.test)
                 data.append('req','test');
 
             let sendParams = {};
 
             for(let paramName in this.paramMap){
+
+                if((paramName === 'articleId') || (paramName === 'blockId'))
+                    continue;
 
                 let param = this.paramMap[paramName];
                 let item = this.mainItem[paramName];
@@ -1540,7 +1583,8 @@ Vue.component('article-block-editor', {
                 case 'video':
                     target = this.mediaSelector;
                     newValue = target.newItem;
-                    paramName = 'blockResourceAddress';
+                    paramName = this.currentBlock.resource.local? 'resourceAddressLocal' :
+                        (this.currentBlock.resource.dataType? 'resourceAddressDB' : 'resourceAddressURI');
                     break;
             }
 
@@ -1560,9 +1604,10 @@ Vue.component('article-block-editor', {
 
             this.apiRequest(
                 data,
-                'api/v1/articles',
+                'api/v2/articles/'+this.block.articleId+'/block'+(this.currentMode !== 'create'?'/'+this.currentBlock.blockId:'')+'/'+this.currentBlock.type,
                 this.identifier+'-set-response',
                 {
+                    'method':this.currentMode === 'create'?'post':'put',
                     'verbose': this.verbose,
                     'parseJSON':true,
                     'identifier':this.identifier
@@ -1627,6 +1672,7 @@ Vue.component('article-block-editor', {
             Vue.set(this.paramMap['meta.preview'],'ignore',(['gallery'].indexOf(this.currentBlock.type) === -1));
             Vue.set(this.paramMap['meta.fullScreenOnClick'],'ignore',(['gallery'].indexOf(this.currentBlock.type) === -1));
             Vue.set(this.paramMap['meta.slider'],'ignore',(['gallery'].indexOf(this.currentBlock.type) === -1));
+            Vue.set(this.paramMap['meta.highlightCode'],'ignore',(['markdown'].indexOf(this.currentBlock.type) === -1));
             Vue.set(this.paramMap['created'],'ignore',this.currentMode === 'create');
             Vue.set(this.paramMap['updated'],'ignore',this.currentMode === 'create');
             this.$forceUpdate();
@@ -1639,9 +1685,9 @@ Vue.component('article-block-editor', {
                 return this.sourceURL()+'img/icons/image-generic.svg';
             let trueAddress = item.address;
             if(item.local)
-                trueAddress = document.rootURI + document[(this.currentBlock.type !== 'video'?'imagePathLocal':'videoPathLocal')]+trueAddress;
+                trueAddress = document.ioframe.rootURI + document.ioframe[(this.currentBlock.type !== 'video'?'imagePathLocal':'videoPathLocal')]+trueAddress;
             else if(item.dataType)
-                trueAddress = document.rootURI+'api/v1/media?action=getDBMedia&address='+trueAddress+'&lastChanged='+item.updated+'&resourceType='+(this.currentBlock.type !== 'video' ? 'img' : 'vid');
+                trueAddress = document.ioframe.rootURI+'api/v1/media?action=getDBMedia&address='+trueAddress+'&lastChanged='+item.updated+'&resourceType='+(this.currentBlock.type !== 'video' ? 'img' : 'vid');
             return trueAddress;
         },
         //Changes creation block back to initial state
@@ -1814,7 +1860,7 @@ Vue.component('article-block-editor', {
                 };
                 if(image.complete)
                     image.onload();
-            };
+            }
         },
 
         //Parses search results returned from a search list
@@ -1876,19 +1922,16 @@ Vue.component('article-block-editor', {
             if(type === 'galleries'){
                 if(!this.currentBlock.collection)
                     this.currentBlock.collection = {};
-                if(this.currentMode === 'create' || this.block.collection && (this.block.collection.name !== item.identifier))
-                    target.changed = true;
-                else
-                    target.changed = false;
+                target.changed = (
+                    this.currentMode === 'create' ||
+                    this.block.collection && (this.block.collection.name !== item.identifier)
+                );
                 this.currentBlock.collection.name = item.identifier;
             }
             else{
                 if(!this.currentBlock.otherArticle)
                     this.currentBlock.otherArticle = {};
-                if(this.currentMode === 'create' || this.block.otherArticle && (this.block.otherArticle.id !== item.identifier))
-                    target.changed = true;
-                else
-                    target.changed = false;
+                target.changed = (this.currentMode === 'create' || this.block.otherArticle && (this.block.otherArticle.id !== item.identifier));
                 this.currentBlock.otherArticle.id = item.identifier;
                 this.currentBlock.otherArticle.address = item.articleAddress;
                 this.currentBlock.otherArticle.title = item.title;
@@ -2059,7 +2102,7 @@ Vue.component('article-block-editor', {
                      v-model:value="item.current"
                      @change="item.current = paramMap[key].parseOnChange($event.target.value,currentBlock);recompute.changed = ! recompute.changed;$forceUpdate()"
                      >
-                        <option v-for="listItem in paramMap[key].list" :value="listItem.value" v-text="listItem.title? listItem.title: listItem.value"></option>
+                        <option v-for="(title,value) in paramMap[key].list" :value="value" v-text="title"></option>
                      </select>
 
                 </div>
@@ -2071,7 +2114,7 @@ Vue.component('article-block-editor', {
                     </button>
                     <div class="article selector-sub-container">
                         <div class="control-buttons" v-if="articleSelector.open">
-                            <img :src="sourceURL()+'img/icons/close-red.svg'"  @click.prevent="articleSelector.open = false">
+                            <img :src="sourceURL()+'img/icons/cancel-icon.svg'"  @click.prevent="articleSelector.open = false">
                         </div>
                         <div
                         v-if="articleSelector.open"
@@ -2105,7 +2148,7 @@ Vue.component('article-block-editor', {
                     </button>
                     <div class="gallery selector-sub-container">
                         <div class="control-buttons" v-if="gallerySelector.open">
-                            <img :src="sourceURL()+'img/icons/close-red.svg'"  @click.prevent="gallerySelector.open = false">
+                            <img :src="sourceURL()+'img/icons/cancel-icon.svg'"  @click.prevent="gallerySelector.open = false">
                         </div>
                         <div
                         v-if="gallerySelector.open"
@@ -2144,7 +2187,7 @@ Vue.component('article-block-editor', {
                     </div>
                     <div class="media selector-sub-container">
                         <div class="control-buttons" v-if="mediaSelector.open">
-                            <img :src="sourceURL()+'img/icons/close-red.svg'"  @click.prevent="mediaSelector.open = false" v-if="mediaSelector.open">
+                            <img :src="sourceURL()+'img/icons/cancel-icon.svg'"  @click.prevent="mediaSelector.open = false" v-if="mediaSelector.open">
                         </div>
                         <div
                              v-if="mediaSelector.open"
@@ -2189,7 +2232,7 @@ Vue.component('article-block-editor', {
                 ></button>
         </div>
 
-        <p v-if="['cover','image','video','youtube','article','markdown'].indexOf(currentBlock.type) !== -1" :class="currentBlock.type" v-html="renderFromBlock"></p>
+        <p v-if="['cover','image','video','youtube','article','markdown'].indexOf(currentBlock.type) !== -1" :class="[currentBlock.type, ...dynamicClasses]" v-html="renderFromBlock" @click="onClickFunction"></p>
         <div v-else-if="['gallery'].indexOf(currentBlock.type) !== -1" :class="currentBlock.type">
             <div
                 v-if="block.collection && block.collection.name === currentBlock.collection.name && !block.collection['@out-of-date']"

@@ -8,9 +8,9 @@ var users = new Vue({
     data(){
         return {
             configObject: JSON.parse(JSON.stringify(document.siteConfig)),
-            rootURI:document.rootURI,
+            rootURI:document.ioframe.rootURI,
             //SearchList API
-            url: document.pathToRoot+ 'api/users',
+            url: document.ioframe.pathToRoot+ 'api/users',
             user: {
                 id:-1,
                 username:'',
@@ -47,7 +47,7 @@ var users = new Vue({
             //Whether we are currently updating
             updating: false,
             //Whether we are logged in
-            loggedIn:document.loggedIn,
+            loggedIn:document.ioframe.loggedIn,
             identifier:'account',
             verbose:false,
             test:false
@@ -75,7 +75,7 @@ var users = new Vue({
         if(this.configObject.account.text)
             this.text = JSON.parse(JSON.stringify(this.configObject.account.text));
 
-        if(document.loggedIn)
+        if(document.ioframe.loggedIn)
             this.getMyUser();
         else
             this.initiating = false;
@@ -271,7 +271,6 @@ var users = new Vue({
                 <div class="require2FA" :class="{positive:user.require2FA,negative:!user.require2FA}">
                     <span class="title" v-text="text.user.require2FA"></span><span class="value" v-text="user.require2FA? text.user.generalYes : text.user.generalNo"></span>
                     <div 
-                    v-if="configObject.account.twoFactor.hasApp || configObject.account.twoFactor.hasPhone" 
                     is="toggle-2fa"
                     :initial-state="user.require2FA"
                     :test="test"

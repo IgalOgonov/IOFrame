@@ -1,0 +1,7 @@
+{
+	"dynamicJobProperties":{
+		"commons_logging":{
+			"active":1
+		}
+	}
+}

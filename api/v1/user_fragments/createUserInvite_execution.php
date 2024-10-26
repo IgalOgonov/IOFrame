@@ -1,10 +1,8 @@
 <?php
 
-if(!defined('UserHandler'))
-    require __DIR__ . '/../../../IOFrame/Handlers/UserHandler.php';
 
-if(!isset($UserHandler))
-    $UserHandler = new IOFrame\Handlers\UserHandler(
+if(!isset($UsersHandler))
+    $UsersHandler = new \IOFrame\Handlers\UsersHandler(
         $settings,
         $defaultSettingsParams
     );
@@ -19,6 +17,4 @@ $inputs = [
     ]
 ];
 
-$result = $UserHandler->createInviteTokens($inputs,['test'=>$test]);
-
-?>
+$result = $UsersHandler->createInviteTokens($inputs,['test'=>$test]);

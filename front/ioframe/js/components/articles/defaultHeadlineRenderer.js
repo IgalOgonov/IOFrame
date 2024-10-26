@@ -1,10 +1,7 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('default-headline-renderer', {
-    mixins: [sourceURL,eventHubManager],
+    mixins: [sourceURL,eventHubManager,IOFrameCommons],
     props: {
-        //Article item as reterned from the articles API.
+        //Article item as returned from the articles API.
         article:{
             type: Object,
             default: function(){
@@ -47,6 +44,18 @@ Vue.component('default-headline-renderer', {
                      * */
                 }
             }
+        },
+        //Info about tags, same as articlesEditor
+        existingTagInfo:{
+            type: Object,
+            default: function(){
+                return {};
+            }
+        },
+        //Language, mainly used for tags
+        language:{
+            type: String,
+            default: ''
         },
         //App Identifier
         identifier: {
@@ -102,7 +111,7 @@ Vue.component('default-headline-renderer', {
                     parser: function(context = this){
                         let article = context.article;
                         let timestamp = article.created;
-                        return '<span class="updated">'+timeStampToReadableFullDate(timestamp)+'</span>';
+                        return '<span class="created">'+timeStampToReadableFullDate(timestamp)+'</span>';
                     }
                 },
                 subtitle:{
@@ -171,6 +180,41 @@ Vue.component('default-headline-renderer', {
                         return allButtons ? '<div class="share">'+allButtons+'</div>' : '<!---->';
                     }
                 },
+                tags:{
+                    display:true,
+                    parser: function(context = this){
+                        let article = context.article;
+                        let language = context.language ?? article.language ?? '';
+                        let tagsHTML = ``;
+                        if(!article.tags || !article.tags.length || !context.existingTagInfo || !context.existingTagInfo.contents || !context.existingTagInfo.contents['@'])
+                            return '<!---->';
+
+                        for(let i in article.tags){
+                            let tagId = article.tags[i];
+                            let tagName = tagId.split('/')[1];
+                            let tagInfo = context.existingTagInfo.contents[tagId];
+                            if(!tagInfo || (typeof tagInfo !== 'object'))
+                                continue;
+                            let title = tagInfo[(language?language:'eng')]??tagName; //Set language -> Article language -> 'eng' -> id
+
+                            tagsHTML += `<span class="tag `+tagName+`">`
+
+                            let img = false;
+                            if(tagInfo.img.address)
+                                img = context.extractImageAddress(tagInfo.img);
+                            if(img)
+                                tagsHTML += `<img src="`+img+`">`;
+
+                            tagsHTML += `<span class="title">`+title+`</span>`
+
+                            tagsHTML += `</span>`
+                        }
+                        if(!tagsHTML)
+                            return '<!---->';
+
+                        return '<span class="tags">'+tagsHTML+'</span>';
+                    }
+                },
             },
             currentShareOptions:{
                 mail:{
@@ -221,8 +265,7 @@ Vue.component('default-headline-renderer', {
                     },
                     href: function(context,options){
                         let url= options.url()+'?ref=share-facebook-'+Date.now();
-                        let href = "https://www.facebook.com/sharer.php?u="+encodeURIComponent(url);
-                        return href;
+                        return "https://www.facebook.com/sharer.php?u="+encodeURIComponent(url);
                     }
                 }
             },
@@ -268,17 +311,6 @@ Vue.component('default-headline-renderer', {
         }
     },
     methods:{
-        //Extracts the image address from an image object
-        extractImageAddress: function(item){
-            if(this.verbose)
-                console.log('Extracting address from ',item);
-            let trueAddress = item.address;
-            if(item.local)
-                trueAddress = document.rootURI + document.imagePathLocal+trueAddress;
-            else if(item.dataType)
-                trueAddress = document.rootURI+'api/media?action=getDBMedia&address='+trueAddress+'&lastChanged='+item.updated;
-            return trueAddress;
-        },
     },
     watch: {
     },

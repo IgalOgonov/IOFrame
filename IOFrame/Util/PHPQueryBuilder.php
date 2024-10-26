@@ -2,10 +2,9 @@
 
 
 namespace IOFrame\Util{
-    define('PHPQueryBuilder',true);
+    define('IOFrameUtilPHPQueryBuilder',true);
     /**A parser to create basic SQL Queries from arrays
      * @author Igal Ogonov <igal1333@hotmail.com>
-     * @license LGPL
      * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
      */
     class PHPQueryBuilder
@@ -35,7 +34,7 @@ namespace IOFrame\Util{
          *              ['ASIS','STRING'], as often you'd be setting/comparing an array column to some value, like WHERE(Name = 'John').
          * ]
          *
-         * BELLOW IS THE CODE USED TO GENERATE INITIAL BOILERPLATE, AS WELL AS NOTES ON MODIFICATION OF THE SWITCH STATEMENT:
+         * BELOW IS THE CODE USED TO GENERATE INITIAL BOILERPLATE, AS WELL AS NOTES ON MODIFICATION OF THE SWITCH STATEMENT:
          * -------------------------
          * Clues for $compare, $arithmetic $assign arrays: ['ASIS','STRING']
          * EXTRACT  connector: ' FROM ',
@@ -240,8 +239,7 @@ namespace IOFrame\Util{
          * echo    EOL.'}'.EOL;
          *
          */
-        private function assertTypes(& $exp, bool $useContext = true, bool $useClues = false, string $clue = '')
-        {
+        private function assertTypes(mixed & $exp, bool $useContext = true, bool $useClues = false, string $clue = ''): array {
             if (!is_array($exp))
                 $exp = [$exp];
             $condLength = count($exp); //When returning, always return $condLength - 1 not to parse the last element, which
@@ -284,13 +282,11 @@ namespace IOFrame\Util{
                     case('STRING'):
                         $argRange = [1, 1];
                         $type = 'base';
-                        $outputClues = [];
                         break;
 
                     case('ASIS'):
                         $argRange = [1, 1];
                         $type = 'base';
-                        $outputClues = [];
                         break;
 
                     case('SELECT'):
@@ -458,43 +454,36 @@ namespace IOFrame\Util{
                     case(' '):
                         $argRange = [1, PHP_INT_MAX];
                         $type = 'connector';
-                        $outputClues = [];
                         break;
 
                     case(','):
                         $argRange = [1, PHP_INT_MAX];
                         $type = 'connector';
-                        $outputClues = [];
                         break;
 
                     case('AND'):
                         $argRange = [1, PHP_INT_MAX];
                         $type = 'connector';
-                        $outputClues = [];
                         break;
 
                     case('OR'):
                         $argRange = [1, PHP_INT_MAX];
                         $type = 'connector';
-                        $outputClues = [];
                         break;
 
                     case('XOR'):
                         $argRange = [1, PHP_INT_MAX];
                         $type = 'connector';
-                        $outputClues = [];
                         break;
 
                     case('CSV'):
                         $argRange = [1, PHP_INT_MAX];
                         $type = 'connector';
-                        $outputClues = [];
                         break;
 
                     case('SSV'):
                         $argRange = [1, PHP_INT_MAX];
                         $type = 'connector';
-                        $outputClues = [];
                         break;
 
                     case(':='):
@@ -506,1381 +495,1144 @@ namespace IOFrame\Util{
                     case('PI'):
                         $argRange = [0, 0];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('RAND'):
                         $argRange = [0, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CURDATE'):
                         $argRange = [0, 0];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CURRENT_DATE'):
                         $argRange = [0, 0];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CURTIME'):
                         $argRange = [0, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CURRENT_TIME'):
                         $argRange = [0, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('NOW'):
                         $argRange = [0, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LOCALTIME'):
                         $argRange = [0, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LOCALTIMESTAMP'):
                         $argRange = [0, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CURRENT_TIMESTAMP'):
                         $argRange = [0, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SYSDATE'):
                         $argRange = [0, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('UNIX_TIMESTAMP'):
                         $argRange = [0, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('UTC_DATE'):
                         $argRange = [0, 0];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('UTC_TIME'):
                         $argRange = [0, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('UTC_TIMESTAMP'):
                         $argRange = [0, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('RELEASE_ALL_LOCKS'):
                         $argRange = [0, 0];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CURRENT_ROLE'):
                         $argRange = [0, 0];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CURRENT_USER'):
                         $argRange = [0, 0];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CONNECTION_ID'):
                         $argRange = [0, 0];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('FOUND_ROWS'):
                         $argRange = [0, 0];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ICU_VERSION'):
                         $argRange = [0, 0];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LAST_INSERT_ID'):
                         $argRange = [0, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ROLES_GRAPHML'):
                         $argRange = [0, 0];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ROW_COUNT'):
                         $argRange = [0, 0];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SCHEMA'):
-                        $argRange = [0, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SESSION_USER'):
-                        $argRange = [0, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SYSTEM_USER'):
-                        $argRange = [0, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('USER'):
-                        $argRange = [0, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('VERSION'):
-                        $argRange = [0, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_ARRAY'):
-                        $argRange = [0, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_OBJECT'):
-                        $argRange = [0, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('UUID'):
                         $argRange = [0, 0];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('UUID_SHORT'):
                         $argRange = [0, 0];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('COALESCE'):
                         $argRange = [1, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('EXISTS'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('NOT'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ISNULL'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ASCII'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('BIN'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('BIN_LENGTH'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CHAR'):
                         $argRange = [1, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CHAR_LENGTH'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CHARACTER_LENGTH'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('FROM_BASE64'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('TO_BASE64'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('HEX'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LCASE'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LENGTH'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LOAD_FILE'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LOWER'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('UPPER'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LTRIM'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('OCT'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('OCTET_LENGTH'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ORD'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('QUOTE'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('REVERSE'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('RTRIM'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SOUNDEX'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SPACE'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('UCASE'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('UNHEX'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ABS'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ACOS'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ASIN'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ATAN'):
                         $argRange = [1, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CEIL'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CEILING'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('COS'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('COT'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CRC32'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('DEGREES'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('EXP'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('FLOOR'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LN'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LOG'):
                         $argRange = [1, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LOG2'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LOG10'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('RADIANS'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ROUND'):
                         $argRange = [1, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SIGN'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SIN'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SQRT'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('TAN'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('TRUNCATE'):
                         $argRange = [1, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('VALUES'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CHARSET'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('COLLECTION'):
                         $argRange = [1, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('DATE'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('DAY'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('DAYOFMONTH'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('DAYNAME'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('DAYOFWEEK'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('DAYOFYEAR'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('FROM_DAYS'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('FROM_UNIXTIME'):
                         $argRange = [1, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('HOUR'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LAST_DAY'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('MICROSECOND'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('MINUTE'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('MONTH'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('MONTHNAME'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('QUARTER'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SECOND'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SEC_TO_TIME'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('TIME'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('TIME_TO_SEC'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('TO_DAYS'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('TO_SECONDS'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('WEEK'):
                         $argRange = [1, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('WEEKDAY'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('WEEKOFYEAR'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('YEAR'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('YEARWEEK'):
                         $argRange = [1, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('BINARY'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('BIT_COUNT'):
                         $argRange = [1, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('COMPRESS'):
                         $argRange = [1, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('DES_DECRYPT'):
                         $argRange = [1, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('DES_ENCRYPT'):
                         $argRange = [1, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('MD5'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('PASSWORD'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('RANDOM_BYTES'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SHA1'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SHA'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('STATEMENT_DIGEST'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('STATEMENT_DIGEST_TEXT'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('UNCOMPRESS'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('UNCOMPRESSED_LENGTH'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('VALIDATE_PASSWORD_STRENGTH'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('IS_FREE_LOCK'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('IS_USED_LOCK'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('RELEASE_LOCK'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('COERCIBILITY'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('COLLATION'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_QUOTE'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_KEYS'):
                         $argRange = [1, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_UNQUOTE'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_DEPTH'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_LENGTH'):
                         $argRange = [1, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_TYPE'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_VALID'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_PRETTY'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_STORAGE_FREE'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_STORAGE_SIZE'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('AVG'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('BIT_AND'):
                         $argRange = [1, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('BIT_OR'):
                         $argRange = [1, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('BIT_XOR'):
                         $argRange = [1, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('COUNT'):
                         $argRange = [1, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('GROUP_CONCAT'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_ARRAYAGG'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_OBJECTAGG'):
                         $argRange = [1, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('MAX'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('MIN'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('STD'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SUM'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('VAR_POP'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('VAR_SAMP'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('VARIANCE'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ANY_VALUE'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('GROUPING'):
                         $argRange = [1, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('INET_ATON'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('INET_NTOA'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('INET6_ATON'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('INET6_NTOA'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('IS_IPV4'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('IS_IPV4_COMPAT'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('IS_IPV4_MAPPED'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('IS_IPV6'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('IS_UUID'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SLEEP'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('!'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('DEFAULT'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('UUID_TO_BIN'):
                         $argRange = [1, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('BIN_TO_UUID'):
                         $argRange = [1, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('COLUMN_CHECK'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('COLUMN_JSON'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('COLUMN_LIST'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_COMPACT'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_DETAILED'):
                         $argRange = [1, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_LOOSE'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CHR'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('VALUE'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LENGTHB'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LASTVAL'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('NEXTVAL'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('PERCENTILE_CONT'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('PERCENTILE_DISC'):
                         $argRange = [1, 1];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('NOT IN'):
                         $argRange = [2, PHP_INT_MAX];
                         $type = 'connector';
-                        $outputClues = [];
                         break;
 
                     case('IN'):
                         $argRange = [2, PHP_INT_MAX];
                         $type = 'connector';
-                        $outputClues = [];
                         break;
 
                     case('REGEXP'):
                         $argRange = [2, 2];
                         $type = 'connector';
-                        $outputClues = [];
                         break;
 
                     case('NOT REGEXP'):
                         $argRange = [2, 2];
                         $type = 'connector';
-                        $outputClues = [];
                         break;
 
                     case('SOUNDS LIKE'):
                         $argRange = [2, 2];
                         $type = 'connector';
-                        $outputClues = [];
                         break;
 
                     case('AS'):
                         $argRange = [2, 2];
                         $type = 'connector';
-                        $outputClues = [];
                         break;
 
                     case('MEDIAN OVER'):
                         $argRange = [2, 2];
                         $type = 'connector';
-                        $outputClues = [];
                         break;
 
                     case('INTERVAL'):
                         $argRange = [2, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LEAST'):
                         $argRange = [2, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('GREATEST'):
                         $argRange = [2, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('STRCMP'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('IFNULL'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('NULLIF'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CONCAT'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ELT'):
                         $argRange = [2, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('FIELD'):
                         $argRange = [2, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('FIND_IN_SET'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('FORMAT'):
                         $argRange = [2, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('INSTR'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LEFT'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('RIGHT'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LOCATE'):
                         $argRange = [2, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('MAKE_SET'):
                         $argRange = [2, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('REPEAT'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SUBSTRING'):
                         $argRange = [2, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SUBSTRING_INDEX'):
                         $argRange = [2, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SUBSTR'):
                         $argRange = [2, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('REGEXP_INSTR'):
                         $argRange = [2, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('REGEXP_LIKE'):
                         $argRange = [2, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('REGEXP_SUBSTR'):
                         $argRange = [2, 5];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('MOD'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ATAN2'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('POW'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('POWER'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ADDDATE'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('DATE_ADD'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SUBDATE'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('DATE_SUB'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ADDTIME'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('DATEDIFF'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('DATE_FORMAT'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('EXTRACT'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('GET_FORMAT'):
@@ -1892,43 +1644,36 @@ namespace IOFrame\Util{
                     case('MAKEDATE'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('PERIOD_ADD'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('PERIOD_DIFF'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('STR_TO_DATE'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SUBTIME'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('TIMEDIFF'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('TIME_FORMAT'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CONVERT'):
@@ -1940,175 +1685,146 @@ namespace IOFrame\Util{
                     case('CAST'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ExtractValue'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('UpdateXML'):
                         $argRange = [2, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('AES_DECRYPT'):
                         $argRange = [2, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('AES_ENCRYPT'):
                         $argRange = [2, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('DECODE'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('ENCODE'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SHA2'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('GET_LOCK'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('BENCHMARK'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_CONTAINS'):
                         $argRange = [2, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_EXTRACT'):
                         $argRange = [2, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_SEARCH'):
                         $argRange = [2, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_MERGE'):
                         $argRange = [2, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_MERGE_PATCH'):
                         $argRange = [2, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_MERGE_PRESERVE'):
                         $argRange = [2, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_REMOVE'):
                         $argRange = [2, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('MASTER_POS_WAIT'):
                         $argRange = [2, 4];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('NAME_CONST'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_VALUE'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('COLUMN_CREATE'):
                         $argRange = [2, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('COLUMN_EXISTS'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('COLUMN_GET'):
                         $argRange = [2, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('COLUMN_DELETE'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_EXISTS'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('SETVAL'):
                         $argRange = [2, 4];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_QUERY'):
                         $argRange = [2, 2];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('BETWEEN AND'):
                         $argRange = [3, 3];
                         $type = 'connector';
-                        $outputClues = [];
                         break;
 
                     case('NOT BETWEEN AND'):
                         $argRange = [3, 3];
                         $type = 'connector';
-                        $outputClues = [];
                         break;
 
                     case('CASE'):
@@ -2124,7 +1840,7 @@ namespace IOFrame\Util{
                         if ($hasElse) {
                             for ($i = 1; $i < $condLength - 2; $i++)
                                 array_push($outputClues, 'ASIS', 'STRING');
-                            array_push($outputClues, 'STRING');
+                            $outputClues[] = 'STRING';
                         } else {
                             for ($i = 1; $i < $condLength - 1; $i++)
                                 array_push($outputClues, 'ASIS', 'STRING');
@@ -2134,7 +1850,6 @@ namespace IOFrame\Util{
                     case('IF'):
                         $argRange = [3, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CONCAT_WS'):
@@ -2142,115 +1857,97 @@ namespace IOFrame\Util{
                         $type = 'function';
                         $outputClues = ['STRING'];
                         for ($i = 1; $i < $condLength - 1; $i++)
-                            array_push($outputClues, 'ASIS');
+                            $outputClues[] = 'ASIS';
                         break;
 
                     case('EXPORT_SET'):
                         $argRange = [3, 5];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('LPAD'):
                         $argRange = [3, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('MID'):
                         $argRange = [3, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('REGEXP_REPLACE'):
                         $argRange = [3, 6];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CONV'):
                         $argRange = [3, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('RPAD'):
                         $argRange = [3, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('CONVERT_TZ'):
                         $argRange = [3, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('MAKETIME'):
                         $argRange = [3, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('TIMESTAMPADD'):
                         $argRange = [3, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('TIMESTAMPDIFF'):
                         $argRange = [3, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_CONTAINS_PATH'):
                         $argRange = [3, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_ARRAY_APPEND'):
                         $argRange = [3, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_ARRAY_INSERT'):
                         $argRange = [3, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_INSERT'):
                         $argRange = [3, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_REPLACE'):
                         $argRange = [3, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_SET'):
                         $argRange = [3, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('REPLACE'):
                         $argRange = [3, 3];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('COLUMN_ADD'):
                         $argRange = [3, PHP_INT_MAX];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     case('JSON_TABLE'):
@@ -2262,7 +1959,6 @@ namespace IOFrame\Util{
                     case('INSERT'):
                         $argRange = [4, 5];
                         $type = 'function';
-                        $outputClues = [];
                         break;
 
                     default:
@@ -2369,8 +2065,7 @@ namespace IOFrame\Util{
          *
          * @returns string The resulting query
          */
-        function expConstructor($exp, bool $useContext = true, bool $useClues = false, string $clue = '')
-        {
+        function expConstructor(mixed $exp, bool $useContext = true, bool $useClues = false, string $clue = ''): string {
             $temp = $this->assertTypes($exp, $useContext, $useClues, $clue);
             //Indicates that a type
             $type = $temp[0];
@@ -2379,7 +2074,7 @@ namespace IOFrame\Util{
             $res = '';
 
             $condLength = count($exp);
-            //If we are bellow the minimum number of arguments, log an error and return '';
+            //If we are below the minimum number of arguments, log an error and return '';
             if ($condLength - 1 < $argRange[0]) {
                 throw new \Exception('Tried to construct query of operation type ' . $exp[$condLength - 1] . ' providing ' .
                     ($condLength - 1) . ' arguments, when the minimal number is ' . $argRange[0]);
@@ -2396,22 +2091,14 @@ namespace IOFrame\Util{
                 case 'base':
                     //In case of an array
                     if (is_array($exp[0]) || ($condLength > 2)) {
-                        switch ($exp[$condLength - 1]) {
-                            case 'SSV':
-                            case ' ':
-                                $connector = ' ';
-                                break;
-                            case 'CSV':
-                            case ',':
-                                $connector = ', ';
-                                break;
-
-                            default: //Default is 'CSV'
-                                $connector = ', ';
-                        }
+                        $connector = match ($exp[$condLength - 1]) {
+                            'SSV', ' ' => ' ',
+                            'CSV', ',' => ', ',
+                            default => ', ',
+                        };
                         $res .= '( ';
                         for ($i = 0; $i < $condLength - 1; $i++) {
-                            $res .= $this->expConstructor($exp[$i], $useContext, $useClues, '') . $connector;
+                            $res .= $this->expConstructor($exp[$i], $useContext, $useClues) . $connector;
                         }
                         $res = substr($res, 0, -strlen($connector));
                         $res .= ' )';
@@ -2435,7 +2122,7 @@ namespace IOFrame\Util{
                                 else {
                                     $stringType = 'ASIS';
                                 }
-                                //Add quotes to the string if you thing it's of string type
+                                //Add quotes to the string if you think it's of string type
                                 if ($stringType == 'STRING') {
                                     $exp[0] = "'" . $exp[0] . "'";
                                 }
@@ -2476,7 +2163,7 @@ namespace IOFrame\Util{
                     } elseif (gettype($exp[1]) == 'NULL') {
                         $exp[1] = 'NULL';
                     }
-                    $comparator = isset($exp[2]) ? $exp[2] : '=';
+                    $comparator = $exp[2] ?? '=';
                     if (!isset($nextClues[0]))
                         $nextClues[0] = 'ASIS';
                     if (!isset($nextClues[0]))
@@ -2618,7 +2305,7 @@ namespace IOFrame\Util{
         }
 
 
-        function selectFromTable(string $tableName, array $cond = [], array $columns = [], array $param = []){
+        function selectFromTable(string $tableName, array $cond = [], array $columns = [], array $param = []): string {
 
             //Read $params
             isset($param['useBrackets'])?
@@ -2629,8 +2316,6 @@ namespace IOFrame\Util{
                 $orderType = $param['orderType'] : $orderType = 0;
             isset($param['limit'])?
                 $limit = $param['limit'] : $limit = null;
-            isset($param['justTheQuery'])?
-                $justTheQuery = $param['justTheQuery'] : $justTheQuery = true;
 
             $query = '';
 
@@ -2720,15 +2405,7 @@ namespace IOFrame\Util{
          *      0 success
          *      <Number of deleted rows> - on success, if $param['returnRows'] is set not to false.
          */
-        function deleteFromTable(string $tableName, array $cond = [], array $param = [], bool $test = false){
-
-            isset($param['noValidate'])?
-                $noValidate = $param['noValidate'] : $noValidate = true;
-
-            if(!$noValidate)
-                //Input validation and sanitation
-                if(!$this->validate($tableName,$cond,[],[],[],$param,$test))
-                    return -1;
+        function deleteFromTable(string $tableName, array $cond = [], array $param = [], bool $test = false): int|string {
 
             //Read $params
             isset($param['orderBy'])?
@@ -2737,10 +2414,6 @@ namespace IOFrame\Util{
                 $orderType = $param['orderType'] : $orderType = 0;
             isset($param['limit'])?
                 $limit = $param['limit'] : $limit = null;
-            isset($param['returnRows'])?
-                $returnRows = $param['returnRows'] : $returnRows = false;
-            isset($param['justTheQuery'])?
-                $justTheQuery = $param['justTheQuery'] : $justTheQuery = false;
 
             //orderType
             if($orderType == 0)
@@ -2796,20 +2469,10 @@ namespace IOFrame\Util{
          *      -1 on illegal input
          *      0 success
          *      array [<last_insert_id>,<ROW_COUNT()>] - on success, if $param['returnRows'] is set not to false.
+         * @throws \Exception
+         * @throws \Exception
          */
-        function insertIntoTable(string $tableName, array $columns, array $values, array $param = [], bool $test = false){
-
-            isset($param['noValidate'])?
-                $noValidate = $param['noValidate'] : $noValidate = true;
-
-            if(!$noValidate)
-                //Input validation and sanitation
-                if(!$this->validate($tableName,[],$columns,$values,[],$param,$test) || $columns==[])
-                    return -1;
-
-            //Read $params
-            isset($param['onDuplicateKey'])?
-                $onDuplicateKey = $param['onDuplicateKey'] : $onDuplicateKey = false;
+        function insertIntoTable(string $tableName, array $columns, array $values, array $param = [], bool $test = false): int|string {
 
             //columns
             $columnNames = ' ('.implode(',',$columns).')';
@@ -2835,7 +2498,6 @@ namespace IOFrame\Util{
 
         /** Inserts an object into the database table $tableName.
          * @param mixed $tableTarget Valid SQL table name, OR an array of such names.
-         * @param array $columns The columns you want, in a 1D array of the form ['col1','col2',..].
          * @param array $assignments A 1D array of STRINGS that constitute the assignments.
          *                           For example, if we $tableTarget was ['t1','t2'], $assignments might be:
          *                           ['t1.ID = t2.ID+5','t1.Name = CONCAT(t2.Name, "_clone")']
@@ -2849,30 +2511,10 @@ namespace IOFrame\Util{
          *                      'limit' If not null/0, will limit number of deleted rows.
          *                      'returnRows' If true, will return the number of affected rows on success.
          * @param bool $test indicates test mode
-         * @returns int|string
-         *      -2 server error
-         *      -1 on illegal input
-         *      0 success
-         *      <Number of updated rows> - on success, if $param['returnRows'] is set not to false.
+         * @return int|string
          */
-        function updateTable( $tableTarget, array $assignments, array $cond = [], array $param = [], bool $test = false){
+        function updateTable(mixed $tableTarget, array $assignments, array $cond = [], array $param = [], bool $test = false): int|string {
 
-            $param['isUpdateQuery'] = true;
-
-            isset($param['noValidate'])?
-                $noValidate = $param['noValidate'] : $noValidate = true;
-
-            if(!$noValidate)
-                if(gettype($tableTarget) == 'string' ){
-                    //Input validation and sanitation
-                    if(!$this->validate($tableTarget,$cond,[],$assignments,[],$param,$test))
-                        return -1;
-                }
-                elseif(gettype($tableTarget) == 'array' ){
-                    //Input validation and sanitation
-                    if(!$this->validate('',$cond,[],$assignments,$tableTarget,$param,$test))
-                        return -1;
-                }
             //Read $params
             isset($param['orderBy'])?
                 $orderBy = $param['orderBy'] : $orderBy = null;

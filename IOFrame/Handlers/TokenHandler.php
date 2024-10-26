@@ -1,48 +1,43 @@
 <?php
 namespace IOFrame\Handlers{
-    use IOFrame;
-    define('TokenHandler',true);
-
-    if(!defined('abstractDBWithCache'))
-        require 'abstractDBWithCache.php';
+    define('IOFrameHandlersTokenHandler',true);
 
     /* Creates various tokens, to be used (once or multiple times or until expiry).
      * For example, tokens for account activation, password change, sending async email, and more.
      *
      * @author Igal Ogonov <igal1333@hotmail.com>
-     * @license LGPL
      * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
      * */
 
-    class TokenHandler extends IOFrame\abstractDBWithCache
+    class TokenHandler extends \IOFrame\Abstract\DBWithCache
     {
         /**
-         * @var String Used for default naming of cache names, and table names
+         * @var string Used for default naming of cache names, and table names
          */
-        protected $name;
+        protected string $name;
 
         /**
-         * @var string The table name - required to do db operations - used as a prefix for the full db name $tableName.
+         * @var ?string The table name - required to do db operations - used as a prefix for the full db name $tableName.
          * Defaults to strtoupper($name)
          */
-        protected $tableName = null;
+        protected ?string $tableName = null;
 
         /**
-         * @var string The cache name - used as a prefix for the full cache name - $cacheName.'_tokens'.
+         * @var ?string The cache name - used as a prefix for the full cache name - $cacheName.'_tokens'.
          * Defaults to strtolower($name).
          */
-        protected $cacheName = null;
+        protected ?string $cacheName = null;
 
         /**
          * @var array Extra columns to get/set from/to the DB (for normal resources)
          */
-        protected $extraColumns = [];
+        protected array $extraColumns = [];
 
         /**
          * @var array An associative array for each extra column defining how it can be set.
          *            For each column, if a matching input isn't set (or is null), it cannot be set.
          */
-        protected $extraInputs = [
+        protected array $extraInputs = [
             /**Each extra input is null, or an associative array of the form
              * '<column name>' => [
              *      'input' => <string, name of expected input>,
@@ -54,16 +49,16 @@ namespace IOFrame\Handlers{
         /**
          * @var int Default time for newly created / refreshed tokens to live, unless explicitly stated otherwise
          */
-        protected $tokenTTL = 3600;
+        protected int $tokenTTL = 3600;
 
         /** Standard constructor
          *
-         * @param object $settings The standard settings object
+         * @param SettingsHandler $settings The standard settings object
          * @param array $params - All parameters share the name/type of the class variables
-         * */
-        function __construct(SettingsHandler $settings, array $params = []){
+         */
+        function __construct(\IOFrame\Handlers\SettingsHandler $settings, array $params = []){
 
-            parent::__construct($settings,$params);
+            parent::__construct($settings,array_merge($params,['logChannel'=>\IOFrame\Definitions::LOG_TOKENS_CHANNEL]));
             if(isset($params['name']))
                 $this->name = $params['name'];
             else
@@ -98,7 +93,7 @@ namespace IOFrame\Handlers{
          * @return bool|string Lock used, or false if failed to reach DB
          *
          * */
-        function lockTokens(array $tokens, array $params = []){
+        function lockTokens(array $tokens, array $params = []): bool|string {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
@@ -115,8 +110,8 @@ namespace IOFrame\Handlers{
                 ];
             }
 
-            $res = $this->SQLHandler->updateTable(
-                $this->SQLHandler->getSQLPrefix().$this->tableName,
+            $res = $this->SQLManager->updateTable(
+                $this->SQLManager->getSQLPrefix().$this->tableName,
                 ['Session_Lock = "'.$lock.'", Locked_At = "'.time().'"'],
                 [
                     [
@@ -135,6 +130,7 @@ namespace IOFrame\Handlers{
             if(!$res){
                 if($verbose)
                     echo 'Failed to lock tokens '.json_encode($tokens).'!'.EOL;
+                $this->logger->warning('Failed to lock tokens',['tokens'=>$tokens]);
                 return false;
             }
             else{
@@ -152,12 +148,12 @@ namespace IOFrame\Handlers{
          * @return bool true if reached DB, false if didn't reach DB
          *
          * */
-        protected function unlockTokens(array $tokens, array $params = []){
+        protected function unlockTokens(array $tokens, array $params = []): bool {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
 
-            $key = $test = isset($params['key'])? $params['key'] : null;
+            $key = $test = $params['key'] ?? null;
 
             foreach($tokens as $index=>$token){
                 $tokens[$index] = [
@@ -187,8 +183,8 @@ namespace IOFrame\Handlers{
                     'AND'
                 ];
 
-            $res = $this->SQLHandler->updateTable(
-                $this->SQLHandler->getSQLPrefix().$this->tableName,
+            $res = $this->SQLManager->updateTable(
+                $this->SQLManager->getSQLPrefix().$this->tableName,
                 ['Session_Lock = NULL, Locked_At = NULL'],
                 $conds,
                 ['test'=>$test,'verbose'=>$verbose]
@@ -197,6 +193,7 @@ namespace IOFrame\Handlers{
             if(!$res){
                 if($verbose)
                     echo 'Failed to unlock tokens '.json_encode($tokens).'!'.EOL;
+                $this->logger->warning('Failed to unlock tokens',['tokens'=>$tokens]);
                 return false;
             }
             else{
@@ -215,7 +212,7 @@ namespace IOFrame\Handlers{
          *
          * @return array|int Array of the token info from db if it exists, "1" if it does not.
         */
-        function getToken($name, $params){
+        function getToken(string $name, array $params): int|array {
             return $this->getTokens([$name],$params)[$name];
         }
 
@@ -234,50 +231,50 @@ namespace IOFrame\Handlers{
          *              ----
          *              'limit' => SQL parameter LIMIT
          *              'offset'=> SQL parameter OFFSET. Only changes anything if limit is set.
-         * @return array the results of the function getFromTableByKey() at abstractDB.php.
+         * @return array the results of the function getFromTableByKey() at Abstract/DB.php.
          *         Also (on success) adds an item called '@', of the form:
          *          [
          *              '#' => int, number of results without limit,
          *          ]
          *
          * */
-        function getTokens(array $tokens ,array $params = []){
+        function getTokens(array $tokens ,array $params = []): array {
 
-            $tokenLike = isset($params['tokenLike'])? $params['tokenLike'] : null;
-            $actionLike = isset($params['actionLike'])? $params['actionLike'] : null;
-            $containsTags = isset($params['containsTags'])? $params['containsTags'] : [];
-            $usesAtLeast = isset($params['usesAtLeast'])? $params['usesAtLeast'] : null;
-            $usesAtMost = isset($params['usesAtMost'])? $params['usesAtMost'] : null;
-            $expiresBefore = isset($params['expiresBefore'])? $params['expiresBefore'] : null;
-            $expiresAfter = isset($params['expiresAfter'])? $params['expiresAfter'] : null;
-            $ignoreExpired = isset($params['ignoreExpired'])? $params['ignoreExpired'] : true;
+            $tokenLike = $params['tokenLike'] ?? null;
+            $actionLike = $params['actionLike'] ?? null;
+            $containsTags = $params['containsTags'] ?? [];
+            $usesAtLeast = $params['usesAtLeast'] ?? null;
+            $usesAtMost = $params['usesAtMost'] ?? null;
+            $expiresBefore = $params['expiresBefore'] ?? null;
+            $expiresAfter = $params['expiresAfter'] ?? null;
+            $ignoreExpired = !isset($params['ignoreExpired']) || $params['ignoreExpired'];
 
-            $extraConditions = isset($params['extraConditions'])? $params['extraConditions'] : [];
+            $extraConditions = $params['extraConditions'] ?? [];
 
             if($tokenLike!== null)
-                array_push($extraConditions,['Token',[$tokenLike,'STRING'],'RLIKE']);
+                $extraConditions[] = ['Token', [$tokenLike, 'STRING'], 'RLIKE'];
             if($actionLike!== null)
-                array_push($extraConditions,['Token_Action',[$actionLike,'STRING'],'RLIKE']);
+                $extraConditions[] = ['Token_Action', [$actionLike, 'STRING'], 'RLIKE'];
             if($usesAtLeast!== null)
-                array_push($extraConditions,['Uses_Left',$usesAtLeast,'>=']);
+                $extraConditions[] = ['Uses_Left', $usesAtLeast, '>='];
             if($usesAtMost!== null)
-                array_push($extraConditions,['Uses_Left',$usesAtMost,'<=']);
+                $extraConditions[] = ['Uses_Left', $usesAtMost, '<='];
             if($expiresBefore!== null)
-                array_push($extraConditions,['Expires',$expiresBefore,'<']);
+                $extraConditions[] = ['Expires', $expiresBefore, '<'];
             if($expiresAfter!== null)
-                array_push($extraConditions,['Expires',$expiresAfter,'>']);
+                $extraConditions[] = ['Expires', $expiresAfter, '>'];
             if($ignoreExpired)
-                array_push($extraConditions,['Expires',time(),'>']);
+                $extraConditions[] = ['Expires', time(), '>'];
 
             if(count($containsTags)){
                 $regexArr = [];
                 foreach ($containsTags as $tag)
-                    array_push($regexArr,'(#'.$tag.'($|#))');
-                array_push($extraConditions,['Tags',[implode('|',$regexArr),'STRING'],'RLIKE']);
+                    $regexArr[] = '(#' . $tag . '($|#))';
+                $extraConditions[] = ['Tags', [implode('|', $regexArr), 'STRING'], 'RLIKE'];
             }
 
             if(count($extraConditions) > 0)
-                array_push($extraConditions,'AND');
+                $extraConditions[] = 'AND';
 
             $params['extraConditions'] = $extraConditions;
 
@@ -285,8 +282,8 @@ namespace IOFrame\Handlers{
             if(!$existingTokens)
                 $existingTokens = [];
             elseif(count($tokens) == 0){
-                $count = $this->SQLHandler->selectFromTable(
-                    $this->SQLHandler->getSQLPrefix().$this->tableName,
+                $count = $this->SQLManager->selectFromTable(
+                    $this->SQLManager->getSQLPrefix().$this->tableName,
                     $extraConditions,
                     ['COUNT(*)'],
                     array_merge(
@@ -306,10 +303,10 @@ namespace IOFrame\Handlers{
         /** Sets one token.
          *
          * @param string $name Up to 256 characters - CANNOT be '@',
-         * @param string $action Up to 1024 characters,
-         * @param int $uses defaults to 1
-         * @param int $ttl TTL in seconds (from creation time)
-         * @param array $tags Tags you wish to set (overrides old ones!)
+         * @param string|null $action Up to 1024 characters,
+         * @param int|null $uses defaults to 1
+         * @param int|null $ttl TTL in seconds (from creation time)
+         * @param array|null $tags Tags you wish to set (overrides old ones!)
          * @param array $params Parameters of the form:
          *              'overwrite' - bool, default false - Whether to overwrite an existing token, or
          *                                    only allow creation if the same token does not exist.
@@ -318,9 +315,8 @@ namespace IOFrame\Handlers{
          *         -1 - could not reach db
          *          0 - success
          *          1 - token already exists and overwrite is false
-         *
-        */
-        function setToken(string $name,string $action = null,int $uses=null,int $ttl=null,array $tags = null,array $params = []){
+         */
+        function setToken(string $name,string $action = null,int $uses=null,int $ttl=null,array $tags = null,array $params = []): int {
 
             if($ttl<0)
                 $ttl = $this->tokenTTL;
@@ -366,7 +362,7 @@ namespace IOFrame\Handlers{
          *          3 - "action" was not passed, and token did not previously exist
          *
          * */
-        function setTokens(array $tokens ,array $params = []){
+        function setTokens(array $tokens ,array $params = []): array {
 
             if(isset($tokens['@']))
                 unset($tokens['@']);
@@ -374,8 +370,8 @@ namespace IOFrame\Handlers{
             //Set defaults
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
-            $overwrite = isset($params['overwrite'])? $params['overwrite'] : true;
-            $update = isset($params['update'])? $params['update'] : false;
+            $overwrite = $params['overwrite'] ?? true;
+            $update = $params['update'] ?? false;
 
             $tokenNames = [];
             $res = [];
@@ -383,20 +379,20 @@ namespace IOFrame\Handlers{
             //Figure out which extra columns to set, and what is their input
             $extraColumns = [];
             $extraInputs = [];
-            foreach($this->extraColumns as $index => $extraColumn){
+            foreach($this->extraColumns as $extraColumn){
                 if($this->extraInputs[$extraColumn]){
-                    array_push($extraColumns,$extraColumn);
-                    array_push($extraInputs,[
-                        'input'=>$this->extraInputs[$extraColumn]['input'],
-                        'default'=>isset($this->extraInputs[$extraColumn]['default'])?$this->extraInputs[$extraColumn]['default']:null
-                    ]);
+                    $extraColumns[] = $extraColumn;
+                    $extraInputs[] = [
+                        'input' => $this->extraInputs[$extraColumn]['input'],
+                        'default' => $this->extraInputs[$extraColumn]['default'] ?? null
+                    ];
                 }
             }
 
             //Assume we couldn't reach the DB until proven otherwise. Also, create a token name array
             foreach($tokens as $tokenName => $tokenArray){
                 $res[$tokenName] = -1;
-                array_push($tokenNames,$tokenName);
+                $tokenNames[] = $tokenName;
             }
 
             //Try to lock existing tokens (assuming they exist) and get them
@@ -407,7 +403,7 @@ namespace IOFrame\Handlers{
                 return $res;
             }
 
-            $existingTokens = $this->getTokens($tokenNames,array_merge($params,['ignoreExpired'=>false,'limit'=>0]));
+            $existingTokens = $this->getTokens($tokenNames,array_merge($params,['ignoreExpired'=>false,'limit'=>null]));
             $tokensToUnlock = [];
             foreach($existingTokens as $tokenName => $token){
                 if($tokenName === '@')
@@ -427,7 +423,7 @@ namespace IOFrame\Handlers{
                     }
                     else{
                         //Save tokens you locked for unlock
-                        array_push($tokensToUnlock,$tokenName);
+                        $tokensToUnlock[] = $tokenName;
                         //Complete missing info
                         if(!isset($tokens[$tokenName]['uses']))
                             $tokens[$tokenName]['uses'] = $token['Uses_Left'];
@@ -479,26 +475,28 @@ namespace IOFrame\Handlers{
                     foreach($extraInputs as $extraInputArr){
                         if(!isset($tokens[$tokenName][$extraInputArr['input']]))
                             $tokens[$tokenName][$extraInputArr['input']] = $extraInputArr['default'];
-                        array_push($creationArray,[$tokens[$tokenName][$extraInputArr['input']],'STRING']);
+                        $creationArray[] = [$tokens[$tokenName][$extraInputArr['input']], 'STRING'];
                     }
 
-                    array_push($updateParams,$creationArray);
+                    $updateParams[] = $creationArray;
                 }
                 //Update relevant objects
                 $columns = array_merge(['Token','Token_Action','Uses_Left','Expires','Tags'],$extraColumns);
 
-                $request = $this->SQLHandler->insertIntoTable(
-                    $this->SQLHandler->getSQLPrefix().$this->tableName,
+                $request = $this->SQLManager->insertIntoTable(
+                    $this->SQLManager->getSQLPrefix().$this->tableName,
                     $columns,
                     $updateParams,
                     ['test'=>$test,'verbose'=>$verbose,'onDuplicateKey'=>true]
                 );
 
-                if($request)
+                if($request === true)
                     foreach($tokens as $tokenName => $tokenArray){
                         if($res[$tokenName] === -1)
                             $res[$tokenName] = 0;
                     }
+                elseif ($request === -2)
+                    $this->logger->error('Failed to set tokens',['tokens'=>$updateParams]);
             }
 
             //Unlocked the tokens we locked
@@ -511,11 +509,9 @@ namespace IOFrame\Handlers{
         /** Deletes tokens
          * @param string[] $tokens Tokens to delete
          * @param array $params
-         * @returns int Code of the form:
-         *         -1 - Failed to connect to db
-         *          0 - All good
+         * @return int
          */
-        function deleteTokens(array $tokens, array $params = []){
+        function deleteTokens(array $tokens, array $params = []): int {
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
 
@@ -528,12 +524,12 @@ namespace IOFrame\Handlers{
             }
             else{
                 foreach($tokens as $token){
-                    array_push($itemsToDelete,[$token,'STRING']);
+                    $itemsToDelete[] = [$token, 'STRING'];
                 }
             }
 
-            $result = $this->SQLHandler->deleteFromTable(
-                $this->SQLHandler->getSQLPrefix().$this->tableName,
+            $result = $this->SQLManager->deleteFromTable(
+                $this->SQLManager->getSQLPrefix().$this->tableName,
                 [
                     'Token',
                     $itemsToDelete,
@@ -542,7 +538,12 @@ namespace IOFrame\Handlers{
                 $params
             );
 
-            return $result === false? -1 : 0;
+            if($result === false){
+                $this->logger->error('Failed to delete tokens',['tokens'=>$tokens]);
+                return -1;
+            }
+            else
+                return 0;
         }
 
         /** Deletes all expired tokens
@@ -552,13 +553,13 @@ namespace IOFrame\Handlers{
          *         -1 - Failed to connect to db
          *          0 - All good
          */
-        function deleteExpiredTokens(array $params = []){
+        function deleteExpiredTokens(array $params = []): int {
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
-            $time = isset($params['time'])? $params['time'] : time();
+            $time = $params['time'] ?? time();
 
-            $result = $this->SQLHandler->deleteFromTable(
-                $this->SQLHandler->getSQLPrefix().$this->tableName,
+            $result = $this->SQLManager->deleteFromTable(
+                $this->SQLManager->getSQLPrefix().$this->tableName,
                 [
                     'Expires',
                     $time,
@@ -567,7 +568,12 @@ namespace IOFrame\Handlers{
                 $params
             );
 
-            return $result === false? -1 : 0;
+            if($result === false){
+                $this->logger->error('Failed to delete expired tokens');
+                return -1;
+            }
+            else
+                return 0;
         }
 
         /** Consumes a specific number of uses for a single token.
@@ -586,12 +592,12 @@ namespace IOFrame\Handlers{
          *          2 - token does not have enough uses left to consume
          *          3 - token expired
          */
-        function consumeToken(string $name, int $uses = 1, string $expectedAction = '', array $params = []){
+        function consumeToken(string $name, int $uses = 1, string $expectedAction = '', array $params = []): int {
             return $this->consumeTokens([$name=>['uses'=>$uses,'action'=>$expectedAction]], $params)[$name];
         }
 
         /** Consumes a number of uses left for tokens, then deletes each of them that has 0 uses left.
-         * @param string[] $tokens Array of token identifiers with how many uses to consume, of the form:
+         * @param array $tokens Array of token identifiers with how many uses to consume, of the form:
          *          [
          *          '<token name>' => [
          *                              'uses' => <number of uses to consume, default 1>,
@@ -616,7 +622,7 @@ namespace IOFrame\Handlers{
          *          2 - token does not have enough uses left to consume
          *          3 - token expired
          * */
-        function consumeTokens(array $tokens ,array $params = []){
+        function consumeTokens(array $tokens ,array $params = []): array {
 
             //Set defaults
             $test = $params['test']?? false;
@@ -628,7 +634,7 @@ namespace IOFrame\Handlers{
             //Assume we couldn't reach the DB until proven otherwise. Also, create a token name array
             foreach($tokens as $tokenName => $tokenArray){
                 $res[$tokenName] = -1;
-                array_push($tokenNames,$tokenName);
+                $tokenNames[] = $tokenName;
             }
 
             //Try to lock existing tokens (assuming they exist) and get them
@@ -643,9 +649,9 @@ namespace IOFrame\Handlers{
             $tokensToUnlock = [];
             foreach($tokens as $tokenName => $tokenArray){
                 //Set default uses
-                if(!isset($tokens[$tokenName]['uses']))
+                if(!isset($tokenArray['uses']))
                     $tokens[$tokenName]['uses'] = 1;
-                if(!isset($tokens[$tokenName]['action']))
+                if(!isset($tokenArray['action']))
                     $tokens[$tokenName]['action'] = 1;
 
                 //This means the token exists
@@ -657,7 +663,7 @@ namespace IOFrame\Handlers{
                     }
                     //Save tokens you locked for unlock
                     else{
-                        array_push($tokensToUnlock,$tokenName);
+                        $tokensToUnlock[] = $tokenName;
                         //Check that the token has enough uses to be consumed
                         if($existingTokens[$tokenName]['Uses_Left'] - $tokens[$tokenName]['uses'] < 0){
                             $res[$tokenName] = 2;
@@ -694,10 +700,10 @@ namespace IOFrame\Handlers{
                     $usesLeft = $existingTokens[$tokenName]['Uses_Left'] - $tokenArray['uses'];
                     //Update the tokens that'll have some uses left
                     if( ($usesLeft > 0) && ($tokenArray['uses'] > -1) )
-                        array_push($updateParams,[[$tokenName,'STRING'],$usesLeft]);
+                        $updateParams[] = [[$tokenName, 'STRING'], $usesLeft];
                     //Delete the tokens that will have no uses left
                     else
-                        array_push($deleteParams,[$tokenName,'STRING']);
+                        $deleteParams[] = [$tokenName, 'STRING'];
                 }
 
                 $request = true;
@@ -711,8 +717,8 @@ namespace IOFrame\Handlers{
                         'IN'
                     ];
 
-                    $request = $this->SQLHandler->deleteFromTable(
-                        $this->SQLHandler->getSQLPrefix().$this->tableName,
+                    $request = $this->SQLManager->deleteFromTable(
+                        $this->SQLManager->getSQLPrefix().$this->tableName,
                         $deleteParams,
                         ['test'=>$test,'verbose'=>$verbose]
                     );
@@ -724,8 +730,8 @@ namespace IOFrame\Handlers{
 
                     $columns = ['Token','Uses_Left'];
 
-                    $request = $this->SQLHandler->insertIntoTable(
-                        $this->SQLHandler->getSQLPrefix().$this->tableName,
+                    $request = $this->SQLManager->insertIntoTable(
+                        $this->SQLManager->getSQLPrefix().$this->tableName,
                         $columns,
                         $updateParams,
                         ['test'=>$test,'verbose'=>$verbose,'onDuplicateKey'=>true]

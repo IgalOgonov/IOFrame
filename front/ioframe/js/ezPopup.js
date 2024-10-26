@@ -46,18 +46,23 @@ class ezPopup{
         ttBox.id = targetID;
         ttBox.style.position = "fixed"; // make it hidden till mouse over
         ttBox.className = this.className;
-        //Unless we are controlling visibility through a class, hide it
+        //Unless we are controlling display through a class, hide it
         if(activityClass === '')
-            ttBox.style.visibility = "hidden"; // make it hidden till mouse over
+            ttBox.style.display = "none"; // make it hidden till mouse over
 
         // insert into DOM
         document.body.appendChild(ttBox);
 
+        //TODO Add dynamic calculation to display this in different directions based on html[dir="rtl"], and whether it'd go out of window bounds
+        //TODO #2 Add click support for accessibility
+
         const ttTurnOn = ((evt) => {
             // get the position of the hover element
             const boundBox = evt.target.getBoundingClientRect();
-            const coordX = boundBox.left;
-            const coordY = boundBox.top;
+            const totalWidth = document.body.offsetWidth;
+            const coordX = totalWidth - boundBox.left > 300? boundBox.left : totalWidth - 300;
+            const coordY = boundBox.top+10;
+            ttBox.style.width = '280px';
 
             // adjust bubble position
             ttBox.style.left = (coordX + this.offsetX).toString() + "px";
@@ -71,7 +76,7 @@ class ezPopup{
                 ttBox.classList.add([activityClass]);
             // make bubble VISIBLE
             else
-                ttBox.style.visibility = "visible";
+                ttBox.style.display = "block";
         });
 
         const ttTurnOff = ((evt) => {
@@ -79,7 +84,7 @@ class ezPopup{
                 ttBox.classList.remove([activityClass]);
             // make bubble VISIBLE
             else
-                ttBox.style.visibility = "hidden";
+                ttBox.style.display = "none";
         });
 
         const hoverEle = document .getElementById(elemID);
@@ -91,4 +96,4 @@ class ezPopup{
             element.addEventListener("click", ttTurnOff , false);
     }
 
-};
+}

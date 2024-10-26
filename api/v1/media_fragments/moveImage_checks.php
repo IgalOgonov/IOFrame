@@ -1,6 +1,5 @@
 <?php
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 
 if(!$inputs['remote'])
     $inputs['remote'] = false;
@@ -14,7 +13,7 @@ if($inputs['oldAddress'] === null || $inputs['newAddress'] === null){
     exit(INPUT_VALIDATION_FAILURE);
 }
 
-$valid = \IOFrame\Util\validator::validateRelativeFilePath($inputs['oldAddress']);
+$valid = \IOFrame\Util\ValidatorFunctions::validateRelativeFilePath($inputs['oldAddress']);
 if($inputs['remote'])
     $valid = $valid || filter_var($inputs['oldAddress'],FILTER_VALIDATE_URL);
 if(!$valid){
@@ -23,7 +22,7 @@ if(!$valid){
     exit(INPUT_VALIDATION_FAILURE);
 }
 
-$valid = \IOFrame\Util\validator::validateRelativeFilePath($inputs['newAddress']);
+$valid = \IOFrame\Util\ValidatorFunctions::validateRelativeFilePath($inputs['newAddress']);
 if($inputs['remote'])
     $valid = $valid || filter_var($inputs['newAddress'],FILTER_VALIDATE_URL);
 if(!$valid){

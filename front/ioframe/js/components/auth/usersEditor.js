@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('auth-users-editor', {
     mixins: [sourceURL,eventHubManager,IOFrameCommons],
     props: {
@@ -73,7 +70,7 @@ Vue.component('auth-users-editor', {
             //Whether we are currently searching
             searchInitiated: false,
             //SearchList API URL
-            url: document.rootURI+'api/v1/auth',
+            url: document.ioframe.rootURI+'api/v1/auth',
             //Whether we are currently initiating the item
             initiating: false,
             //Whether we are currently updating the item
@@ -270,7 +267,7 @@ Vue.component('auth-users-editor', {
                     alertLog('Failed to update user '+type,'error',this.$el);
                     break;
                 case 1:
-                    alertLog('User '+type+' updated!','success',this.$el);
+                    alertLog('User '+type+' updated!','success',this.$el,{autoDismiss:2000});
                     this.setInputsAsCurrent(type);
                     break;
                 default:

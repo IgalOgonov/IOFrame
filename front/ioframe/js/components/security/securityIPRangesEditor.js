@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('security-ip-ranges-editor', {
     mixins: [sourceURL,eventHubManager,IOFrameCommons],
     props: {
@@ -444,7 +441,7 @@ Vue.component('security-ip-ranges-editor', {
                     alertLog('IP was not '+(this.mode === 'create'? 'created - server error, or already exists!' : 'updated - server error, or no longer exists!'),'error',this.$el);
                     break;
                 case 1:
-                    alertLog('IP '+(this.mode === 'create'? 'created' : 'updated')+'!','success',this.$el);
+                    alertLog('IP '+(this.mode === 'create'? 'created' : 'updated')+'!','success',this.$el,{autoDismiss:2000});
                     if(this.mode === 'update')
                         this.setInputsAsCurrent();
                     eventHub.$emit('searchAgain');

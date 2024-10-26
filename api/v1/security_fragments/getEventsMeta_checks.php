@@ -2,7 +2,7 @@
 
 if($inputs['inputs'] === null)
     $inputs['inputs'] = [];
-elseif(!\IOFrame\Util\is_json($inputs['inputs'])){
+elseif(!\IOFrame\Util\PureUtilFunctions::is_json($inputs['inputs'])){
     if($test)
         echo 'inputs must be a valid JSON string!'.EOL;
     exit(INPUT_VALIDATION_FAILURE);
@@ -13,12 +13,17 @@ else
 foreach($inputs['inputs'] as $index => $inputsArray){
     $cleanInputs = [];
 
-    if(isset($inputsArray['category']) && $inputsArray['category'] === null){
+    if(isset($inputsArray['category'])){
         if(!filter_var($inputsArray['category'],FILTER_VALIDATE_INT) && $inputsArray['category'] !== 0){
             if($test)
                 echo 'category must be an integer!'.EOL;
             exit(INPUT_VALIDATION_FAILURE);
         }
+    }
+    else{
+        if($test)
+            echo 'category must be set!'.EOL;
+        exit(INPUT_VALIDATION_FAILURE);
     }
     $cleanInputs['category'] = $inputsArray['category'];
 

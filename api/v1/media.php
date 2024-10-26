@@ -429,7 +429,7 @@
  *        Examples: action=incrementVideos&addresses=["examples/example-1.webm"]
  *_________________________________________________
  * getGalleriesOfVideo
- *      - Gets all the galleries a video belongs to. Same as getImageGalleries.
+ *      - Gets all the galleries a video belongs to. Same as getGalleriesOfImage.
  *        Examples: action=getGalleriesOfVideo&address=examples/example-1.webm
  *_________________________________________________
  * getVideoGalleries
@@ -493,15 +493,15 @@
  *
  * */
 
-if(!defined('coreInit'))
-    require __DIR__ . '/../../main/coreInit.php';
+if(!defined('IOFrameMainCoreInit'))
+    require __DIR__ . '/../../main/core_init.php';
 
 require __DIR__ . '/../apiSettingsChecks.php';
 require __DIR__ . '/../defaultInputChecks.php';
 require __DIR__ . '/../defaultInputResults.php';
 require __DIR__ . '/../CSRF.php';
 require 'media_fragments/definitions.php';
-require __DIR__ . '/../../IOFrame/Util/timingManager.php';
+require __DIR__ . '/../../IOFrame/Util/TimingMeasurer.php';
 
 if(!isset($_REQUEST["action"]))
     exit('Action not specified!');
@@ -510,7 +510,7 @@ $action = $_REQUEST["action"];
 if($test)
     echo 'Testing mode!'.EOL;
 
-if(!checkApiEnabled('media',$apiSettings,$_REQUEST['action']))
+if(!checkApiEnabled('media',$apiSettings,$SecurityHandler,$_REQUEST['action']))
     exit(API_DISABLED);
 
 //Available languages
@@ -533,7 +533,7 @@ switch($action){
     /******* Media Related *******/
 
     case 'uploadMedia':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["category","type","items","address","imageQualityPercentage","gallery","overwrite"];
@@ -580,15 +580,15 @@ switch($action){
 
     case 'updateVideo':
     case 'updateImage':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = $action === 'updateImage' ?
             ["address","name","caption","alt","deleteEmpty"] :
             ["address","name","alt","caption","autoplay","loop","mute","controls","poster","preload","deleteEmpty"];
         foreach($languages as $lang){
-            array_push($arrExpected,$lang.'_name');
-            array_push($arrExpected,$lang.'_caption');
+            $arrExpected[] = $lang . '_name';
+            $arrExpected[] = $lang . '_caption';
         }
 
         require __DIR__ . '/../setExpectedInputs.php';
@@ -603,7 +603,7 @@ switch($action){
 
     case 'moveVideo':
     case 'moveImage':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["oldAddress","newAddress","copy","remote"];
@@ -619,7 +619,7 @@ switch($action){
 
     case 'deleteVideos':
     case 'deleteImages':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["addresses","remote"];
@@ -639,7 +639,7 @@ switch($action){
 
     case 'incrementVideos':
     case 'incrementImages':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["addresses","remote"];
@@ -655,7 +655,7 @@ switch($action){
 
     case 'getGalleriesOfVideo':
     case 'getGalleriesOfImage':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["address"];
@@ -707,12 +707,12 @@ switch($action){
 
     case 'setVideoGallery':
     case 'setGallery':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["name","gallery","overwrite","update"];
         foreach($languages as $lang){
-            array_push($arrExpected,$lang.'_name');
+            $arrExpected[] = $lang . '_name';
         }
 
         require __DIR__ . '/../setExpectedInputs.php';
@@ -726,7 +726,7 @@ switch($action){
 
     case 'deleteVideoGallery':
     case 'deleteGallery':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["gallery"];
@@ -742,7 +742,7 @@ switch($action){
 
     case 'addToVideoGallery':
     case 'addToGallery':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["remote","addresses","gallery"];
@@ -761,7 +761,7 @@ switch($action){
 
     case 'removeFromVideoGallery':
     case 'removeFromGallery':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["addresses","gallery"];
@@ -777,7 +777,7 @@ switch($action){
 
     case 'moveVideoInVideoGallery':
     case 'moveImageInGallery':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["from","to","gallery"];
@@ -793,7 +793,7 @@ switch($action){
 
     case 'swapVideosInVideoGallery':
     case 'swapImagesInGallery':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["num1","num2","gallery"];
@@ -810,7 +810,7 @@ switch($action){
     /******* General *******/
 
     case 'createFolder':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected =["category","relativeAddress","name"];
@@ -827,5 +827,3 @@ switch($action){
     default:
         exit('Specified action is not recognized');
 }
-
-?>

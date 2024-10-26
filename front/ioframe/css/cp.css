@@ -1,13 +1,14 @@
 body > .wrapper {
     display: flex;
+    height: 100vh;
 }
 
 /*Main app*/
 .main-app {
-    padding: 0px 10px;
     max-width: calc(100vw - 220px);
-    padding: 10px;
     width: 100%;
+    margin: 10px auto;
+    padding: 0px 10px;
 }
 
 /* Loading */
@@ -19,14 +20,30 @@ body > .wrapper {
     z-index: 1;
 }
 
+/* Type Mode */
+.main-app .type-mode {
+    margin: 2px 00px;
+}
+.main-app .type-mode * {
+    font-size: 1.25em;
+}
+.main-app .type-mode select {
+    padding: 2px;
+    text-align: center;
+    background: var(--main-color-3);
+}
+.main-app .type-mode select:hover {
+    background: var(--main-color-2);
+}
+
 /*Modes + Operations menu*/
 .main-app .modes{
     display: flex;
+    flex-direction: row;
 }
 .main-app .modes,
 .main-app .operations {
     padding: 5px 0px 5px 0px;
-    flex-direction: row;
 }
 
 .main-app .modes > button.selected,
@@ -71,6 +88,13 @@ body > .wrapper {
     margin: 5px;
 }
 
+/* Operations */
+
+.main-app .operations .input-container {
+    display: flex;
+    flex-direction: column;
+}
+
 .main-app .operations > button {
     text-transform: uppercase;
     margin: 5px 5px 5px 5px;
@@ -79,7 +103,7 @@ body > .wrapper {
     display: inline-flex;
 }
 
-/*Icon, if exists*/
+/*icon, if exists*/
 .main-app .operations > button > img {
     height: 20px;
     margin: 0px 0px 0px 10px;
@@ -91,6 +115,48 @@ body > .wrapper {
     min-width: calc(100% - 10px);
     max-width: calc(100% - 10px);
     margin: 5px;
+    overflow-x: auto;
+}
+
+/*Main items (usually inside editors/creators)*/
+.main-app .main-items{
+    margin: 5px 0px;
+    padding: 5px;
+    background-color: var(--main-color-2-5);
+    border: 1px var(--secondary-color-4-5) solid;
+}
+.main-app .main-items .main-item{
+    display: grid;
+    align-content: center;
+    grid-template-columns: 1fr auto auto;
+    margin: 5px;
+    padding: 2px 5px;
+    background: var(--shadow-gray-2);
+    transition: 0.2s ease-in-out;
+}
+.main-app .main-items .main-item:not(.static){
+    margin: 10px 5px;
+    background: var(--main-color-3-5);
+}
+.main-app .main-items .main-item.changed {
+    background: var(--main-color-4);
+}
+.main-app .main-items .main-item .title{
+    font-size: 1em;
+    font-weight: 800;
+}
+.main-app .main-items .main-item.required .title:after{
+    content: '*';
+    margin: 0px 2px;
+    color: var(--soft-red-2);
+}
+.main-app .main-items .main-item.static .value{
+    padding: 2px 5px;
+    background-color: var(--shadow-dark-1);
+}
+.main-app .main-items .main-item .reset-changes{
+    max-width: 40px;
+    margin: 0px 5px;
 }
 
 /* Search List*/
@@ -118,15 +184,15 @@ body > .wrapper {
     border: 1px var(--secondary-color-4) solid;
 }
 .main-app .search-list .pagination button[class="go-to"]{
-    background-color: var(--secondary-color-2);
+    background-color: var(--main-color-2);
 }
 .main-app .search-list .pagination button[class="go-to"]:hover{
-    background-color: var(--secondary-color-4);
+    background-color: var(--main-color-4);
 }
 
 .main-app .search-list .pagination .go-to-page input,
 .main-app .search-list .pagination .total-pages span:nth-child(2){
-    background-color: var(--secondary-color-2);
+    background-color: var(--main-color-2);
 }
 
 /*Titles*/
@@ -162,5 +228,8 @@ h4 {
     .main-app .modes,
     .main-app .operations-container {
         flex-direction: column;
+    }
+    .main-app {
+        min-width: calc(100vw - 15px);
     }
 }

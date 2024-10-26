@@ -72,14 +72,14 @@ class ezAlert{
         alert = document.createElement("div");
         alert.className=this.className+" "+params.extraClasses;
         alert.innerHTML = content;
-        if(params.dismissible == 'click'){
+        if(params.dismissible === 'click'){
             alert.className +=' click';
             alert.style.display = 'block';
             alert.style.textDecoration = 'none';
             alert.style.cursor = 'pointer';
             alert.addEventListener('click',e =>{e.target.parentNode.removeChild(e.target)});
         }
-        if(params.dismissible == 'button'){
+        if(params.dismissible === 'button'){
             alert.className +=' button';
             let alertClose = document.createElement("p");
             alertClose.innerHTML = 'X';
@@ -145,7 +145,7 @@ class ezAlert{
         }
         catch(e){
             //Browsers not supporting W3 DOM2 don't have HTMLElement and
-            //an exception is thrown and we end up here. Testing some
+            //an exception is thrown, and we end up here. Testing some
             //properties that all elements have (works on IE7)
             return (typeof obj==="object") &&
                 (obj.nodeType===1) && (typeof obj.style === "object") &&
@@ -153,4 +153,4 @@ class ezAlert{
         }
     };
 
-};
+}

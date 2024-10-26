@@ -4,7 +4,7 @@
 require_once __DIR__.'/../../IOFrame/Handlers/IPHandler.php';
 
 if(!isset($IPHandler))
-    $IPHandler = new IOFrame\Handlers\IPHandler(
+    $IPHandler = new \IOFrame\Handlers\IPHandler(
         $settings,
         array_merge($defaultSettingsParams, ['siteSettings'=>$siteSettings])
     );

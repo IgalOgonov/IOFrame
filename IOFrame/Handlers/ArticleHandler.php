@@ -1,11 +1,9 @@
 <?php
 namespace IOFrame\Handlers{
-    use IOFrame;
-    define('ArticleHandler',true);
-    if(!defined('abstractObjectsHandler'))
-        require 'abstractObjectsHandler.php';
+    define('IOFrameHandlersArticleHandler',true);
 
-    /** The article handler is meant to handle block-based articles.
+    /** TODO In highScalability, don't join users table and get groupUsers programmatically
+     * The article handler is meant to handle block-based articles.
      *  Not much to write here, most of the explanation is in the api.
      *  WARNING:
      *    Both articles and blocks may take up to 1 hour to sync with changes of related tables (resources, contacts, etc)
@@ -13,34 +11,29 @@ namespace IOFrame\Handlers{
      *    Still, in most cases those resources don't change (who suddenly changes their name? Or uploads a different
      *    image to the same address?).
      * @author Igal Ogonov <igal1333@hotmail.com>
-     * @license LGPL
      * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
      */
-    class ArticleHandler extends IOFrame\abstractObjectsHandler{
+    class ArticleHandler extends \IOFrame\Generic\ObjectsHandler{
 
 
         /** @var array $validBlockTypes Array of valid block types - those are the objects under an article.
          * */
-        private $validBlockTypes = [];
-
-        /** @var array $articleCacheName String cachename for a full article (this object is the article, and all its blocks)
-         * */
-        private $articleCacheName = 'full_article_';
+        private array $validBlockTypes;
 
         /**
          * Basic construction function
          * @param SettingsHandler $settings local settings handler.
          * @param array $params Typical default settings array
          */
-        function __construct(SettingsHandler $settings, $params = []){
+        function __construct(\IOFrame\Handlers\SettingsHandler $settings, $params = []){
 
             //Types of blocks - 'general-block' just refers to getting blocks in general, and has no set columns.
             $this->validBlockTypes = ['general-block','markdown-block','image-block','cover-block','gallery-block','video-block',
                 'youtube-block','article-block'];
             //The first type is the main articles table. The other tables are for individual blocks.
-            $this->validObjectTypes = array_merge(['articles'],$this->validBlockTypes);
+            $this->validObjectTypes = array_merge(['articles','article-tags'],$this->validBlockTypes);
 
-            $prefix = $params['SQLHandler']->getSQLPrefix();
+            $prefix = $params['SQLManager']->getSQLPrefix();
 
             $this->objectsDetails = [
                 'articles' => [
@@ -89,11 +82,20 @@ namespace IOFrame\Handlers{
                             'tableName' => 'CONTACTS',
                             'column' => 'Last_Name',
                             'as' => 'Creator_Last_Name'
-                        ]
+                        ],
+                        [
+                            'expression' => '
+                            (SELECT GROUP_CONCAT(CONCAT(Tag_Type,"/",Tag_Name))
+                             FROM '.$prefix.'ARTICLE_TAGS
+                             WHERE
+                                '.$prefix.'ARTICLE_TAGS.Article_ID = '.$prefix.'ARTICLES.Article_ID
+                             ) AS "Tags"
+                             '
+                        ],
                     ],
                     'extendTTL' => false,
                     'cacheName' => 'article_',
-                    'childCache' => ['article_blocks_'],
+                    'childCache' => ['article_tags_','article_blocks_'],
                     'keyColumns' => ['Article_ID'],
                     'safeStrColumns' => ['Thumbnail_Meta'],
                     'setColumns' => [
@@ -208,6 +210,39 @@ namespace IOFrame\Handlers{
                             'column' => 'Article_Weight',
                             'filter' => 'IN'
                         ],
+                        'tagsIn' => [
+                            'function' => function($context){
+                                return \IOFrame\Util\GenericObjectFunctions::filterByStuffInAnotherTable($context,[
+                                    'filterName'=>'tagsIn',
+                                    'baseTableName'=>'ARTICLES',
+                                    'foreignTableName'=>'ARTICLE_TAGS',
+                                    'inputMap'=>['type','name'],
+                                    'foreignColumns'=>['Tag_Type','Tag_Name'],
+                                    'mainColumns'=>['Article_ID']
+                                ]);
+                            }
+                        ],
+                        /*have to be explicitly set, due to ambiguous where conditions when getting tags (that also have time columns) with those filters*/
+                        'createdBefore' => [
+                            'tableName' => $prefix.'ARTICLES',
+                            'column' => 'Created',
+                            'filter' => '<'
+                        ],
+                        'createdAfter' => [
+                            'tableName' => $prefix.'ARTICLES',
+                            'column' => 'Created',
+                            'filter' => '>'
+                        ],
+                        'changedBefore' => [
+                            'tableName' => $prefix.'ARTICLES',
+                            'column' => 'Last_Updated',
+                            'filter' => '<'
+                        ],
+                        'changedAfter' => [
+                            'tableName' => $prefix.'ARTICLES',
+                            'column' => 'Last_Updated',
+                            'filter' => '>'
+                        ],
                     ],
                     'extraToGet' => [
                         '#' => [
@@ -221,7 +256,79 @@ namespace IOFrame\Handlers{
                     ],
                     'orderColumns' => ['Article_ID','Article_Weight'],
                     'autoIncrement'=>true
-                ]
+                ],
+                'article-tags' => [
+                    'tableName' => 'ARTICLE_TAGS',
+                    'joinOnGet' => [
+                        [
+                            'tableName' => 'TAGS',
+                            'on' => [
+                                ['Tag_Type','Tag_Type'],
+                                ['Tag_Name','Tag_Name']
+                            ],
+                        ]
+                    ],
+                    'columnsToGet' => [
+                    ],
+                    'extendTTL' => false,
+                    'cacheName' => 'article_tags_',
+                    'fatherDetails'=>[
+                        [
+                            'tableName' => 'ARTICLES',
+                            'cacheName' => 'article_'
+                        ],
+                        'minKeyNum' => 1
+                    ],
+                    'keyColumns' => ['Article_ID','Tag_Type','Tag_Name'],
+                    'safeStrColumns' => [],
+                    'setColumns' => [
+                        'Article_ID' => [
+                            'type' => 'int',
+                            'required' => true
+                        ],
+                        'Tag_Type' => [
+                            'type' => 'string',
+                            'default' => 'default-article-tags'
+                        ],
+                        'Tag_Name' => [
+                            'type' => 'string',
+                            'required' => true
+                        ]
+                    ],
+                    'moveColumns' => [
+                    ],
+                    'columnFilters' => [
+                        'articleIs' => [
+                            'column' => 'Article_ID',
+                            'filter' => '='
+                        ],
+                        'articleIn' => [
+                            'column' => 'Article_ID',
+                            'filter' => 'IN'
+                        ],
+                        'typeIs' => [
+                            'column' => 'Tag_Type',
+                            'filter' => '='
+                        ],
+                        'typeIn' => [
+                            'column' => 'Tag_Type',
+                            'filter' => 'IN'
+                        ],
+                        'tagIs' => [
+                            'column' => 'Tag_Name',
+                            'filter' => '='
+                        ],
+                        'tagIn' => [
+                            'column' => 'Tag_Name',
+                            'filter' => 'IN'
+                        ],
+                    ],
+                    'extraToGet' => [
+                    ],
+                    'orderColumns' => ['Article_ID','Tag_Type','Tag_Name'],
+                    'hasTimeColumns'=>false,
+                    'groupByFirstNKeys'=>1,
+                ],
             ];
 
             $commonBlocksTable = 'ARTICLE_BLOCKS';
@@ -553,16 +660,16 @@ namespace IOFrame\Handlers{
          * @param int $userID
          * @param array $params
          *              'requiredArticles' => int[], default [] - if set, limites the search to those articles.
-         * @returns int[]|int Array of article IDs the user owns, OR code -1 if the database connection failed.
+         * @return array|bool|int|string|string[]
          */
-        function getUserArticles(int $userID, array $params = []){
+        function getUserArticles(int $userID, array $params = []): array|bool|int|string {
 
-            $requiredArticles = isset($params['requiredArticles'])? $params['requiredArticles'] : [];
+            $requiredArticles = $params['requiredArticles'] ?? [];
 
-            $prefix = $this->SQLHandler->getSQLPrefix();
+            $prefix = $this->SQLManager->getSQLPrefix();
 
             if(count($requiredArticles)){
-                array_push($requiredArticles,'CSV');
+                $requiredArticles[] = 'CSV';
             }
 
             $userCondition = [
@@ -581,11 +688,11 @@ namespace IOFrame\Handlers{
             $conditions = [ $userCondition ];
 
             if(count($requiredArticles))
-                array_push($conditions,$articlesCondition);
+                $conditions[] = $articlesCondition;
 
-            array_push($conditions,'AND');
+            $conditions[] = 'AND';
 
-            $res = $this->SQLHandler->selectFromTable(
+            $res = $this->SQLManager->selectFromTable(
                 $prefix.$this->objectsDetails['articles']['tableName'],
                 $conditions,
                 ['Article_ID'],
@@ -606,24 +713,25 @@ namespace IOFrame\Handlers{
          *
          * @param int[] $articleIDs
          * @param array $params
-         * @returns int 0 on success, -1 on db connection failure
+         * @return false|int
          */
-        function hideArticles(array $articleIDs, array $params = []){
+        function hideArticles(array $articleIDs, array $params = []): bool|int {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
+            $useCache = $params['useCache'] ?? $this->defaultSettingsParams['useCache'];
 
             if(count($articleIDs) < 1)
                 return false;
 
             $existingIDs = [];
             foreach($articleIDs as $id){
-                array_push($existingIDs,$this->objectsDetails['articles']['cacheName'].$id);
+                $existingIDs[] = $this->objectsDetails['articles']['cacheName'] . $id;
             }
-            array_push($articleIDs, 'CSV');
+            $articleIDs[] = 'CSV';
 
-            $res = $this->SQLHandler->updateTable(
-                $this->SQLHandler->getSQLPrefix().$this->objectsDetails['articles']['tableName'],
+            $res = $this->SQLManager->updateTable(
+                $this->SQLManager->getSQLPrefix().$this->objectsDetails['articles']['tableName'],
                 ['Article_View_Auth = 9999'],
                 [['Article_ID',$articleIDs,'IN']],
                 $params
@@ -632,16 +740,112 @@ namespace IOFrame\Handlers{
             if($res === true){
                 if($verbose)
                     echo 'Deleting  cache of article '.json_encode($existingIDs).EOL;
-                if(!$test)
-                    $this->RedisHandler->call( 'del', [$existingIDs] );
+                if(!$test && $useCache)
+                    $this->RedisManager->call( 'del', [$existingIDs] );
                 return 0;
             }
-            else
+            else{
+                $this->logger->error('Could not hide articles',['articles'=>$articleIDs]);
                 return -1;
+            }
+        }
+
+
+        /** Adds tags to an article.
+         *
+         * @param array $inputs Array of strings of tag Names
+         * @param array $params Same as abstractObjectHandler::setItems()
+         *
+         * @returns array of the form:
+         *              setObjects Code
+         *
+         * @throws \Exception
+         * @throws \Exception
+         * @throws \Exception
+         */
+        function setArticleTags(int $id, string $type, array $inputs, array $params = []): array|bool|int|string|null {
+            $tempInputs = [];
+            foreach ($inputs as $tagName){
+                $tempInputs[] = [
+                    'Article_ID' => $id,
+                    'Tag_Type' => $type,
+                    'Tag_Name' => $tagName
+                ];
+            }
+            return $this->setItems($tempInputs,'article-tags',$params);
+        }
+
+        /** Deletes tags from an article
+         *
+         * @param mixed $id Name of the Content
+         * @param array $params same as deleteContent
+         *
+         * @returns  array of the form:
+         * @throws \Exception
+         * @throws \Exception
+         * @throws \Exception
+         */
+        function removeArticleTags(int $id, string $type, array $inputs, array $params = []): int {
+            $tempInputs = [];
+            foreach ($inputs as $tagName){
+                $tempInputs[] = [
+                    'Article_ID' => $id,
+                    'Tag_Type' => $type,
+                    'Tag_Name' => $tagName
+                ];
+            }
+            return $this->deleteItems($tempInputs,'article-tags',$params);
+        }
+
+        /** Adds blocks to the article order.
+         * @param int $articleID Article ID
+         * @param int[] $blockInsertions Associative array of the form: [
+         *                                                                  <int, block destination> => <int|int[], block ID(s) to be inserted at this position>
+         *                                                              ]
+         *              Each block pushes the existing blocks forward. Array starts from 0.
+         *              If the index is higher than the length of the current article order, pushes it to the end.
+         *              This WILL insert non-existent IDs, and will not remove them once a block is removed from an article -
+         *              Up to the front-end to realize the order may contain non-existent blocks.
+         *              If an array is provided to be inserted at a destination, it will be inserted in the order provided.
+         * @param array $params
+         * @return array|bool|int|string|string[]|null
+         */
+        function addBlocksToArticle(int $articleID,array $blockInsertions,array $params = []): array|bool|int|string|null {
+            return $this->articleBlockOrderWrapper($articleID,'add',array_merge($params,['blockInsertions'=>$blockInsertions]));
+        }
+
+        /** Removes blocks from the article order.
+         * @param int $articleID Article ID
+         * @param int[] $blocksToRemove INDEXES (not IDs, as those can be duplicate) of blocks to remove
+         * @param array $params
+         * @return array|bool|int|string|string[]|null
+         */
+        function removeBlocksFromArticle(int $articleID,array $blocksToRemove,array $params = []): array|bool|int|string|null {
+            return $this->articleBlockOrderWrapper($articleID,'remove',array_merge($params,['blocksToRemove'=>$blocksToRemove]));
+        }
+
+        /** Moves a block in the article ID from one index to another.
+         * @param int $articleID Article ID
+         * @param int $from
+         * @param int $to
+         * @param array $params
+         * @return array|bool|int|string|string[]|null
+         */
+        function moveBlockInArticle(int $articleID,int $from,int $to,array $params = []): array|bool|int|string|null {
+            return $this->articleBlockOrderWrapper($articleID,'move',array_merge($params,['from'=>$from,'to'=>$to]));
+        }
+
+        /** Removes ALL orphan blocks from the article order.
+         * @param int $articleID Article ID
+         * @param array $params
+         * @return array|bool|int|string|string[]|null
+         */
+        function removeOrphanBlocksFromArticle(int $articleID,array $params = []): array|bool|int|string|null {
+            return $this->articleBlockOrderWrapper($articleID,'remove-orphan',$params);
         }
 
         /* Common function, relevant to addBlocksToArticle,removeBlocksFromArticle,moveBlockInArticle and removeOrphanBlocksFromArticle*/
-        function articleBlockOrderWrapper(int $articleID,string $type, array $params){
+        protected function articleBlockOrderWrapper(int $articleID,string $type, array $params): array|bool|int|string|null {
 
             $articles = $this->getItems([[$articleID]], 'articles', array_merge($params,['updateCache'=>false]));
 
@@ -666,25 +870,25 @@ namespace IOFrame\Handlers{
                             if(gettype($blockInsertions[$index]) !== 'array')
                                 $blockInsertions[$index] = [$blockInsertions[$index]];
                             foreach($blockInsertions[$index] as $item){
-                                array_push($newOrder,$item);
+                                $newOrder[] = $item;
                             }
                             unset($blockInsertions[$index]);
                         }
-                        array_push($newOrder,$id);
+                        $newOrder[] = $id;
                     }
                     $blockInsertions = array_splice($blockInsertions,0);
                     foreach($blockInsertions as $insertion){
                         if(gettype($insertion) !== 'array')
                             $insertion = [$insertion];
                         foreach($insertion as $item){
-                            array_push($newOrder,$item);
+                            $newOrder[] = $item;
                         }
                     }
                     break;
                 case 'remove-orphan':
                     //Get not orphan blocks, so we know what to keep
-                    $existingBlocks = $this->SQLHandler->selectFromTable(
-                        $this->SQLHandler->getSQLPrefix().$this->objectsDetails['general-block']['tableName'],
+                    $existingBlocks = $this->SQLManager->selectFromTable(
+                        $this->SQLManager->getSQLPrefix().$this->objectsDetails['general-block']['tableName'],
                         [['Article_ID',$articleID,'=']],
                         ['Block_ID'],
                         $params
@@ -697,7 +901,7 @@ namespace IOFrame\Handlers{
                         return -1;
                     else
                         foreach($existingBlocks as $blockArr)
-                            array_push($blocksToKeep,$blockArr['Block_ID']);
+                            $blocksToKeep[] = $blockArr['Block_ID'];
                     //Remove all blocks that we do not keep
                     foreach($order as $index => $id){
                         if(!in_array($id,$blocksToKeep))
@@ -724,12 +928,12 @@ namespace IOFrame\Handlers{
                     $insertToEnd = ($params['to'] > $orderCount - 1);
                     foreach($order as $index=>$item){
                         if($index === $params['to'])
-                            array_push($newOrder,$temp);
+                            $newOrder[] = $temp;
                         if($index !== $params['from'])
-                            array_push($newOrder,$item);
+                            $newOrder[] = $item;
                     }
                     if($insertToEnd)
-                        array_push($newOrder,$temp);
+                        $newOrder[] = $temp;
                     break;
                 default:
                     return -1;
@@ -741,69 +945,6 @@ namespace IOFrame\Handlers{
             return $setRes[$articleID] ?? $setRes;
         }
 
-        /** Adds blocks to the article order.
-         * @param int $articleID Article ID
-         * @param int[] $blockInsertions Associative array of the form: [
-         *                                                                  <int, block destination> => <int|int[], block ID(s) to be inserted at this position>
-         *                                                              ]
-         *              Each block pushes the existing blocks forward. Array starts from 0.
-         *              If the index is higher than the length of the current article order, pushes it to the end.
-         *              This WILL insert non-existent IDs, and will not remove them once a block is removed from an article -
-         *              Up to the front-end to realize the order may contain non-existent blocks.
-         *              If an array is provided to be inserted at a destination, it will be inserted in the order provided.
-         * @param array $params
-         * @returns int
-         *      -1 db connection failure
-         *      0 success
-         *      1 article doesn't exist
-         */
-        function addBlocksToArticle(int $articleID,array $blockInsertions,array $params = []){
-            return $this->articleBlockOrderWrapper($articleID,'add',array_merge($params,['blockInsertions'=>$blockInsertions]));
-        }
-
-        /** Removes blocks from the article order.
-         * @param int $articleID Article ID
-         * @param int[] $blocksToRemove INDEXES (not IDs, as those can be duplicate) of blocks to remove
-         * @param array $params
-         * @returns int
-         *      -1 db connection failure
-         *      0 success
-         *      1 article doesn't exist
-         */
-        function removeBlocksFromArticle(int $articleID,array $blocksToRemove,array $params = []){
-            return $this->articleBlockOrderWrapper($articleID,'remove',array_merge($params,['blocksToRemove'=>$blocksToRemove]));
-        }
-
-        /** Moves a block in the article ID from one index to another.
-         * @param int $articleID Article ID
-         * @param int $from
-         * @param int $to
-         * @param array $params
-         * @returns int
-         *      -1 db connection failure
-         *      0 success
-         *      1 article doesn't exist
-         *      2 from index doesn't exist
-         *      3 to index doesn't exist
-         */
-        function moveBlockInArticle(int $articleID,int $from,int $to,array $params = []){
-            return $this->articleBlockOrderWrapper($articleID,'move',array_merge($params,['from'=>$from,'to'=>$to]));
-        }
-
-        /** Removes ALL orphan blocks from the article order.
-         * @param int $articleID Article ID
-         * @param array $params
-         * @returns int
-         *      -1 db connection failure
-         *      0 success
-         *      1 article doesn't exist
-         */
-        function removeOrphanBlocksFromArticle(int $articleID,array $params = []){
-            return $this->articleBlockOrderWrapper($articleID,'remove-orphan',$params);
-        }
-
     }
 
 }
-
-?>

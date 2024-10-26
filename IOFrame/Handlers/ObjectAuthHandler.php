@@ -1,10 +1,6 @@
 <?php
 namespace IOFrame\Handlers{
-    use IOFrame;
-    use Monolog\Logger;
-    define('ObjectAuthHandler',true);
-    if(!defined('abstractObjectsHandler'))
-        require 'abstractObjectsHandler.php';
+    define('IOFrameHandlersObjectAuthHandler',true);
 
     /**Handles Object permissions in IOFrame.
      * Object auth is the only scheme in IOFrame that has no meaning by itself, and instead is meant to be tied to
@@ -26,10 +22,9 @@ namespace IOFrame\Handlers{
      *  Any actual auth objects, however, will be deleted, so in essence they will be empty of any meaningful content,
      *  despite still existing in the cache.
      * @author Igal Ogonov <igal1333@hotmail.com>
-     * @license LGPL
      * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
      */
-    class ObjectAuthHandler extends IOFrame\abstractObjectsHandler{
+    class ObjectAuthHandler extends \IOFrame\Generic\ObjectsHandler{
 
         /** @var array $objects Used when initiating specific objects - mainly for persistent use
          *             {
@@ -60,7 +55,7 @@ namespace IOFrame\Handlers{
          *                  ]
          *              }
          * */
-        protected $objects=[
+        protected array $objects=[
             /*
              * 'object_id' =>[
                     'initiated' => true,
@@ -96,7 +91,7 @@ namespace IOFrame\Handlers{
          *                  ]
          *              }
          * */
-        protected $userGroups=[
+        protected array $userGroups=[
             /*
              * 'user_id' =>[
                     'group_A' => [],
@@ -113,17 +108,15 @@ namespace IOFrame\Handlers{
          * @param SettingsHandler $settings local settings handler.
          * @param array $params Typical default settings array
          */
-        function __construct(SettingsHandler $settings, $params = []){
+        function __construct(\IOFrame\Handlers\SettingsHandler $settings, $params = []){
 
-            /* Allows dynamically setting table details at construction.
-             * As much as I hate variable variables, this is likely one of the only places where their use is for the best.
-             * */
             $this->validObjectTypes = ['categories','objects','actions','groups','objectUsers','objectGroups','userGroups'];
 
             $this->objectsDetails = [
                 'categories' => [
                     'tableName' => 'OBJECT_AUTH_CATEGORIES',
                     'cacheName'=> 'object_auth_category_',
+                    '_uniqueLogger'=>\IOFrame\Definitions::LOG_GENERAL_SECURITY_CHANNEL,
                     'keyColumns' => ['Object_Auth_Category'],
                     'setColumns' => [
                         'Object_Auth_Category' => [
@@ -161,14 +154,8 @@ namespace IOFrame\Handlers{
                 'objects'=>[
                     'tableName' => 'OBJECT_AUTH_OBJECTS',
                     'cacheName'=> 'object_auth_object_',
+                    '_uniqueLogger'=>\IOFrame\Definitions::LOG_GENERAL_SECURITY_CHANNEL,
                     'extendTTL'=> false,
-                    'fatherDetails'=>[
-                        /*I leave this here specifically to signify this is NOT the case - the categories table
-                          simply represents valid categories - the 'Last_Updated' is unrelated to the object [
-                            'tableName' => 'OBJECT_AUTH_CATEGORIES',
-                            'cacheName' => 'object_auth_category_',
-                        ]*/
-                    ],
                     'keyColumns' => ['Object_Auth_Category','Object_Auth_Object'],
                     'setColumns' => [
                         'Object_Auth_Category' => [
@@ -238,14 +225,8 @@ namespace IOFrame\Handlers{
                 'actions'=>[
                     'tableName' => 'OBJECT_AUTH_ACTIONS',
                     'cacheName'=> 'object_auth_action_',
+                    '_uniqueLogger'=>\IOFrame\Definitions::LOG_GENERAL_SECURITY_CHANNEL,
                     'extendTTL'=> false,
-                    'fatherDetails'=>[
-                        /*I leave this here specifically to signify this is NOT the case - the categories table
-                          simply represents valid categories - the 'Last_Updated' is unrelated to the action [
-                            'tableName' => 'OBJECT_AUTH_CATEGORIES',
-                            'cacheName' => 'object_auth_category_',
-                        ]*/
-                    ],
                     'keyColumns' => ['Object_Auth_Category','Object_Auth_Action'],
                     'setColumns' => [
                         'Object_Auth_Category' => [
@@ -304,6 +285,7 @@ namespace IOFrame\Handlers{
                 'groups'=>[
                     'tableName' => 'OBJECT_AUTH_GROUPS',
                     'cacheName'=> 'object_auth_group_',
+                    '_uniqueLogger'=>\IOFrame\Definitions::LOG_GENERAL_SECURITY_CHANNEL,
                     'extendTTL'=> false,
                     'childCache' => ['object_auth_object_group_actions_'],
                     'fatherDetails'=>[
@@ -389,6 +371,7 @@ namespace IOFrame\Handlers{
                 'objectUsers'=>[
                     'tableName' => 'OBJECT_AUTH_OBJECT_USERS',
                     'cacheName'=> 'object_auth_object_user_actions_',
+                    '_uniqueLogger'=>\IOFrame\Definitions::LOG_GENERAL_SECURITY_CHANNEL,
                     'useCache'=> false,
                     'fatherDetails'=>[
                         [
@@ -476,6 +459,7 @@ namespace IOFrame\Handlers{
                 'objectGroups'=>[
                     'tableName' => 'OBJECT_AUTH_OBJECT_GROUPS',
                     'cacheName'=> 'object_auth_object_group_actions_',
+                    '_uniqueLogger'=>\IOFrame\Definitions::LOG_GENERAL_SECURITY_CHANNEL,
                     'useCache'=> false,
                     'fatherDetails'=>[
                         [
@@ -563,6 +547,7 @@ namespace IOFrame\Handlers{
                 'userGroups'=>[
                     'tableName' => 'OBJECT_AUTH_USERS_GROUPS',
                     'cacheName'=> 'object_auth_object_user_groups_',
+                    '_uniqueLogger'=>\IOFrame\Definitions::LOG_GENERAL_SECURITY_CHANNEL,
                     'useCache'=> false,
                     'fatherDetails'=>[
                         [
@@ -666,12 +651,14 @@ namespace IOFrame\Handlers{
          *              -1 server error
          *               0 User has one/all of the actions in the specified category/object.
          *               1 User does not have one/all of the actions in the specified category/object.
+         * @throws \Exception
+         * @throws \Exception
          */
-        function userHasActions(string $category, int $id, string $object, array $actions, array $params){
+        function userHasActions(string $category, int $id, string $object, array $actions, array $params): int {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
-            $actionSeparator = isset($params['actionSeparator'])? $params['actionSeparator'] : 'AND';
+            $actionSeparator = $params['actionSeparator'] ?? 'AND';
 
             $existingActions = [];
             $existingGroups = [];
@@ -692,7 +679,7 @@ namespace IOFrame\Handlers{
 
             if($userActions['@']['#'] != 0 && isset($userActions[$category.'/'.$object.'/'.$id])){
                 foreach($userActions[$category.'/'.$object.'/'.$id] as $actionArray){
-                    array_push($existingActions,$actionArray['Object_Auth_Action']);
+                    $existingActions[] = $actionArray['Object_Auth_Action'];
                 }
             }
 
@@ -723,7 +710,7 @@ namespace IOFrame\Handlers{
 
             if($userGroups['@']['#'] != 0 && isset($userGroups[$category.'/'.$object.'/'.$id])){
                 foreach($userGroups[$category.'/'.$object.'/'.$id] as $actionArray){
-                    array_push($existingGroups,(int)$actionArray['Object_Auth_Group']);
+                    $existingGroups[] = (int)$actionArray['Object_Auth_Group'];
                 }
             }
 
@@ -749,7 +736,7 @@ namespace IOFrame\Handlers{
                         continue;
                     foreach($groupsArray as $actionArray){
                         if(!in_array($actionArray['Object_Auth_Action'],$existingActions))
-                            array_push($existingActions,$actionArray['Object_Auth_Action']);
+                            $existingActions[] = $actionArray['Object_Auth_Action'];
                     }
                 }
 
@@ -771,44 +758,35 @@ namespace IOFrame\Handlers{
         /** Returns all the objects where the user (or one of its group) has a specific action (or user just exists)
          * @param string $category Category ID
          * @param int $id User ID
-         * @param string[] $objects Array of specific objects we are searching.
          * @param array $params of the form
          *              'objects' => string[], default [] - array of objects to limit the search in
          *              'requiredActions' => string[], default [] - the object is only added if one of the following actions is present.
          *
-         * @returns Bool|Array of arrays the form:
-         *          [
-         *              [
-         *                  'Object_Auth_Object' => <string, object the user is in>
-         *                  'Source' => <string, 'self' if the user is in the object naturally, 'group' if he is in because of a group>
-         *              ]
-         *          ]
-         *          OR
-         *          false on DB connection failure
-         *
+         * @return array|bool|string|null
+         * @throws \Exception
          */
-        function userObjects(string $category, int $id, array $params){
+        function userObjects(string $category, int $id, array $params): mixed {
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
 
-            $objects = isset($params['objects'])? $params['objects'] : [];
-            $requiredActions = isset($params['requiredActions'])? $params['requiredActions'] : [];
+            $objects = $params['objects'] ?? [];
+            $requiredActions = $params['requiredActions'] ?? [];
 
-            $prefix = $this->SQLHandler->getSQLPrefix();
+            $prefix = $this->SQLManager->getSQLPrefix();
 
             foreach($requiredActions as $index => $action){
                 $requiredActions[$index] = [$action,'STRING'];
             }
             if(count($requiredActions)){
-                array_push($requiredActions,'CSV');
+                $requiredActions[] = 'CSV';
             }
 
             foreach($objects as $index => $object){
                 $objects[$index] = [$object,'STRING'];
             }
             if(count($objects)){
-                array_push($objects,'CSV');
+                $objects[] = 'CSV';
             }
 
             /* Query explanation:
@@ -849,14 +827,14 @@ namespace IOFrame\Handlers{
             $usersConditions = [ $userCondition, $categoryCondition ];
 
             if(count($requiredActions))
-                array_push($usersConditions,$actionsCondition);
+                $usersConditions[] = $actionsCondition;
 
             if(count($objects))
-                array_push($usersConditions,$objectsCondition);
+                $usersConditions[] = $objectsCondition;
 
-            array_push($usersConditions,'AND');
+            $usersConditions[] = 'AND';
 
-            $query = $this->SQLHandler->selectFromTable(
+            $query = $this->SQLManager->selectFromTable(
                 $prefix.$this->objectsDetails['objectUsers']['tableName'],
                 $usersConditions,
                 ['Object_Auth_Object', '"self" AS Source'],
@@ -868,7 +846,7 @@ namespace IOFrame\Handlers{
 
                 $groupCondition = [
                     'Object_Auth_Group',
-                    $this->SQLHandler->selectFromTable(
+                    $this->SQLManager->selectFromTable(
                         $prefix.$this->objectsDetails['userGroups']['tableName'],
                         [$categoryCondition, $userCondition,'AND'],
                         ['Object_Auth_Group'],
@@ -879,11 +857,11 @@ namespace IOFrame\Handlers{
 
                 $groupObjectsConditions = [ $groupCondition,$categoryCondition,$actionsCondition ];
                 if(count($objects)){}
-                    array_push($groupObjectsConditions,$objectsCondition);
-                array_push($groupObjectsConditions,'AND');
+                    $groupObjectsConditions[] = $objectsCondition;
+                $groupObjectsConditions[] = 'AND';
 
                 $query .= ' UNION '.
-                    $this->SQLHandler->selectFromTable(
+                    $this->SQLManager->selectFromTable(
                         $prefix.$this->objectsDetails['objectGroups']['tableName'],
                         $groupObjectsConditions,
                         ['Object_Auth_Object', '"group" AS Source'],
@@ -892,7 +870,7 @@ namespace IOFrame\Handlers{
             }
             if($verbose)
                 echo 'Query to send: '.$query.EOL;
-            $response = $this->SQLHandler->exeQueryBindParam($query,[],['fetchAll'=>true]);
+            $response = $this->SQLManager->exeQueryBindParam($query,[],['fetchAll'=>true]);
             if($response !== false)
                 foreach($response as $key => $arr){
                     for($i = 0; $i< 2; $i++)
@@ -904,37 +882,34 @@ namespace IOFrame\Handlers{
         /** Returns all the objects where the group has a specific action (or just exists)
          * @param string $category Category ID
          * @param int $id User ID
-         * @param string[] $objects Array of specific objects we are searching.
          * @param array $params of the form
          *              'objects' => string[], default [] - array of objects to limit the search in
          *              'requiredActions' => string[], default [] - the object is only added if one of the following actions is present.
          *
-         * @returns Bool|Array of objects in which the user has the action.
-         *          OR
-         *          false on DB connection failure
-         *
+         * @return array|bool|mixed|string
+         * @throws \Exception
          */
         function groupObjects(string $category, int $id, array $params){
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
-            $objects = isset($params['objects'])? $params['objects'] : [];
-            $requiredActions = isset($params['requiredActions'])? $params['requiredActions'] : [];
+            $objects = $params['objects'] ?? [];
+            $requiredActions = $params['requiredActions'] ?? [];
 
-            $prefix = $this->SQLHandler->getSQLPrefix();
+            $prefix = $this->SQLManager->getSQLPrefix();
 
             foreach($requiredActions as $index => $action){
                 $requiredActions[$index] = [$action,'STRING'];
             }
             if(count($requiredActions)){
-                array_push($requiredActions,'CSV');
+                $requiredActions[] = 'CSV';
             }
 
             foreach($objects as $index => $object){
                 $objects[$index] = [$object,'STRING'];
             }
             if(count($objects)){
-                array_push($objects,'CSV');
+                $objects[] = 'CSV';
             }
 
 
@@ -972,14 +947,14 @@ namespace IOFrame\Handlers{
             $groupsConditions = [ $groupCondition, $categoryCondition ];
 
             if(count($requiredActions))
-                array_push($groupsConditions,$actionsCondition);
+                $groupsConditions[] = $actionsCondition;
 
             if(count($objects))
-                array_push($groupsConditions,$objectsCondition);
+                $groupsConditions[] = $objectsCondition;
 
-            array_push($groupsConditions,'AND');
+            $groupsConditions[] = 'AND';
 
-            $query = $this->SQLHandler->selectFromTable(
+            $query = $this->SQLManager->selectFromTable(
                 $prefix.$this->objectsDetails['objectGroups']['tableName'],
                 $groupsConditions,
                 ['Object_Auth_Object'],
@@ -988,7 +963,7 @@ namespace IOFrame\Handlers{
 
             if($verbose)
                 echo 'Query to send: '.$query.EOL;
-            $response = $this->SQLHandler->exeQueryBindParam($query,[],['fetchAll'=>true]);
+            $response = $this->SQLManager->exeQueryBindParam($query,[],['fetchAll'=>true]);
 
             if($response !== false)
                 foreach($response as $key => $arr){
@@ -1003,20 +978,22 @@ namespace IOFrame\Handlers{
          * @param array $params of the form
          *              'users' => string[], default [] - array of users to limit the search in
          *
-         * @returns Array of users in the group (who answer the action requirements)
+         * @returns array of users in the group (who answer the action requirements)
          *          OR
          *          false on DB connection failure
          *
+         * @throws \Exception
+         * @throws \Exception
          */
         function groupUsers(string $category, int $groupID, array $params){
 
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
-            $users = isset($params['users'])? $params['users'] : [];
-            $prefix = $this->SQLHandler->getSQLPrefix();
+            $users = $params['users'] ?? [];
+            $prefix = $this->SQLManager->getSQLPrefix();
 
             if(count($users)){
-                array_push($users,'CSV');
+                $users[] = 'CSV';
             }
 
             /* Query explanation:
@@ -1036,22 +1013,21 @@ namespace IOFrame\Handlers{
                 '='
             ];
 
-            if(count($users))
+            //ObjectUsers conditions
+            $groupsConditions = [ $groupCondition, $categoryCondition ];
+
+            if(count($users)){
                 $usersCondition = [
                     'ID',
                     $users,
                     'IN'
                 ];
+                $groupsConditions[] = $usersCondition;
+            }
 
-            //ObjectUsers conditions
-            $groupsConditions = [ $groupCondition, $categoryCondition ];
+            $groupsConditions[] = 'AND';
 
-            if(count($users))
-                array_push($groupsConditions,$usersCondition);
-
-            array_push($groupsConditions,'AND');
-
-            $query = $this->SQLHandler->selectFromTable(
+            $query = $this->SQLManager->selectFromTable(
                 $prefix.$this->objectsDetails['userGroups']['tableName'],
                 $groupsConditions,
                 ['ID'],
@@ -1060,7 +1036,7 @@ namespace IOFrame\Handlers{
 
             if($verbose)
                 echo 'Query to send: '.$query.EOL;
-            $response = $this->SQLHandler->exeQueryBindParam($query,[],['fetchAll'=>true]);
+            $response = $this->SQLManager->exeQueryBindParam($query,[],['fetchAll'=>true]);
 
             if($response !== false)
                 foreach($response as $key => $arr){
@@ -1074,5 +1050,3 @@ namespace IOFrame\Handlers{
 
 
 }
-
-?>

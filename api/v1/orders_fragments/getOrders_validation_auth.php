@@ -1,6 +1,5 @@
 <?php
-if(!defined('validator'))
-    require __DIR__ . '/../../IOFrame/Util/validator.php';
+
 
 //IDs
 if($inputs['ids'] === null)
@@ -18,7 +17,7 @@ else{
 
 //typeIs
 if($inputs['typeIs'] !== null) {
-    if (!\IOFrame\Util\validator::validateSQLKey($inputs['typeIs'])) {
+    if (!\IOFrame\Util\ValidatorFunctions::validateSQLKey($inputs['typeIs'])) {
         if ($test)
             echo 'Invalid type!' . EOL;
         exit(INPUT_VALIDATION_FAILURE);
@@ -27,7 +26,7 @@ if($inputs['typeIs'] !== null) {
 
 //statusIs
 if($inputs['statusIs'] !== null) {
-    if (!\IOFrame\Util\validator::validateSQLKey($inputs['statusIs'])) {
+    if (!\IOFrame\Util\ValidatorFunctions::validateSQLKey($inputs['statusIs'])) {
         if ($test)
             echo 'Invalid status!' . EOL;
         exit(INPUT_VALIDATION_FAILURE);
@@ -36,7 +35,7 @@ if($inputs['statusIs'] !== null) {
 
 //orderBy
 if($inputs['orderBy'] !== null) {
-    if (!\IOFrame\Util\validator::validateSQLKey($inputs['orderBy'])) {
+    if (!\IOFrame\Util\ValidatorFunctions::validateSQLKey($inputs['orderBy'])) {
         if ($test)
             echo 'Invalid orderBy!' . EOL;
         exit(INPUT_VALIDATION_FAILURE);

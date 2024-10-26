@@ -1,9 +1,8 @@
 <?php
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 
 if($inputs['address'] !== null){
-    if(!\IOFrame\Util\validator::validateRelativeDirectoryPath($inputs['address'])){
+    if(!\IOFrame\Util\ValidatorFunctions::validateRelativeDirectoryPath($inputs['address'])){
         if($test)
             echo 'Invalid address!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);

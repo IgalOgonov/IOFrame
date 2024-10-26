@@ -1,29 +1,6 @@
 <?php
 /* Current API for sending mails, and modifying mail templates.
  *________________________________________
- * mailTo
- *      - Sends a mail to a user.
- *          mail                                - string, mail address to mail to
- *          secToken                            - string, security token
- *          subj                                - string, mail subject
- *          mName1                              - string, mail of the sender which the recipient will see (for example "cars@cars.com").
- *                                                        Defaults to the real address the email was sent from.
- *          mName2                              - string, name  of the sender which the recipient will see (for example "Car Dealership")
- *          type                                - string, "normal" or "template" - send a mail normally or from template.
- *                                                        Defaults to "normal"
- *          varArray                            - string, JSON encoded array explained in MailHandler->fillTemplate()
- *          [type == "template"] templateNum    - int, template ID
- *          [type == "normal"] mBody            - string, mail body
- *
- *
- *        Examples:
- *          action=mailTo&mail=test@test.com&secToken=ASTR6356FGDFY654MGHGFV644&subj=Important Mail&mName1=cars@cars.com&mName2=Car Dealership&type=template&templateNum=7
- *
- *        Returns int Codes which mean:
- *             -1 - failed to reach DB
- *              0 - success
- *
- *________________________________________
  * getTemplates
  *      - Gets templates
  *          ids                 - string, default null - JSON encoded array of IDs. If null, gets all templates instead.
@@ -40,7 +17,7 @@
  *
  *
  *        Examples:
- *          action=getTemplates&ids=[1,2,3]
+ *          action=getTemplates&ids=["default_invite","default_activation"]
  *
  *        Returns array of the form:
  *
@@ -52,40 +29,45 @@
  *          if ids is null, also returns the object '@' (stands for 'meta') inside which there is a
  *              single key '#', and the value is the total number of results if there was no limit.
  *
- *          Templates and codes are the same as the ones from getTemplate() in MailHandler
+ *          Templates and codes are the same as the ones from getTemplate() in MailManager
  *
  *________________________________________
  * createTemplate
  *      - Creates a new template
+ *          id - string, id of the template.
  *          title - string, title of the template
  *          content - string, content of the template.
  *
  *        Examples:
- *          action=createTemplate&title=Test Template&content=Hello template!
+ *          action=createTemplate&id=example&title=Test Template&content=Hello template!
  *
  *        Returns Codes/Int:
- *          -1 could not connect to db
- *          <ID> ID of the newly created template otherwise.
+ *         -3 - Template exists and override is false
+ *         -2 - Template does not exist and required fields are not provided, or 'update' is true
+ *         -1 - Could not connect to db
+ *          0 - All good
  *________________________________________
  * updateTemplate
  *      - Updates a template
- *          id - int, id of the template.
+ *          id - string, id of the template.
  *          title - string, title of the template.
  *          content - string, content of the template.
  *
  *        Examples:
- *          action=createTemplate&id=6&title=Test Template 2&content=Hello again, template!
+ *          action=updateTemplate&id=example&title=Test Template 2&content=Hello again, template!
  *
  *        Returns Codes/Int:
- *          -1 could not connect to db
- *          <ID> ID of the newly created template otherwise.
+ *         -3 - Template exists and override is false
+ *         -2 - Template does not exist and required fields are not provided, or 'update' is true
+ *         -1 - Could not connect to db
+ *          0 - All good
  *________________________________________
  * deleteTemplates
  *      - Deletes templates
  *          ids - string, JSON encoded array of ids of the templates.
  *
  *        Examples:
- *          action=deleteTemplates&ids=[4,5,6]
+ *          action=deleteTemplates&ids=["example","example_2"]
  *
  *        Returns Array of the form :
  *          [
@@ -98,14 +80,14 @@
  *
  *
 */
-if(!defined('coreInit'))
-    require __DIR__ . '/../../main/coreInit.php';
+if(!defined('IOFrameMainCoreInit'))
+    require __DIR__ . '/../../main/core_init.php';
 
 require __DIR__ . '/../apiSettingsChecks.php';
 require __DIR__ . '/../defaultInputChecks.php';
 require __DIR__ . '/../defaultInputResults.php';
 require __DIR__ . '/../CSRF.php';
-require __DIR__ . '/../../IOFrame/Handlers/MailHandler.php';
+require __DIR__ . '/../../IOFrame/Managers/MailManager.php';
 require 'mail_fragments/definitions.php';
 
 if($test){
@@ -114,31 +96,15 @@ if($test){
         echo htmlspecialchars($key.': '.$value).EOL;
 }
 
-$MailHandler = new IOFrame\Handlers\MailHandler(
-    $settings,
-    $defaultSettingsParams
-);
-
 if(!isset($_REQUEST["action"]))
     exit('Action not specified!');
 
 $action = $_REQUEST['action'];
 
-if(!checkApiEnabled('mail',$apiSettings,$_REQUEST['action']))
+if(!checkApiEnabled('mail',$apiSettings,$SecurityHandler,$_REQUEST['action']))
     exit(API_DISABLED);
 
 switch($action){
-    case 'mailTo':
-        $arrExpected = ["mail","secToken","subj","mName1","mName2","type","templateNum","mBody","varArray"];
-
-        require __DIR__ . '/../setExpectedInputs.php';
-        require 'mail_fragments/mailTo_checks.php';
-        require 'mail_fragments/mailTo_auth.php';
-        require 'mail_fragments/mailTo_execution.php';
-
-        echo ($result === 0)?
-            '0' : $result;
-        break;
 
     case 'getTemplates':
         $arrExpected = ["ids","limit","offset","createdAfter","createdBefore","changedAfter","changedBefore","includeRegex","excludeRegex"];
@@ -154,7 +120,7 @@ switch($action){
     case 'createTemplate':
     case 'updateTemplate':
 
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = ["id","title","content"];
@@ -170,7 +136,7 @@ switch($action){
 
     case 'deleteTemplates':
 
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = ["ids"];

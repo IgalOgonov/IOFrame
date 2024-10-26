@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('add-2fa', {
     mixins: [sourceURL,eventHubManager,IOFrameCommons],
     props: {
@@ -141,7 +138,7 @@ Vue.component('add-2fa', {
             const maxVer = this.options.maxVer? this.options.maxVer : 40;
             const mask = this.options.mask? this.options.mask : -1;
             const boostECC  = this.options.boostECC? this.options.boostECC : true;
-            const text = "otpauth://totp/LABEL:"+this.QR.mail+"?secret="+(this.test? 'JBSWY3DPEHPK3PXP' : this.QR.secret)+"&issuer="+(this.test? this.QR.issuer+' Test' : this.QR.issuer);
+            const text = "otpauth://totp/"+this.QR.mail+"?secret="+(this.test? 'JBSWY3DPEHPK3PXP' : this.QR.secret)+"&issuer="+(this.test? this.QR.issuer+' Test' : this.QR.issuer);
             const segs = qrcodegen.QrSegment.makeSegments(text);
             const qr = qrcodegen.QrCode.encodeSegments(segs, ecl, minVer, maxVer, mask, boostECC);
             const code = qr.toSvgString(this.options.border? (this.options.border - 0) : 0);
@@ -227,6 +224,7 @@ Vue.component('add-2fa', {
 
             let message;
             let messageType = 'error';
+            let extraParams = {};
 
             switch (response){
                 case 'AUTHENTICATION_FAILURE':
@@ -242,6 +240,7 @@ Vue.component('add-2fa', {
                     break;
                 case '0':
                     messageType = 'success';
+                    extraParams = {autoDismiss:2000};
                     message = this.text.responses[response];
                     this.success = true;
                     break;
@@ -258,7 +257,7 @@ Vue.component('add-2fa', {
                     }
             }
             if(this.alertOptions.use && message)
-                alertLog(message,messageType);
+                alertLog(message,messageType,document.body,extraParams);
             eventHub.$emit('twoFactorAppResponse',{
                 action:action,
                 response:response,

@@ -1,6 +1,3 @@
-if (eventHub === undefined)
-    var eventHub = new Vue();
-
 /** Common Site functions
  * **/
 const indexedDBInterface = {
@@ -10,9 +7,9 @@ const indexedDBInterface = {
     },
     methods: {
         /** Promise that gets items from a specific DB
-         *  @var string|IDBOpenDBRequest Either - database name, or an already open request to a database.
-         *  @var string[] items - items to get from the database(by ID)
-         *  @var object params Parameters of the form:
+         *  @param {string|IDBOpenDBRequest} Either - database name, or an already open request to a database.
+         *  @param {string[]} items - items to get from the database(by ID)
+         *  @param {object} params Parameters of the form:
          *              {
          *                  //In the function that return "outcome", an alternative function needs to return value as well,
          *                  //where the value determines whether the function keeps running or resolves (although it can be left undefined, and still resolves/return)
@@ -42,7 +39,7 @@ const indexedDBInterface = {
          *                  }
          *              }
          *
-         *  @returns null Typically resolves once with an object of the form {
+         *  @return {null} Typically resolves once with an object of the form {
          *          outcome:<bool, whether the items were fetched>,
          *          reason:<string, if outcome was "false", states the reason for failure>,
          *          items: {
@@ -93,8 +90,8 @@ const indexedDBInterface = {
             });
         },
         /** Promise that sets items to in specific DB
-         *  @var string|IDBOpenDBRequest Either - database name, or an already open request to a database.
-         *  @var object[] items - Array of objects of the form:
+         *  @param {string|IDBOpenDBRequest} Either - database name, or an already open request to a database.
+         *  @param {object[]} items - Array of objects of the form:
          *                      {
          *                          [key]:<string, item key>,
          *                          value:<item itself>,
@@ -104,8 +101,8 @@ const indexedDBInterface = {
          *                              merge:<bool, default false - another object with similar key exists, (deep)merges the two instead of overwriting>
          *                          }
          *                      }
-         *  @var object params Similar to getFromIndexedDB
-         *  @returns null Typically resolves once with an object of the form {
+         *  @param {object} params Similar to getFromIndexedDB
+         *  @return {null} Typically resolves once with an object of the form {
          *          outcome:<bool, whether the items were fetched>,
          *          reason:<string, if outcome was "false", states the reason for failure>,
          *          items: {
@@ -121,7 +118,7 @@ const indexedDBInterface = {
             /* Set default params */
             this._parseParams(params);
 
-            //If the user passed an open reqeust but didn't pass the DB name, this function is invalid
+            //If the user passed an open request but didn't pass the DB name, this function is invalid
             if(!params.db.name && dbRequestOpen){
                 return new Promise(function(resolve, reject) {
                     console.warn('Invalid function inputs!');
@@ -269,7 +266,7 @@ const indexedDBInterface = {
             //When the last object fetch request returned
             transaction.oncomplete = function(event) {
                 //Set/add new items
-                let transaction2 = db.transaction([params.db.name], "readwrite");
+                let transaction2 = db.transaction([params.db.name], "readwrite",{durability:"strict"});
                 let objectStore2 = transaction2.objectStore(params.db.name);
                 for(let i in items){
                     let item = items[i];

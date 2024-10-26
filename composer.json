@@ -13,27 +13,35 @@
         }
     ],
     "require": {
-        "php": "^7.4|^8.0",
+        "php": "^8.0",
+        "ext-bcmath": "*",
+        "ext-curl": "*",
         "ext-gd": "*",
+        "ext-iconv": "*",
+        "ext-json": "*",
+        "ext-openssl": "*",
+        "ext-pdo": "*",
+        "ext-redis": "*",
+        "ext-exif": "*",
         "altorouter/altorouter": "^2.0",
+        "composer/composer": "*",
         "ezyang/htmlpurifier": "^4.0",
+        "guzzlehttp/psr7": "*",
+        "kekos/multipart-form-data-parser": "1.*",
+        "league/openapi-psr7-validator": "0.*",
+        "mailgun/mailgun-php": "^3.6",
         "matthiasmullie/minify": "^1.3",
-        "scssphp/scssphp": "^1.4",
         "monolog/monolog": "^2.2",
+        "nyholm/psr7": "^1.6.1",
+        "php-http/curl-client": "*",
+        "php-http/discovery": "*",
+        "php-http/message": "*",
         "phpmailer/phpmailer": "^6.3",
         "robthree/twofactorauth": "^1.7",
+        "scssphp/scssphp": "^1.4",
         "symfony/http-foundation": "^5.2",
-        "nyholm/psr7": "^1.3.2",
         "symfony/psr-http-message-bridge": "^2.0.2",
-        "league/openapi-psr7-validator": "^0.15.2",
-		"kekos/multipart-form-data-parser": "1.*",
-		"twilio/sdk": "^5.0",
-		"php-http/discovery": "*", 
-		"php-http/curl-client": "*", 
-		"guzzlehttp/psr7": "*",
-		"php-http/message": "*",
-		"mailgun/mailgun-php": "*",
-
+        "symfony/string": "6.4.x-dev"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
@@ -51,7 +59,9 @@
     },
     "config": {
         "optimize-autoloader": true,
-        "sort-packages": true
-    },
-    "minimum-stability": "dev"
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    }
 }

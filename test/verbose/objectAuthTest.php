@@ -1,18 +1,18 @@
 <?php
 require __DIR__.'/../../IOFrame/Handlers/ObjectAuthHandler.php';
 
-$ObjectAuthHandler = new IOFrame\Handlers\ObjectAuthHandler($settings,$defaultSettingsParams);
+$ObjectAuthHandler = new \IOFrame\Handlers\ObjectAuthHandler($settings,$defaultSettingsParams);
 
 /* ------------------------------------------------------------
                         Gets
  ------------------------------------------------------------ */
 
-echo EOL.'Getting all categories without conditions:'.EOL;
+echo EOL.'Getting all categories without conditions (limit 20):'.EOL;
 var_dump(
     $ObjectAuthHandler->getItems(
         [],
         'categories',
-        ['test'=>true,'verbose'=>true]
+        ['test'=>true,'verbose'=>true,'limit'=>20]
     )
 );
 
@@ -44,6 +44,52 @@ var_dump(
         [
             'test'=>true,
             'verbose'=>true
+        ]
+    )
+);
+
+// The following was done after creating seeding the db with 1,000 categories, creation time set randomly withing the last 365 days
+echo EOL.'Getting All Category creation dates by 7 days intervals (no time limit, LIMIT 0)'.EOL;
+var_dump(
+    $ObjectAuthHandler->getItems(
+        [],
+        'categories',
+        [
+            'test'=>true,
+            'verbose'=>true,
+            'limit'=>0,
+            'replaceTypeArray'=>[
+                'extraToGet'=>[
+                    'Created'=>[
+                        'key'=>'intervals',
+                        'type'=>'count_interval',
+                        'intervals'=>7*24*3600
+                    ]
+                ]
+            ]
+        ]
+    )
+);
+
+echo EOL.'Getting All Category creation dates by 1 day intervals (30 days limit, LIMIT 0)'.EOL;
+var_dump(
+    $ObjectAuthHandler->getItems(
+        [],
+        'categories',
+        [
+            'test'=>true,
+            'verbose'=>true,
+            'limit'=>0,
+            'createdAfter'=>time()-3600*24*30,
+            'replaceTypeArray'=>[
+                'extraToGet'=>[
+                    'Created'=>[
+                        'key'=>'intervals',
+                        'type'=>'count_interval',
+                        'intervals'=>24*3600
+                    ]
+                ]
+            ]
         ]
     )
 );

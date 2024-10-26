@@ -3,10 +3,11 @@
 
 require $settings->getSetting('absPathToRoot').'front/ioframe/templates/definitions.php';
 
+$isLoginPage = true;
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_start.php';
 
 array_push($CSS, 'cp.css','popUpTooltip.css', 'modules/CPMenu.css', 'modules/loginRegister.css');
-array_push($JS, 'ezPopup.js', 'mixins/eventHubManager.js','mixins/sourceUrl.js', 'modules/CPMenu.js', 'modules/loginRegister.js');
+array_push($JS, 'ezPopup.js','mixins/sourceUrl.js', 'modules/CPMenu.js', 'modules/loginRegister.js');
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_get_resources.php';
 
@@ -28,12 +29,12 @@ $siteConfig = array_merge($siteConfig,
 );
 $inviteToken = empty($_SESSION['VALID_INVITE_TOKEN'])?null:$_SESSION['VALID_INVITE_TOKEN'];
 $inviteMail = empty($_SESSION['VALID_INVITE_MAIL'])?null:$_SESSION['VALID_INVITE_MAIL'];
-$userSettings = new IOFrame\Handlers\SettingsHandler($rootFolder.SETTINGS_DIR_FROM_ROOT.'/userSettings/');
+$userSettings = new \IOFrame\Handlers\SettingsHandler($rootFolder.\IOFrame\Handlers\SettingsHandler::SETTINGS_DIR_FROM_ROOT.'/userSettings/');
 $siteConfig['login'] = [
-    'hasRememberMe'=>$userSettings->getSetting('rememberMe')? true: false,
+    'hasRememberMe'=> (bool)$userSettings->getSetting('rememberMe'),
 ];
 $siteConfig['register'] = [
-    'canRegister'=>(bool)($userSettings->getSetting('selfReg') || $inviteToken),
+    'canRegister'=> $userSettings->getSetting('selfReg') || $inviteToken,
     'canHaveUsername'=>$userSettings->getSetting('usernameChoice') < 2,
     'requiresUsername'=>$userSettings->getSetting('usernameChoice') == 0,
     'inviteToken'=>$inviteToken,
@@ -52,7 +53,8 @@ $siteConfig['register'] = [
 <body>
 
 <div class="wrapper">
-<?php if($auth->isLoggedIn()) require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot.'modules/CPMenu.php';?>
+<?php if($auth->isLoggedIn() && empty($banned)) require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot.'modules/CPMenu.php';?>
+<?php if($banned) require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'user_banned.php'; ?>
 <?php require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot.'modules/loginRegister.php';?>
 
  </div>
@@ -69,5 +71,3 @@ $frontEndResourceTemplateManager->printResources('JS');
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'footers_end.php';
 
 echo '<script src="https://hcaptcha.com/1/api.js&render=explicit" async defer></script>';
-
-?>

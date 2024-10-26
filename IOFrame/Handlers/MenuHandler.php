@@ -1,56 +1,50 @@
 <?php
 namespace IOFrame\Handlers{
-    use IOFrame;
-    use Monolog\Logger;
-    define('MenuHandler',true);
-    if(!defined('abstractObjectsHandler'))
-        require 'abstractObjectsHandler.php';
+    define('IOFrameHandlersMenuHandler',true);
 
     /** The menu handler is meant to handle simple menus.
      * @author Igal Ogonov <igal1333@hotmail.com>
-     * @license LGPL
      * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
      */
-    class MenuHandler extends IOFrame\abstractObjectsHandler{
+    class MenuHandler extends \IOFrame\Generic\ObjectsHandler{
 
 
         /**
          * @var string The table name where the menu resides
          */
-        protected $tableName = 'MENUS';
+        protected string $tableName = 'MENUS';
 
         /**
          * @var string The table key column for the menu
          */
-        protected $tableKeyCol = 'Menu_ID';
+        protected string $tableKeyCol = 'Menu_ID';
 
         /**
          * @var string The table column storing the value of the menu
          */
-        protected $menuValueCol = 'Menu_Value';
+        protected string $menuValueCol = 'Menu_Value';
 
         /**
          * @var string The table column storing the menu meta
          */
-        protected $menuMetaCol = 'Meta';
+        protected string $menuMetaCol = 'Meta';
 
         /**
          * @var string The cache name for the menu
          */
-        protected $cacheName = 'menu_';
+        protected string $cacheName = 'menu_';
 
         /**
          * Basic construction function
          * @param SettingsHandler $settings local settings handler.
          * @param array $params Typical default settings array
          */
-        function __construct(SettingsHandler $settings, $params = []){
+        function __construct(\IOFrame\Handlers\SettingsHandler $settings, $params = []){
 
             $this->validObjectTypes = ['menus'];
             $this->objectsDetails = [
                 'menus' => [
                     'tableName' => 'MENUS',
-                    'extendTTL' => true,
                     'cacheName' => 'menu_',
                     'keyColumns' => ['Menu_ID'],
                     'safeStrColumns' => ['Menu_Value'],
@@ -111,7 +105,7 @@ namespace IOFrame\Handlers{
          *      -1 Database Error
          */
         function getMenu(string $identifier, array $params = []){
-            $safeStr = isset($params['safeStr'])? $params['safeStr'] : true;
+            $safeStr = !isset($params['safeStr']) || $params['safeStr'];
 
             $result = $this->getFromCacheOrDB(
                 [$identifier],
@@ -123,11 +117,11 @@ namespace IOFrame\Handlers{
             )[$identifier];
 
             if(is_array($result)){
-                if(!empty($result['Meta']) && IOFrame\Util\is_json($result['Meta']))
+                if(!empty($result['Meta']) && \IOFrame\Util\PureUtilFunctions::is_json($result['Meta']))
                     $meta = json_decode($result['Meta'],true);
                 else
                     $meta = [];
-                if(!empty($result['Title']) && IOFrame\Util\is_json($result['Title']))
+                if(!empty($result['Title']) && \IOFrame\Util\PureUtilFunctions::is_json($result['Title']))
                     $title = json_decode($result['Title'],true);
                 else
                     $title = null;
@@ -136,8 +130,8 @@ namespace IOFrame\Handlers{
                     $result = [];
                 else{
                     if($safeStr)
-                        $result = IOFrame\Util\safeStr2Str($result);
-                    if(!IOFrame\Util\is_json($result))
+                        $result = \IOFrame\Util\SafeSTRFunctions::safeStr2Str($result);
+                    if(!\IOFrame\Util\PureUtilFunctions::is_json($result))
                         $result =  -3;
                     else
                         $result = json_decode($result, true);
@@ -192,12 +186,10 @@ namespace IOFrame\Handlers{
         function setMenuItems(string $identifier, array $inputs, array $params = []){
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
-            $safeStr = isset($params['safeStr'])? $params['safeStr'] : true;
+            $useCache = $params['useCache'] ?? $this->defaultSettingsParams['useCache'];
+            $safeStr = !isset($params['safeStr']) || $params['safeStr'];
 
-            if(isset($params['existing']))
-                $existingMenu = $params['existing'];
-            else
-                $existingMenu = $this->getMenu($identifier,array_merge($params,['updateCache'=>false]));
+            $existingMenu = $params['existing'] ?? $this->getMenu($identifier, array_merge($params, ['updateCache' => false]));
 
             if(!is_array($existingMenu))
                 return $existingMenu;
@@ -240,63 +232,55 @@ namespace IOFrame\Handlers{
             }
             $existingMenu = json_encode($existingMenu);
             if($safeStr)
-                $existingMenu = IOFrame\Util\str2SafeStr($existingMenu);
+                $existingMenu = \IOFrame\Util\SafeSTRFunctions::str2SafeStr($existingMenu);
 
-            $res = $this->SQLHandler->updateTable(
-                $this->SQLHandler->getSQLPrefix().$this->tableName,
+            $res = $this->SQLManager->updateTable(
+                $this->SQLManager->getSQLPrefix().$this->tableName,
                 [$this->menuValueCol.' = "'.$existingMenu.'"'],
                 [$this->tableKeyCol,$identifier,'='],
                 $params
             );
             if($res){
                 $res = 0;
-                if(!$test)
-                    $this->RedisHandler->call('del',[$this->cacheName.$identifier]);
+                if(!$test && $useCache)
+                    $this->RedisManager->call('del',[$this->cacheName.$identifier]);
                 if($verbose)
                     echo 'Deleting cache of '.$this->cacheName.$identifier.EOL;
             }
-            else
+            else{
+                $this->logger->error('Could not update menu',['identifier'=>$identifier]);
                 $res = -1;
+            }
             return $res;
         }
 
         /** Moves one branch of the menu to a different root
          * @param string $identifier Identifier of branch
          * @param string $blockIdentifier Identifier of branch
-         * @param string $sourceAddress Source address
-         * @param string $targetAddress Target address
+         * @param array $sourceAddress Source address
+         * @param array $targetAddress Target address
          * @param array $params
          *          'override' - bool, default false. Whether to override a block with similar address at target address.
          *          'updateOrder' - bool, default true. Will update target and source orders, if possible.
          *          'orderIndex' - int, if set, will insert the target into a specific index at the order. Otherwise,
          *                         if updateOrder is set, will insert it into the end.
          *          'safeStr' - bool, default true. Whether to convert Meta to a safe string
-         * @returns int Code of the form:
-         *      -3 Menu not a valid json somehow
-         *      -2 Menu not found for some reason
-         *      -1 Database Error
-         *       0 All good
-         *       1 One of the parents for the source not found
-         *       2 One of the parents for the target not found
-         *       3 Source identifier does not exist
-         *       4 Address identifier exists and override is false
+         * @return int|mixed
          */
         function moveMenuBranch(string $identifier, string $blockIdentifier, array $sourceAddress, array $targetAddress, array $params = []){
             $test = $params['test']?? false;
             $verbose = $params['verbose'] ?? $test;
-            $override = isset($params['override'])? $params['override'] : false;
-            $safeStr = isset($params['safeStr'])? $params['safeStr'] : true;
-            $updateOrder = isset($params['updateOrder'])? $params['updateOrder'] : true;
-            $orderIndex = isset($params['orderIndex'])? $params['orderIndex'] : -1;
+            $useCache = $params['useCache'] ?? $this->defaultSettingsParams['useCache'];
+            $override = $params['override'] ?? false;
+            $safeStr = !isset($params['safeStr']) || $params['safeStr'];
+            $updateOrder = $params['updateOrder'] ?? true;
+            $orderIndex = $params['orderIndex'] ?? -1;
 
             $sameAddress = (count($sourceAddress) === count($targetAddress) && count(array_diff($sourceAddress,$targetAddress)) === 0);
             if($sameAddress && !$updateOrder)
                 return 0;
 
-            if(isset($params['existing']))
-                $existingMenu = $params['existing'];
-            else
-                $existingMenu = $this->getMenu($identifier,array_merge($params,['updateCache'=>false]));
+            $existingMenu = $params['existing'] ?? $this->getMenu($identifier, array_merge($params, ['updateCache' => false]));
 
             if(!is_array($existingMenu))
                 return $existingMenu;
@@ -352,7 +336,7 @@ namespace IOFrame\Handlers{
                     if(!$replacing){
                         $orderIndex = ($orderIndex<0 || $orderIndex > $targetCount - 1 ) ? $targetCount : $orderIndex;
                         if($targetCount === $orderIndex)
-                            array_push($target['order'],$blockIdentifier);
+                            $target['order'][] = $blockIdentifier;
                         else
                             array_splice($target['order'],$orderIndex,0,$blockIdentifier);
                     }
@@ -366,7 +350,7 @@ namespace IOFrame\Handlers{
                                     $orderIndex = max(0,$orderIndex-1);
                             }
                             if($targetCount === $orderIndex)
-                                array_push($target['order'],$blockIdentifier);
+                                $target['order'][] = $blockIdentifier;
                             else
                                 array_splice($target['order'],min($orderIndex,$targetCount - 1),0,$blockIdentifier);
                         }
@@ -381,10 +365,10 @@ namespace IOFrame\Handlers{
 
             $existingMenu = json_encode($existingMenu);
             if($safeStr)
-                $existingMenu = IOFrame\Util\str2SafeStr($existingMenu);
+                $existingMenu = \IOFrame\Util\SafeSTRFunctions::str2SafeStr($existingMenu);
 
-            $res = $this->SQLHandler->updateTable(
-                $this->SQLHandler->getSQLPrefix().$this->tableName,
+            $res = $this->SQLManager->updateTable(
+                $this->SQLManager->getSQLPrefix().$this->tableName,
                 [$this->menuValueCol.' = "'.$existingMenu.'"'],
                 [$this->tableKeyCol,$identifier,'='],
                 $params
@@ -392,13 +376,15 @@ namespace IOFrame\Handlers{
 
             if($res){
                 $res = 0;
-                if(!$test)
-                    $this->RedisHandler->call('del',[$this->cacheName.$identifier]);
+                if(!$test && $useCache)
+                    $this->RedisManager->call('del',[$this->cacheName.$identifier]);
                 if($verbose)
                     echo 'Deleting cache of '.$this->cacheName.$identifier.EOL;
             }
-            else
+            else{
+                $this->logger->error('Could not update menu',['identifier'=>$identifier]);
                 $res = -1;
+            }
 
             return $res;
         }
@@ -407,5 +393,3 @@ namespace IOFrame\Handlers{
     }
 
 }
-
-?>

@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('media-viewer', {
     mixins:[
         eventHubManager,
@@ -147,7 +144,7 @@ Vue.component('media-viewer', {
                     <div class="thumbnail-container">\
                         <img \
                             v-if="item.folder" \
-                            :src="absoluteIOFrameImage(\'icons/folder.png\')"\
+                            :src="absoluteIOFrameImage(\'icons/folder.svg\')"\
                             :draggable="draggable"\
                             ondragstart="eventHub.$emit(\'dragStart\',event)"\
                             ondragenter="eventHub.$emit(\'dragEnter\',event)"\
@@ -185,8 +182,8 @@ Vue.component('media-viewer', {
     methods: {
         //Extracts the name of an item
         extractName: function(item){
-            if(document.selectedLanguage && (item[document.selectedLanguage+'_name'] !== undefined) )
-                return item[document.selectedLanguage+'_name'];
+            if(document.ioframe.selectedLanguage && (item[document.ioframe.selectedLanguage+'_name'] !== undefined) )
+                return item[document.ioframe.selectedLanguage+'_name'];
             else if(item.name){
                 return item.name;
             }
@@ -223,13 +220,13 @@ Vue.component('media-viewer', {
             if(url!=='')
                 data.append('address', url);
             //Api url
-            let apiURL = document.pathToRoot+"api/v1/media";
-            var test = this.test;
-            var verbose = this.verbose;
-            var thisElement = this.$el;
-            var identifier = this.identifier;
-            var onlyFolders = this.onlyFolders;
-            var onlyPictures = this.onlyPictures;
+            let apiURL = document.ioframe.pathToRoot+"api/v1/media";
+            let test = this.test;
+            let verbose = this.verbose;
+            let thisElement = this.$el;
+            let identifier = this.identifier;
+            let onlyFolders = this.onlyFolders;
+            let onlyPictures = this.onlyPictures;
             //Assume request succeeded and images are not gonna be cropped
             this.imagesNeedCropping = true;
             //Request itself
@@ -332,10 +329,10 @@ Vue.component('media-viewer', {
                 (img.dataType? this.calculateDBImageLink(img) : img.identifier)
         },
         absoluteMediaURL:function(relativeURL , type = this.mediaType){
-            return document.rootURI + document[(type=== 'img'?'imagePathLocal':'videoPathLocal')]+relativeURL;
+            return document.ioframe.rootURI + document.ioframe[(type=== 'img'?'imagePathLocal':'videoPathLocal')]+relativeURL;
         },
         calculateDBImageLink: function(item){
-            let url = document.rootURI+'api/media?action=getDBMedia&address='+item.identifier+'&resourceType='+this.mediaType;
+            let url = document.ioframe.rootURI+'api/media?action=getDBMedia&address='+item.identifier+'&resourceType='+this.mediaType;
             if(item.lastChanged)
                 url = url+'&lastChanged='+item.lastChanged.toString();
             return url;
@@ -377,7 +374,7 @@ Vue.component('media-viewer', {
                             }
                         };
                     }
-                };
+                }
                 this.imagesCropped = true;
             }
             else{
@@ -411,7 +408,7 @@ Vue.component('media-viewer', {
             }
         },
         isDraggedOver: function(key){
-            return(this.dragAboveElement !== '' && key == this.dragAboveElement && key != this.dragStartElement);
+            return(this.dragAboveElement !== '' && (key === this.dragAboveElement) && (key !== this.dragStartElement));
         },
         // ---- DRAG RELATED STARTS HERE ----
         dragStart: function(event){

@@ -7,8 +7,16 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_s
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'cp_redirect_to_login.php';
 
-array_push($CSS, 'cp.css', 'components/searchList.css', 'components/tokens/tokensEditor.css', 'modules/tokens.css', 'modules/CPMenu.css');
-array_push($JS, 'mixins/sourceUrl.js', 'mixins/eventHubManager.js', 'components/searchList.js', 'components/tokens/tokensEditor.js', 'modules/CPMenu.js', 'modules/tokens.js');
+array_push($CSS, 'cp.css', 'components/searchList.css', 'modules/CPMenu.css');
+array_push($JS, 'mixins/sourceUrl.js', 'mixins/searchListFilterSaver.js', 'components/searchList.js', 'modules/CPMenu.js');
+$CSSPackages['CPTokensCSS'] = [
+    'items'=>[  'components/tokens/tokensEditor.css', 'modules/tokens.css'],
+    'order'=>-1
+];
+$JSPackages['CPTokensJS'] = [
+    'items'=>[ 'components/tokens/tokensEditor.js', 'modules/tokens.js'],
+    'order'=>-1
+];
 
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_get_resources.php';
@@ -56,5 +64,3 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'footers_s
 $frontEndResourceTemplateManager->printResources('JS');
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'footers_end.php';
-
-?>

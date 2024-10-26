@@ -1,1 +1,0 @@
-{"restore":{"name":"Restore Last Comment Backup?","type":"radio","list":{"Yes":1,"No":0},"desc":"Will attempt to restore comments (FROM THIS SYSTEM, not a different install) that were deleted on previous plugin uninstall.","optional":true}}

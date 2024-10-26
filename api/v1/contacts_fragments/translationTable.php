@@ -57,7 +57,7 @@ $translationTable = array_merge($translationTable,[
         'newName'=>'extraInfo',
         'isJson'=>true
     ],
-    'Created_On'=>[
+    'Created'=>[
         'newName'=>'created'
     ],
     'Last_Updated'=>[

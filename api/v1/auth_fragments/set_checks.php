@@ -1,7 +1,6 @@
 <?php
 
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 
 if($params == null){
     if($test)
@@ -25,7 +24,7 @@ foreach($params[$expectedParam] as $name=>$description){
         $params[$expectedParam][$name] = null;
     }
 
-    if(!\IOFrame\Util\validator::validateSQLKey($name)){
+    if(!\IOFrame\Util\ValidatorFunctions::validateSQLKey($name)){
         if($test)
             echo 'Each member of '.$expectedParam.' must be a valid string of 1 to 256 characters!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);

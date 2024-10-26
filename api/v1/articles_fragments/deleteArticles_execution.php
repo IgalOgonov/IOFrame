@@ -3,7 +3,7 @@ $ArticleHandler = new \IOFrame\Handlers\ArticleHandler($settings,$defaultSetting
 
 $deleteItems = [];
 foreach($inputs['articles'] as $index => $id){
-    array_push($deleteItems,['Article_ID'=>$id]);
+    $deleteItems[] = ['Article_ID' => $id];
 }
 
 $result = !$inputs['permanentDeletion'] ?

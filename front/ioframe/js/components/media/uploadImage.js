@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('media-uploader', {
     mixins:[eventHubManager,IOFrameCommons,sourceURL],
     props: {
@@ -36,7 +33,7 @@ Vue.component('media-uploader', {
     },
     data: function(){
         return {
-            languages: JSON.parse(JSON.stringify(document.languages)),
+            languages: JSON.parse(JSON.stringify(document.ioframe.languages)),
             newMediaInfo:{
                 identifier:this.randomIdentifier(),
                 link: '',
@@ -87,8 +84,8 @@ Vue.component('media-uploader', {
             v-text="'Toggle Media Type - Current type is '+(remoteType === 'db'? 'Database' : 'Link')"
              ></button>
             <div :style="remoteType === 'link' ? 'display:none' : ''" class="image-container">
-                <img v-if="mediaType === 'img'" class="upload-preview" :src="imageURL('general/upload-image.png')">
-                <video v-else="" class="upload-preview" src="" :loop="videoState.looping" :muted="videoState.muted" :poster="uploaded ? '' : imageURL('general/upload-image.png') " preload="auto"></video>
+                <img v-if="mediaType === 'img'" class="upload-preview" :src="imageURL('icons/upload.svg')">
+                <video v-else="" class="upload-preview" src="" :loop="videoState.looping" :muted="videoState.muted" :poster="uploaded ? '' : imageURL('icons/upload.svg') " preload="auto"></video>
                 <input
                 class="upload-address"
                 name="upload"
@@ -217,7 +214,7 @@ Vue.component('media-uploader', {
         //Emits an event when the user-uploaded image was loaded
         updateImageDetailsWhenLoaded: function(){
             const image = this.$el.querySelector('.image-uploader .upload-preview');
-            var identifier = this.identifier;
+            let identifier = this.identifier;
             if(this.mediaType === 'img')
                 image.onload = function(){
                     const request = {
@@ -313,7 +310,7 @@ Vue.component('media-uploader', {
             this.uploaded = false;
             const image = this.$el.querySelector('.image-uploader .upload-preview');
             image.onload = function(){};
-            image.src = this.imageURL('general/upload-image.png');
+            image.src = this.imageURL('icons/upload.svg');
         },
         //Happens when the user image was uploaded
         imageUploaded: function(response){
@@ -369,7 +366,7 @@ Vue.component('media-uploader', {
                                 alertLog('Media upload would work, but requested gallery does not exist!','error',this.$el);
                                 break;
                             default:
-                                alertLog('Media successfully uploaded <a href="'+document.rootURI+response[uploadName]+'">here</a>','success',this.$el);
+                                alertLog('Media successfully uploaded <a href="'+document.ioframe.rootURI+response[uploadName]+'">here</a>','success',this.$el,{autoDismiss:2000});
                                 this.resetImage();
                         }
                     }
@@ -392,7 +389,7 @@ Vue.component('media-uploader', {
                                     alertLog('Could not upload a file because safeMode is true and the file type isn\'t supported!','error',this.$el);
                                     break;
                                 case 0:
-                                    alertLog('Media successfully uploaded <a href="'+document.rootURI+'api/v1/media?action=getDBMedia&address='+this.newMediaInfo.identifier+'">here</a>','success',this.$el);
+                                    alertLog('Media successfully uploaded <a href="'+document.ioframe.rootURI+'api/v1/media?action=getDBMedia&address='+this.newMediaInfo.identifier+'">here</a>','success',this.$el,{autoDismiss:2000});
                                     this.resetImage();
                                     break;
                                 case 105:
@@ -416,13 +413,11 @@ Vue.component('media-uploader', {
                                 case 3:
                                     alertLog('Could not create new link, because it already exists! Edit the existing one to change things.','info',this.$el);
                                     break;
-                                    this.resetImage();
-                                    break;
                                 case 105:
                                     alertLog('Media upload would work, but requested gallery does not exist!','error',this.$el);
                                     break;
                                 default:
-                                    alertLog('Media successfully uploaded <a href="'+response[uploadName]+'">here</a>','success',this.$el);
+                                    alertLog('Media successfully uploaded <a href="'+response[uploadName]+'">here</a>','success',this.$el,{autoDismiss:2000});
                                     this.resetImage();
                             }
                         }
@@ -523,11 +518,11 @@ Vue.component('media-uploader', {
         },
         //Creates a random identifier for the image (db upload)
         randomIdentifier: function () {
-            var result = '';
-            var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-            var charactersLength = characters.length;
+            let result = '';
+            let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let charactersLength = characters.length;
             result += characters.charAt(Math.floor(Math.random() * (charactersLength - 10)));
-            for (var i = 0; i < 63; i++) {
+            for (let i = 0; i < 63; i++) {
                 result += characters.charAt(Math.floor(Math.random() * charactersLength));
             }
             return result;
@@ -543,7 +538,7 @@ Vue.component('media-uploader', {
         if(this.verbose){
             console.log('Uploader ',this.identifier,' mounted!');
         }
-        var identifier = this.identifier;
+        let identifier = this.identifier;
         bindImagePreview(
             this.$el.querySelector('.image-uploader .upload-address'),
             this.$el.querySelector('.image-uploader .upload-preview'),

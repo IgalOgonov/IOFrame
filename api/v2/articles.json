@@ -1,0 +1,3038 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "IOFrame-Core APIs",
+    "description": "IOFrame is an API-based, Fullstack PHP Framework. Articles core API",
+    "termsOfService": "",
+    "contact": {
+      "name": "Igal Ogonov",
+      "email": "igal@iosoft.io"
+    },
+    "version": "1.0"
+  },
+  "servers": [
+    {
+      "url": "%%ROOT_URL%%api/v2",
+      "description": "Relative API location from server root. Usability may vary based on the actual system."
+    }
+  ],
+  "tags": [
+    {
+      "name": "Articles API",
+      "description": "Articles and article comments"
+    }
+  ],
+  "paths": {
+    "/articles": {
+      "get": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Gets articles.",
+        "description": "Gets all available articles, or specific articles. Will not get article blocks (the content) with this action.",
+        "operationId": "articles-search",
+        "parameters": [
+          {
+            "name": "keys",
+            "in": "query",
+            "description": "Specific article IDs which you wish to get",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "integer",
+                "format": "int64"
+              }
+            },
+            "example": "1,2,3"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "SQL pagination parameter",
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "example": 25
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "SQL pagination parameter",
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "example": 25
+          },
+          {
+            "name": "orderBy",
+            "in": "query",
+            "description": "Possible columns to order by.\n The value is 'weight' is automatically added first.",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "Article_ID",
+                  "Created",
+                  "Last_Updated",
+                  "Article_Weight"
+                ]
+              },
+              "default": ""
+            },
+            "example": "Article_ID,Created"
+          },
+          {
+            "name": "orderType",
+            "in": "query",
+            "description": "Descending or ascending item order",
+            "schema": {
+              "$ref": "#/components/schemas/StandardBooleanAsNumber"
+            },
+            "example": 0
+          },
+          {
+            "name": "languageIs",
+            "in": "query",
+            "description": "Match articles with specific language - emppty string signifies the default language",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z]{0,32}$|^@$",
+              "default": ""
+            },
+            "example":"en"
+          },
+          {
+            "name": "titleLike",
+            "in": "query",
+            "description": "Limited regex to match title against.\n Note that this is only valid for ENGLISH, and this parameter needs to be rewritten or overwritten when supporting other languages, too.",
+            "schema": {
+              "$ref": "#/components/schemas/RegexRegex"
+            },
+            "example":"Test title"
+          },
+          {
+            "name": "addressIn",
+            "in": "query",
+            "description": "Array of specific addresses the title must match",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "$ref": "#/components/schemas/ArticleAddress"
+              },
+              "default": null
+            },
+            "example":"test-article-1,test-article-2"
+          },
+          {
+            "name": "createdBefore",
+            "in": "query",
+            "description": "Only show articles created before this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/Timestamp"
+            },
+            "example":1700000000
+          },
+          {
+            "name": "createdAfter",
+            "in": "query",
+            "description": "Only show articles created after this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/TimestampDefault0"
+            },
+            "example":1500000000
+          },
+          {
+            "name": "changedBefore",
+            "in": "query",
+            "description": "Only show articles changed before this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/Timestamp"
+            },
+            "example":1700000000
+          },
+          {
+            "name": "changedAfter",
+            "in": "query",
+            "description": "Only show articles changed after this Timestamp (in seconds).",
+            "schema": {
+              "$ref": "#/components/schemas/TimestampDefault0"
+            },
+            "example":1500000000
+          },
+          {
+            "name": "authAtMost",
+            "in": "query",
+            "description": "Only return items with view auth at most this.\n  1/2 without specific keys and 2 with specific keys require ownership of the article.\n  1 with specific keys requires ownership or relevant object auth for the articles, OR a sitewide setting marking allowing getting directly linked articles which are otherwise hidden.\n Auth 9999 is default for 'hidden' items that only an admin can get, and requires admin auth.",
+            "schema": {
+              "$ref": "#/components/schemas/ArticleAuthNumber"
+            },
+            "example":2
+          },
+          {
+            "name": "authIn",
+            "in": "query",
+            "description": "Auth is one of those values. Using this parameter requires admin auth.",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/components/schemas/ArticleAuthNumber"
+              }
+            },
+            "example":"1,2,3"
+          },
+          {
+            "name": "tagsIn",
+            "in": "query",
+            "description": "Specific article tags",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/components/schemas/ArticleTag"
+              }
+            },
+            "example": "1,2,3"
+          },
+          {
+            "name": "weightIn",
+            "in": "query",
+            "description": "Article weight is one of those values. Using this parameter requires admin auth.",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/components/schemas/StandardArticleWeight"
+              }
+            },
+            "example":"1,2,3"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns articles. The 'error' is only returned if an error has occured, otherwise 'articles' and 'meta' are returned.",
+                  "properties": {
+                    "articles": {
+                      "oneOf": [
+                        {
+                          "description": "Requested articles.",
+                          "type": "object",
+                          "patternProperties": {
+                            "^\\d+$": {
+                              "$ref": "#/components/schemas/ArticleWithoutBlocks"
+                            }
+                          }
+                        },
+                        {
+                          "$ref": "#/components/schemas/EmptyArrayIfNoResults"
+                        }
+                      ]
+                    },
+                    "meta": {
+                      "description": "Meta information about the requested articles - if relevant.",
+                      "properties":{
+                        "#":{
+                          "description": "Number of matching results",
+                          "type":"integer"
+                        },
+                        "creators":{
+                          "description": "IDs of all article creators (typically - writers)",
+                          "type":"array",
+                          "items": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Deletes articles.",
+        "description": "Deletes articles.",
+        "operationId": "delete-articles",
+        "parameters": [
+          {
+            "name": "permanent",
+            "in": "query",
+            "description": "If true, really deletes articles - otherwise, just sets their view auth to max (thus, hiding them from all but the admins).",
+            "schema": {
+              "$ref": "#/components/schemas/StandardBooleanAsNumber"
+            },
+            "example":1
+          },
+          {
+            "name": "ids",
+            "in": "query",
+            "description": "Article IDs",
+            "required": true,
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "integer"
+              }
+            },
+            "example":"1,2,3"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "description": "An object where each key is an article ID, and the value is the operation response - 0 success, -1 db connection error, AUTHENTICATION_FAILURE - lack of authentication for specific article",
+                      "type": "object"
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Create a new article",
+        "description": "Create a new article.",
+        "operationId": "create-article",
+        "requestBody": {
+          "description": "Article to create.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "required": ["title"],
+                "properties": {
+                  "safe": {
+                    "$ref": "#/components/schemas/StandardBooleanAsNumber"
+                  },
+                  "title":{
+                    "description": "Article title",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  },
+                  "subtitle":{
+                    "description": "Article subtitle - in systems where it's relevant",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "address":{
+                    "$ref": "#/components/schemas/ArticleAddress"
+                  },
+                  "resourceAddressLocal": {
+                    "$ref": "#/components/schemas/LocalResourceID"
+                  },
+                  "resourceAddressDB": {
+                    "$ref": "#/components/schemas/DBResourceID"
+                  },
+                  "resourceAddressURI": {
+                    "description": "Thumbnail address, when the image is a link. Will disregard this if regular address is passed",
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "alt":{
+                    "description": "Image alt",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "caption":{
+                    "description": "Caption for the thumbnail",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024
+                  },
+                  "name":{
+                    "description": "Caption for the thumbnail",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "articleAuth": {
+                    "$ref": "#/components/schemas/ArticleAuthNumber"
+                  },
+                  "weight": {
+                    "$ref": "#/components/schemas/StandardArticleWeight"
+                  },
+                  "language": {
+                    "type": "string",
+                    "description": "Article language",
+                    "pattern": "^[a-zA-Z]{0,32}$",
+                    "default": ""
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "description": "Response codes: -3 - Missing inputs when creating one of the items, -2 - One of the dependencies missing, -1 - unknown database error, >0 - ID of created item",
+                      "type": "integer"
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}": {
+      "get": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Gets an article, and its blocks",
+        "description": "Get an article. Will get article blocks (the content).",
+        "operationId": "article-id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article ID.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          },
+          {
+            "name": "authAtMost",
+            "in": "query",
+            "description": "Return items with view auth at most this. 0 is public, 1 requires ownership or relevant object auth for the article,  2 requires ownership of the article, 3+ requires admin access.",
+            "schema": {
+              "$ref": "#/components/schemas/ArticleAuthNumber"
+            },
+            "example":1
+          },
+          {
+            "name": "ignoreOrphan",
+            "in": "query",
+            "description": "Ignore orphan blocks (not in the article order). Can only be set to false if you are an admin, the article owner, or have the relevant auth.",
+            "schema": {
+              "$ref": "#/components/schemas/StandardBooleanAsNumberDefaultTrue"
+            },
+            "example":false
+          },
+          {
+            "name": "preloadGalleries",
+            "in": "query",
+            "description": "Preload ALL gallery children for gallery blocks.",
+            "schema": {
+              "$ref": "#/components/schemas/StandardBooleanAsNumberDefaultTrue"
+            },
+            "example":false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns articles. The 'error' is only returned if an error has occurred, otherwise 'article' and 'blocks' are returned.",
+                  "properties": {
+                    "article": {
+                      "oneOf": [
+                        {"$ref": "#/components/schemas/ArticleWithoutBlocks"},
+                        {"$ref": "#/components/schemas/EmptyArrayIfNoResults"}
+                      ]
+                    },
+                    "blocks": {
+                      "description": "Array of article blocks, and their order.",
+                      "type":"array",
+                      "items": {
+                        "$ref": "#/components/schemas/ArticleBlock"
+                      }
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Updates an article",
+        "description": "Update an article.",
+        "operationId": "update-article",
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Article id",
+            "in": "path",
+            "schema": {
+              "type": "integer"
+            },
+            "example":2
+          },
+          {
+            "name": "blockOrder",
+            "description": "Block order that can be set at one go rather than one by one. Why not in body? See adding tags.",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "integer"
+              }
+            },
+            "example":"1,2,3"
+          }
+        ],
+        "requestBody": {
+          "description": "Article to update.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema":{
+                "type": "object",
+                "properties": {
+                  "safe": {
+                    "$ref": "#/components/schemas/StandardBooleanAsNumber"
+                  },
+                  "title":{
+                    "description": "Article title",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  },
+                  "subtitle":{
+                    "description": "Article subtitle - in systems where it's relevant",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "address":{
+                    "$ref": "#/components/schemas/ArticleAddress"
+                  },
+                  "resourceAddressLocal": {
+                    "$ref": "#/components/schemas/LocalResourceID"
+                  },
+                  "resourceAddressDB": {
+                    "$ref": "#/components/schemas/DBResourceID"
+                  },
+                  "resourceAddressURI": {
+                    "description": "Thumbnail address, when the image is a link. Will disregard this if regular address is passed.",
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "alt":{
+                    "description": "Image alt",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "caption":{
+                    "description": "Caption for the thumbnail",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024
+                  },
+                  "name":{
+                    "description": "Caption for the thumbnail",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "articleAuth": {
+                    "$ref": "#/components/schemas/ArticleAuthNumber"
+                  },
+                  "weight": {
+                    "$ref": "#/components/schemas/StandardArticleWeight"
+                  },
+                  "language": {
+                    "type": "string",
+                    "description": "Article language",
+                    "pattern": "^[a-zA-Z]{0,32}$",
+                    "default": ""
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "description": "Response codes: -2 - failed to create items since one of the dependencies (thumbnail most likely) is missing, -1 - failed to connect to db, 0 - success, 1 - item does not exist",
+                      "type": "integer"
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Deletes article.",
+        "description": "Deletes article.",
+        "operationId": "delete-article",
+        "parameters": [
+          {
+            "name": "permanent",
+            "in": "query",
+            "description": "If true, really deletes articles - otherwise, just sets their view auth to max (thus, hiding them from all but the admins).",
+            "schema": {
+              "type": "boolean",
+              "default":false
+            },
+            "example":true
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article ID",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "description": "An object where each key is an article ID, and the value is the operation response - 0 success, -1 db connection error, AUTHENTICATION_FAILURE - lack of authentication for specific article",
+                      "type": "object"
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{address}": {
+      "get": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Gets an article, and its blocks",
+        "description": "Get an article. Will get article blocks (the content).",
+        "operationId": "article-address",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "description": "Article address - instead of id.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ArticleAddress"
+            },
+            "example":"test-article"
+          },
+          {
+            "name": "authAtMost",
+            "in": "query",
+            "description": "Return items with view auth at most this. 0 is public, 1 requires ownership or relevant object auth for the article,  2 requires ownership of the article, 3+ requires admin access.",
+            "schema": {
+              "$ref": "#/components/schemas/ArticleAuthNumber"
+            },
+            "example":1
+          },
+          {
+            "name": "ignoreOrphan",
+            "in": "query",
+            "description": "Ignore orphan blocks (not in the article order). Can only be set to false if you are an admin, the article owner, or have the relevant auth.",
+            "schema": {
+              "$ref": "#/components/schemas/StandardBooleanAsNumberDefaultTrue"
+            },
+            "example":false
+          },
+          {
+            "name": "preloadGalleries",
+            "in": "query",
+            "description": "Preload ALL gallery children for gallery blocks.",
+            "schema": {
+              "$ref": "#/components/schemas/StandardBooleanAsNumberDefaultTrue"
+            },
+            "example":false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns articles. The 'error' is only returned if an error has occurred, otherwise 'article' and 'blocks' are returned.",
+                  "properties": {
+                    "article": {
+                      "oneOf": [
+                        {"$ref": "#/components/schemas/ArticleWithoutBlocks"},
+                        {"$ref": "#/components/schemas/EmptyArrayIfNoResults"}
+                      ]
+                    },
+                    "blocks": {
+                      "description": "Array of article blocks, and their order.",
+                      "type":"array",
+                      "items": {
+                        "$ref": "#/components/schemas/ArticleBlock"
+                      }
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/tags/{type}": {
+      "post": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Add article tags",
+        "description": "Adds article tags",
+        "operationId": "add-article-tags",
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Article id",
+            "in": "path",
+            "schema": {
+              "type": "integer"
+            },
+            "example":2
+          },
+          {
+            "name": "type",
+            "description": "Article Tag Type. Preloaded programmatically",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "enum": ["%%ARTICLE_VALID_TAGS%%"]
+            },
+            "example": "default-article-tags"
+          },
+          {
+            "name": "tags",
+            "in": "query",
+            "description": "Tags to add. Why is this not in body? Thanks to forced body media type https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.2.md#fixed-fields-13",
+            "required": true,
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/components/schemas/ArticleTag"
+              }
+            },
+            "example": "test-1,test-2"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "type": "object",
+                      "description": "An object where each key is article-id/type/tag-identifier, and the value is the operation response - 0 success, -1 db connection error,-2 - failed to create items since one of the dependencies (tag) is missing"
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Deletes article tags.",
+        "description": "Deletes tags.",
+        "operationId": "add-article-tags",
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Article id",
+            "in": "path",
+            "schema": {
+              "type": "integer"
+            },
+            "example":2
+          },
+          {
+            "name": "type",
+            "description": "Article Tag Types. Preloaded programmatically",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "enum": ["%%ARTICLE_VALID_TAGS%%"]
+            },
+            "example": "default-article-tags"
+          },
+          {
+            "name": "tags",
+            "in": "query",
+            "description": "Tags to delete.",
+            "required": true,
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/components/schemas/ArticleTag"
+              }
+            },
+            "example": "test-1,test-2"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "description": "0 in success, -1 on failure",
+                      "type": "integer"
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/block/markdown": {
+      "post": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Create a new article markdown block.",
+        "description": "Create a new article markdown block. Updating requires article auth or ownership.",
+        "operationId": "create-article-block-markdown",
+        "requestBody": {
+          "description": "Article to update.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema":{
+                "type": "object",
+                "required": ["text"],
+                "properties": {
+                  "orderIndex": {
+                    "$ref": "#/components/schemas/StandardOrderIndex"
+                  },
+                  "safe": {
+                    "$ref": "#/components/schemas/StandardBooleanAsNumber"
+                  },
+                  "text": {
+                    "$ref": "#/components/schemas/StandardTextBlockText"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, or 'block' and 'order' if operation went through. Order is related to the block order operation after block creation, and if a block is created while the order insertion fails, the block remains tied to the article, but 'hidden'.",
+                  "properties": {
+                    "block": {
+                      "description": "Response codes: -3 - Missing inputs when creating one of the items, -1 - unknown database error, >0 - ID of the created item",
+                      "type": "integer"
+                    },
+                    "order": {
+                      "description": "Response codes: -1 - failed to connect to db, 0 - success, 1 - article does not exist",
+                      "type": "integer",
+                      "enum":[
+                        -1,
+                        0,
+                        1
+                      ]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/block/image": {
+      "post": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Create a new article image block.",
+        "description": "Create a new article image block. Updating requires article auth or ownership.",
+        "operationId": "create-article-block-image",
+        "requestBody": {
+          "description": "Article to update.",
+          "required": true,
+          "content": {
+            "*/*": {
+                "schema": {
+                "type": "object",
+                "anyOf": [
+                  {
+                    "required": [
+                      "resourceAddressLocal"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "resourceAddressDB"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "resourceAddressURI"
+                    ]
+                  }
+                ],
+                "properties": {
+                  "orderIndex": {
+                    "$ref": "#/components/schemas/StandardOrderIndex"
+                  },
+                  "safe": {
+                    "$ref": "#/components/schemas/StandardBooleanAsNumber"
+                  },
+                  "resourceAddressLocal": {
+                    "$ref": "#/components/schemas/LocalResourceID"
+                  },
+                  "resourceAddressDB": {
+                    "$ref": "#/components/schemas/DBResourceID"
+                  },
+                  "resourceAddressURI": {
+                    "description": "Image address, when the image is a link. Will disregard this if regular address is passed",
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "alt":{
+                    "description": "Image alt",
+                    "type": "string"
+                  },
+                  "caption":{
+                    "description": "Caption for various block types",
+                    "type": "string"
+                  },
+                  "name":{
+                    "description": "Caption for various block types",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "block": {
+                      "description": "Response codes: -3 - Missing inputs when creating one of the items, -1 - unknown database error, >0 - ID of the created item",
+                      "type": "integer"
+                    },
+                    "order": {
+                      "description": "Response codes: -1 - failed to connect to db, 0 - success, 1 - article does not exist",
+                      "type": "integer",
+                      "enum":[
+                        -1,
+                        0,
+                        1
+                      ]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/block/cover": {
+      "post": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Create a new article cover block.",
+        "description": "Create a new article cover block. Updating requires article auth or ownership.",
+        "operationId": "create-article-block-cover",
+        "requestBody": {
+          "description": "Article to update.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "anyOf": [
+                  {
+                    "required": [
+                      "resourceAddressLocal"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "resourceAddressDB"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "resourceAddressURI"
+                    ]
+                  }
+                ],
+                "properties": {
+                  "orderIndex": {
+                    "$ref": "#/components/schemas/StandardOrderIndex"
+                  },
+                  "safe": {
+                    "$ref": "#/components/schemas/StandardBooleanAsNumber"
+                  },
+                  "resourceAddressLocal": {
+                    "$ref": "#/components/schemas/LocalResourceID"
+                  },
+                  "resourceAddressDB": {
+                    "$ref": "#/components/schemas/DBResourceID"
+                  },
+                  "resourceAddressURI": {
+                    "description": "Image address, when the image is a link. Will disregard this if regular address is passed",
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "alt":{
+                    "description": "Image alt",
+                    "type": "string"
+                  },
+                  "caption":{
+                    "description": "Caption for various block types",
+                    "type": "string"
+                  },
+                  "name":{
+                    "description": "Caption for various block types",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "block": {
+                      "description": "Response codes: -3 - Missing inputs when creating one of the items, -1 - unknown database error, >0 - ID of the created item",
+                      "type": "integer"
+                    },
+                    "order": {
+                      "description": "Response codes: -1 - failed to connect to db, 0 - success, 1 - article does not exist",
+                      "type": "integer",
+                      "enum":[
+                        -1,
+                        0,
+                        1
+                      ]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/block/gallery": {
+      "post": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Create a new article gallery block.",
+        "description": "Create a new article gallery block. Updating requires article auth or ownership.",
+        "operationId": "create-article-block-gallery",
+        "requestBody": {
+          "description": "Article to update.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "required": ["galleryName"],
+                "properties": {
+                  "orderIndex": {
+                    "$ref": "#/components/schemas/StandardOrderIndex"
+                  },
+                  "safe": {
+                    "$ref": "#/components/schemas/StandardBooleanAsNumber"
+                  },
+                  "galleryName":{
+                    "description": "Gallery name.",
+                    "type": "string",
+                    "pattern": "^[\\w \\/]{1,128}$"
+                  },
+                  "caption":{
+                    "description": "Caption for various block types",
+                    "type": "string"
+                  },
+                  "name":{
+                    "description": "Caption for various block types",
+                    "type": "string"
+                  },
+                  "autoplay":{
+                    "description": "Autoplay relevant resource",
+                    "type": "boolean"
+                  },
+                  "delay":{
+                    "description": "Autoplay delay",
+                    "type": "boolean"
+                  },
+                  "loop":{
+                    "description": "",
+                    "type": "boolean"
+                  },
+                  "preview":{
+                    "description": "Whether gallery should have a preview",
+                    "type": "boolean"
+                  },
+                  "center":{
+                    "description": "Whether to center gallery preview",
+                    "type": "boolean"
+                  },
+                  "slider":{
+                    "description": "Whether gallery should have a slider",
+                    "type": "boolean"
+                  },
+                  "fullScreenOnClick":{
+                    "description": "Whether gallery should enter full screen on click",
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "block": {
+                      "description": "Response codes: -3 - Missing inputs when creating one of the items, -1 - unknown database error, >0 - ID of the created item",
+                      "type": "integer"
+                    },
+                    "order": {
+                      "description": "Response codes: -1 - failed to connect to db, 0 - success, 1 - article does not exist",
+                      "type": "integer",
+                      "enum":[
+                        -1,
+                        0,
+                        1
+                      ]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/block/video": {
+      "post": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Create a new article video block.",
+        "description": "Create a new article video block. Updating requires article auth or ownership.",
+        "operationId": "create-article-block-video",
+        "requestBody": {
+          "description": "Article to update.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "anyOf": [
+                  {
+                    "required": [
+                      "resourceAddressLocal"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "resourceAddressDB"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "resourceAddressURI"
+                    ]
+                  }
+                ],
+                "properties": {
+                  "orderIndex": {
+                    "$ref": "#/components/schemas/StandardOrderIndex"
+                  },
+                  "safe": {
+                    "$ref": "#/components/schemas/StandardBooleanAsNumber"
+                  },
+                  "resourceAddressLocal": {
+                    "$ref": "#/components/schemas/LocalResourceID"
+                  },
+                  "resourceAddressDB": {
+                    "$ref": "#/components/schemas/DBResourceID"
+                  },
+                  "resourceAddressURI": {
+                    "description": "Video address, when the video is a link. Will disregard this if regular address is passed",
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "caption":{
+                    "description": "Caption",
+                    "type": "string"
+                  },
+                  "name":{
+                    "description": "",
+                    "type": "string"
+                  },
+                  "autoplay":{
+                    "description": "Autoplay",
+                    "type": "boolean"
+                  },
+                  "loop":{
+                    "description": "",
+                    "type": "boolean"
+                  },
+                  "height":{
+                    "$ref": "#/components/schemas/IntegerInStringForm"
+                  },
+                  "width":{
+                    "$ref": "#/components/schemas/IntegerInStringForm"
+                  },
+                  "mute":{
+                    "description": "Start muted",
+                    "type": "boolean"
+                  },
+                  "controls":{
+                    "description": "Show controls",
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "block": {
+                      "description": "Response codes: -3 - Missing inputs when creating one of the items, -1 - unknown database error, >0 - ID of the created item",
+                      "type": "integer"
+                    },
+                    "order": {
+                      "description": "Response codes: -1 - failed to connect to db, 0 - success, 1 - article does not exist",
+                      "type": "integer",
+                      "enum":[
+                        -1,
+                        0,
+                        1
+                      ]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/block/youtube": {
+      "post": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Create a new article youtube block.",
+        "description": "Create a new article youtube block. Updating requires article auth or ownership.",
+        "operationId": "create-article-block-youtube",
+        "requestBody": {
+          "description": "Article to update.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "required": ["identifier"],
+                "properties": {
+                  "orderIndex": {
+                    "$ref": "#/components/schemas/StandardOrderIndex"
+                  },
+                  "safe": {
+                    "$ref": "#/components/schemas/StandardBooleanAsNumber"
+                  },
+                  "identifier": {
+                    "description": "Youtube identifier",
+                    "type": "string",
+                    "pattern": "^(?:\\w|-|_){11}$"
+                  },
+                  "caption":{
+                    "description": "Caption",
+                    "type": "string"
+                  },
+                  "autoplay":{
+                    "description": "Autoplay",
+                    "type": "boolean"
+                  },
+                  "loop":{
+                    "description": "",
+                    "type": "boolean"
+                  },
+                  "height":{
+                    "$ref": "#/components/schemas/IntegerInStringForm"
+                  },
+                  "width":{
+                    "$ref": "#/components/schemas/IntegerInStringForm"
+                  },
+                  "mute":{
+                    "description": "Start muted",
+                    "type": "boolean"
+                  },
+                  "controls":{
+                    "description": "Show controls",
+                    "type": "boolean"
+                  },
+                  "embed":{
+                    "description": "Youtube embedding feature",
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "block": {
+                      "description": "Response codes: -3 - Missing inputs when creating one of the items, -1 - unknown database error, >0 - ID of the created item",
+                      "type": "integer"
+                    },
+                    "order": {
+                      "description": "Response codes: -1 - failed to connect to db, 0 - success, 1 - article does not exist",
+                      "type": "integer",
+                      "enum":[
+                        -1,
+                        0,
+                        1
+                      ]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/block/article": {
+      "post": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Create a new article article block.",
+        "description": "Create a new article article block. Updating requires article auth or ownership.",
+        "operationId": "create-article-block-article",
+        "requestBody": {
+          "description": "Article to update.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "orderIndex": {
+                    "$ref": "#/components/schemas/StandardOrderIndex"
+                  },
+                  "safe": {
+                    "$ref": "#/components/schemas/StandardBooleanAsNumber"
+                  },
+                  "caption":{
+                    "description": "Different caption",
+                    "type": "string"
+                  },
+                  "otherArticleId":{
+                    "$ref": "#/components/schemas/IntegerInStringForm"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "block": {
+                      "description": "Response codes: -3 - Missing inputs when creating one of the items, -1 - unknown database error, >0 - ID of the created item",
+                      "type": "integer"
+                    },
+                    "order": {
+                      "description": "Response codes: -1 - failed to connect to db, 0 - success, 1 - article does not exist",
+                      "type": "integer",
+                      "enum":[
+                        -1,
+                        0,
+                        1
+                      ]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/block/{blockId}/markdown": {
+      "put": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Update article markdown block.",
+        "description": "Update article markdown block. Updating requires article auth or ownership.",
+        "operationId": "update-article-block-markdown",
+        "requestBody": {
+          "description": "Article to update.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "orderIndex": {
+                    "$ref": "#/components/schemas/StandardOrderIndex"
+                  },
+                  "safe": {
+                    "$ref": "#/components/schemas/StandardBooleanAsNumber"
+                  },
+                  "text": {
+                    "$ref": "#/components/schemas/StandardTextBlockText"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          },
+          {
+            "name": "blockId",
+            "in": "path",
+            "description": "Block id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, or 'block' and 'order' if operation went through. Order is related to the block order operation after block creation, and if a block is created while the order insertion fails, the block remains tied to the article, but 'hidden'.",
+                  "properties": {
+                    "block": {
+                      "description": "Response codes: -2 - failed to create items since one of the dependencies is missing, -1 - failed to connect to db, 0 - success, 1 - item does not exist (and update is true), 2 - item exists (and override is false), 3 - trying to create a new item with missing inputs.",
+                      "type": "integer",
+                      "enum":[
+                        -2,
+                        -1,
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    "order": {
+                      "description": "Response codes: -1 - failed to connect to db, 0 - success, 1 - article does not exist",
+                      "type": "integer",
+                      "enum":[
+                        -1,
+                        0,
+                        1
+                      ]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/block/{blockId}/image": {
+      "put": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Update article image block.",
+        "description": "Update article image block. Updating requires article auth or ownership.",
+        "operationId": "update-article-block-image",
+        "requestBody": {
+          "description": "Article to update.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "orderIndex": {
+                    "$ref": "#/components/schemas/StandardOrderIndex"
+                  },
+                  "safe": {
+                    "$ref": "#/components/schemas/StandardBooleanAsNumber"
+                  },
+                  "resourceAddressLocal": {
+                    "$ref": "#/components/schemas/LocalResourceID"
+                  },
+                  "resourceAddressDB": {
+                    "$ref": "#/components/schemas/DBResourceID"
+                  },
+                  "resourceAddressURI": {
+                    "description": "Image address, when the image is a link. Will disregard this if regular address is passed",
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "alt":{
+                    "description": "Image alt ['image','cover']",
+                    "type": "string"
+                  },
+                  "caption":{
+                    "description": "Caption for various block types",
+                    "type": "string"
+                  },
+                  "name":{
+                    "description": "Caption for various block types",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          },
+          {
+            "name": "blockId",
+            "in": "path",
+            "description": "Block id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "description": "Response codes: -1 db connection failure, 0 success, 1 article doesn't exist",
+                      "type": "integer",
+                      "enum":[
+                        -1,
+                        0,
+                        1
+                      ]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/block/{blockId}/cover": {
+      "put": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Update article cover block.",
+        "description": "Update article cover block. Updating requires article auth or ownership.",
+        "operationId": "update-article-block-cover",
+        "requestBody": {
+          "description": "Article to update.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "orderIndex": {
+                    "$ref": "#/components/schemas/StandardOrderIndex"
+                  },
+                  "safe": {
+                    "$ref": "#/components/schemas/StandardBooleanAsNumber"
+                  },
+                  "resourceAddressLocal": {
+                    "$ref": "#/components/schemas/LocalResourceID"
+                  },
+                  "resourceAddressDB": {
+                    "$ref": "#/components/schemas/DBResourceID"
+                  },
+                  "resourceAddressURI": {
+                    "description": "Image address, when the image is a link. Will disregard this if regular address is passed",
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "alt":{
+                    "description": "Image alt",
+                    "type": "string"
+                  },
+                  "caption":{
+                    "description": "Caption for various block types",
+                    "type": "string"
+                  },
+                  "name":{
+                    "description": "Caption for various block types",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          },
+          {
+            "name": "blockId",
+            "in": "path",
+            "description": "Block id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "description": "Response codes: -1 db connection failure, 0 success, 1 article doesn't exist",
+                      "type": "integer",
+                      "enum":[
+                        -1,
+                        0,
+                        1
+                      ]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/block/{blockId}/gallery": {
+      "put": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Update article gallery block.",
+        "description": "Update article gallery block. Updating requires article auth or ownership.",
+        "operationId": "update-article-block-gallery",
+        "requestBody": {
+          "description": "Article to update.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "orderIndex": {
+                    "$ref": "#/components/schemas/StandardOrderIndex"
+                  },
+                  "safe": {
+                    "$ref": "#/components/schemas/StandardBooleanAsNumber"
+                  },
+                  "galleryName":{
+                    "description": "Gallery name.",
+                    "type": "string",
+                    "pattern": "^[\\w \\/]{1,128}$"
+                  },
+                  "caption":{
+                    "description": "Caption for various block types",
+                    "type": "string"
+                  },
+                  "name":{
+                    "description": "Caption for various block types",
+                    "type": "string"
+                  },
+                  "autoplay":{
+                    "description": "Autoplay relevant resource",
+                    "type": "boolean"
+                  },
+                  "delay":{
+                    "description": "Autoplay delay",
+                    "type": "boolean"
+                  },
+                  "loop":{
+                    "description": "",
+                    "type": "boolean"
+                  },
+                  "preview":{
+                    "description": "Whether gallery should have a preview",
+                    "type": "boolean"
+                  },
+                  "center":{
+                    "description": "Whether to center gallery preview",
+                    "type": "boolean"
+                  },
+                  "slider":{
+                    "description": "Whether gallery should have a slider",
+                    "type": "boolean"
+                  },
+                  "fullScreenOnClick":{
+                    "description": "Whether gallery should enter full screen on click",
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          },
+          {
+            "name": "blockId",
+            "in": "path",
+            "description": "Block id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "description": "Response codes: -1 db connection failure, 0 success, 1 article doesn't exist",
+                      "type": "integer",
+                      "enum":[
+                        -1,
+                        0,
+                        1
+                      ]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/block/{blockId}/video": {
+      "put": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Update article video block.",
+        "description": "Update article video block. Updating requires article auth or ownership.",
+        "operationId": "update-article-block-video",
+        "requestBody": {
+          "description": "Article to update.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "orderIndex": {
+                    "$ref": "#/components/schemas/StandardOrderIndex"
+                  },
+                  "safe": {
+                    "$ref": "#/components/schemas/StandardBooleanAsNumber"
+                  },
+                  "resourceAddressLocal": {
+                    "$ref": "#/components/schemas/LocalResourceID"
+                  },
+                  "resourceAddressDB": {
+                    "$ref": "#/components/schemas/DBResourceID"
+                  },
+                  "resourceAddressURI": {
+                    "description": "Image address, when the image is a link. Will disregard this if regular address is passed",
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "caption":{
+                    "description": "Caption",
+                    "type": "string"
+                  },
+                  "name":{
+                    "description": "",
+                    "type": "string"
+                  },
+                  "autoplay":{
+                    "description": "Autoplay",
+                    "type": "boolean"
+                  },
+                  "loop":{
+                    "description": "",
+                    "type": "boolean"
+                  },
+                  "height":{
+                    "$ref": "#/components/schemas/IntegerInStringForm"
+                  },
+                  "width":{
+                    "$ref": "#/components/schemas/IntegerInStringForm"
+                  },
+                  "mute":{
+                    "description": "Start muted",
+                    "type": "boolean"
+                  },
+                  "controls":{
+                    "description": "Show controls",
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          },
+          {
+            "name": "blockId",
+            "in": "path",
+            "description": "Block id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "description": "Response codes: -1 db connection failure, 0 success, 1 article doesn't exist",
+                      "type": "integer",
+                      "enum":[
+                        -1,
+                        0,
+                        1
+                      ]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/block/{blockId}/youtube": {
+      "put": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Update article youtube block.",
+        "description": "Update article youtube block. Updating requires article auth or ownership.",
+        "operationId": "update-article-block-youtube",
+        "requestBody": {
+          "description": "Article to create.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "orderIndex": {
+                    "$ref": "#/components/schemas/StandardOrderIndex"
+                  },
+                  "safe": {
+                    "$ref": "#/components/schemas/StandardBooleanAsNumber"
+                  },
+                  "identifier": {
+                    "description": "Youtube identifier",
+                    "type": "string",
+                    "pattern": "^(?:\\w|-|_){11}$"
+                  },
+                  "caption":{
+                    "description": "Caption",
+                    "type": "string"
+                  },
+                  "autoplay":{
+                    "description": "Autoplay",
+                    "type": "boolean"
+                  },
+                  "loop":{
+                    "description": "",
+                    "type": "boolean"
+                  },
+                  "height":{
+                    "$ref": "#/components/schemas/IntegerInStringForm"
+                  },
+                  "width":{
+                    "$ref": "#/components/schemas/IntegerInStringForm"
+                  },
+                  "mute":{
+                    "description": "Start muted",
+                    "type": "boolean"
+                  },
+                  "controls":{
+                    "description": "Show controls",
+                    "type": "boolean"
+                  },
+                  "embed":{
+                    "description": "Youtube embedding feature",
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          },
+          {
+            "name": "blockId",
+            "in": "path",
+            "description": "Block id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "description": "Response codes: -1 db connection failure, 0 success, 1 article doesn't exist",
+                      "type": "integer",
+                      "enum":[
+                        -1,
+                        0,
+                        1
+                      ]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/block/{blockId}/article": {
+      "put": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Update article article block.",
+        "description": "Update article article block. Updating requires article auth or ownership.",
+        "operationId": "update-article-block-article",
+        "requestBody": {
+          "description": "Article to create.",
+          "required": true,
+          "content": {
+            "*/*": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "orderIndex": {
+                    "$ref": "#/components/schemas/StandardOrderIndex"
+                  },
+                  "safe": {
+                    "$ref": "#/components/schemas/StandardBooleanAsNumber"
+                  },
+                  "caption":{
+                    "description": "Different caption",
+                    "type": "string"
+                  },
+                  "otherArticleId":{
+                    "$ref": "#/components/schemas/IntegerInStringForm"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          },
+          {
+            "name": "blockId",
+            "in": "path",
+            "description": "Block id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "description": "Response codes: -1 db connection failure, 0 success, 1 article doesn't exist",
+                      "type": "integer",
+                      "enum":[
+                        -1,
+                        0,
+                        1
+                      ]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/blocks": {
+      "delete": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Deletes article blocks.",
+        "description": "Deletes article blocks.",
+        "operationId": "delete-article-blocks",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article id.",
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          },
+          {
+            "name": "permanent",
+            "in": "query",
+            "description": "If true, really deletes blocks - otherwise, just removes them from order (thus, hiding them).",
+            "schema": {
+              "type": "boolean",
+              "default":false
+            },
+            "example":true
+          },
+          {
+            "name": "targets",
+            "in": "query",
+            "description": "Block INDEXES in the order if permanentDeletion is false, or block IDs if permanentDeletion is true",
+            "required": true,
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "integer"
+              }
+            },
+            "example":"1,2,3"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "description": "Response codes: -1 db connection failure, 0 success, 1 article doesn't exist, 2 from index doesn't exist, 3 to index doesn't exist",
+                      "type": "integer",
+                      "enum":[
+                        -1,
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/blocks/clean": {
+      "delete": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Deletes blocks from article order that no longer exist.",
+        "description": "Deletes blocks from article order that no longer exist.",
+        "operationId": "clean-article-blocks",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "description": "Response codes: -1 db connection failure, 0 success, 1 article doesn't exist",
+                      "type": "integer",
+                      "enum":[
+                        -1,
+                        0,
+                        1
+                      ]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    },
+    "/articles/{id}/blocks/{from}/{to}": {
+      "put": {
+        "tags": [
+          "Articles API"
+        ],
+        "summary": "Moves article block",
+        "description": "Moves a block from one position in the article to another.",
+        "operationId": "move-article-block",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Article id.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          },
+          {
+            "name": "from",
+            "in": "path",
+            "description": "Block current position.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          },
+          {
+            "name": "to",
+            "in": "path",
+            "description": "Block new position.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example":1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generic Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Returns an object that has a key 'error' if an error occurred before the operation, and 'response' if operation went through.",
+                  "properties": {
+                    "response": {
+                      "description": "Response codes: -1 db connection failure, 0 success, 1 article doesn't exist, 2 from index doesn't exist, 3 to index doesn't exist",
+                      "type": "integer",
+                      "enum":[
+                        -1,
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    "error":{
+                      "$ref": "#/components/schemas/GenericApiError"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Something wrong on our end (Unexpected server errors)."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "IntegerInStringForm":{
+        "type": "string",
+        "pattern":"^\\d+$",
+        "description": "Integer, but in string format due to how post/put works",
+        "example": "1"
+      },
+      "RegexRegex":{
+        "type": "string",
+        "description": "Podcast publisher name.",
+        "example": "Planet Broadcasting",
+        "pattern":"^[\\w\\-\\.\\_ ]{1,128}$"
+      },
+      "ArticleAddress":{
+        "type": "string",
+        "description": "Address of an article. Must contain at least one non-digit.",
+        "format": "article-address",
+        "example": "test-article-address",
+        "maxLength":128
+      },
+      "ArticleTag":{
+        "type": "string",
+        "description": "Article tag",
+        "example": "test-article-tag",
+        "pattern":"^\\w[\\w\\d\\-_]{0,63}$"
+      },
+      "LocalResourceID": {
+        "description": "Thumbnail address, when the image is local",
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 260,
+        "pattern": "^([a-zA-Z0-9\\.\\ \\_\\-\\@\\$\\%]+\\/{0,1})*?[a-zA-Z0-9_\\-]{1,259}\\.[a-z]{1,259}$",
+        "example": "test.jpg"
+      },
+      "DBResourceID": {
+        "description": "Image address, when the image is in the DB",
+        "type": "string",
+        "pattern": "^[a-zA-Z0-9_\\-\\/]{1,259}$"
+      },
+      "ArticleAuthNumber": {
+        "type": "string",
+        "pattern": "^\\d{1,4}$"
+      },
+      "GenericApiError":{
+        "type": "object",
+        "description": "Errors range from client input, to lack of authorization, to server errors, to many other reasons.\n This is property is returned if something went wrong.",
+        "properties": {
+          "code":{
+            "type":"string",
+            "description": "Error code. Typically related to the stage and cause of the error.",
+            "example":"RATE_LIMIT_REACHED"
+          },
+          "info":{
+            "description": "Extra info about the error. Depends on the context - for example, if the error code was INPUT_VALIDATION_FAILURE, this may be the name of the invalid input. For RATE_LIMIT_REACHED, this may be the number of seconds until you can repeat the action. Such context based specifics should be documented in the more in-depth API documnatation.",
+            "example":"3600"
+          }
+        }
+      },
+      "Timestamp":{
+        "description": "UNIX Timestamp",
+        "type": "integer",
+        "minimum": 0,
+        "example": 1600000000
+      },
+      "TimestampDefault0":{
+        "description": "UNIX Timestamp",
+        "type": "integer",
+        "minimum": 0,
+        "default": 0,
+        "example": 1600000000
+      },
+      "StandardArticleWeight":{
+        "type": "integer",
+        "description": "Used to promote specific articles. Anything other than 0 requires admin auth.",
+        "minimum":0,
+        "default": 0,
+        "example":1
+      },
+      "StandardBooleanAsNumber":{
+        "type": "integer",
+        "description": "0 or 1",
+        "example": 1,
+        "enum":[0,1]
+      },
+      "StandardBooleanAsNumberDefaultTrue":{
+        "type": "integer",
+        "description": "0 or 1",
+        "example": 1,
+        "default": 1,
+        "enum":[0,1]
+      },
+      "StandardOrderIndex": {
+        "description": "Where you want to push the block in the article order (pushes other blocks forward). If negative, will stay unpublished. If above maximum article number of blocks, will just push to the end of the order. 10,000 assumes nobody is allowed even close to this number (I mean, seriously).",
+        "type": "string",
+        "pattern":"^\\d{1,4}|10000|-1$",
+        "default":"10000"
+      },
+      "StandardTextBlockText": {
+        "description": "Markdown text - SHOULD BE URI ENCODED (js function encodeURIComponent, PHP function urldecode), is considered unsafe by default.",
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 99999
+      },
+      "EmptyArrayIfNoResults":{
+        "type": "array",
+        "description": "Empty array not encoded as JSON",
+        "example": "[]"
+      },
+      "ArticleWithoutBlocks": {
+        "type": "object",
+        "properties": {
+          "articleID":{
+            "description": "Basic ID",
+            "type": "integer"
+          },
+          "creatorID":{
+            "description": "User ID of article creator",
+            "type": "integer"
+          },
+          "firstName":{
+            "description": "First name of article creator (might be null)",
+            "type": "string"
+          },
+          "lastName":{
+            "description": "Last name of article creator (might be null)",
+            "type": "string"
+          },
+          "title":{
+            "description": "Article title",
+            "type": "string"
+          },
+          "articleAddress":{
+            "$ref": "#/components/schemas/ArticleAddress"
+          },
+          "articleAuth":{
+            "description": "Article view auth",
+            "type": "integer"
+          },
+          "meta":{
+            "description": "Article meta information",
+            "properties": {
+              "subtitle":{
+                "description": "Article subtitle",
+                "type": "string"
+              },
+              "alt":{
+                "description": "Article image alt - overrides thumbnail meta",
+                "type": "string"
+              },
+              "caption":{
+                "description": "Article image caption - overrides thumbnail meta",
+                "type": "string"
+              },
+              "name":{
+                "description": "Article image name - overrides thumbnail meta",
+                "type": "string"
+              }
+            }
+          },
+          "thumbnail":{
+            "$ref":"#/components/schemas/ArticleResource"
+          },
+          "blockOrder":{
+            "description": "Order of article blocks inside the article. Comma separated IDs.",
+            "type": "string",
+            "example":"100,101,102,104"
+          },
+          "weight":{
+            "description": "Article 'weight' (how it should be promoted).",
+            "type": "integer"
+          },
+          "created":{
+            "$ref":"#/components/schemas/Timestamp"
+          },
+          "updated":{
+            "$ref":"#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "ArticleBlock": {
+        "type": "object",
+        "properties": {
+          "articleID":{
+            "description": "Basic ID, redundant",
+            "type": "integer"
+          },
+          "type":{
+            "description": "Block type (from the current supported blocks)",
+            "type": "string",
+            "enum": [
+              "markdown",
+              "image",
+              "cover",
+              "gallery",
+              "video",
+              "youtube",
+              "article"
+            ]
+          },
+          "blockId":{
+            "description": "Block ID",
+            "type": "integer"
+          },
+          "orphan":{
+            "description": "Whether this block is missing from article order",
+            "type": "boolean"
+          },
+          "text":{
+            "description": "Block text content, if relevant",
+            "type": "string"
+          },
+          "resource": {
+            "$ref":"#/components/schemas/ArticleResource"
+          },
+          "collection": {
+            "type": "object",
+            "properties": {
+              "name":{
+                "type": "string",
+                "description": "Collection name"
+              },
+              "meta":{
+                "description": "Collection meta information",
+                "type": "object",
+                "properties": {
+                  "caption":{
+                    "type": "string"
+                  },
+                  "name":{
+                    "type": "string"
+                  },
+                  "autoplay":{
+                    "type": "boolean"
+                  },
+                  "loop":{
+                    "type": "boolean"
+                  }
+                }
+              },
+              "members": {
+                "type": "array",
+                "description": "Ordered array of resources (images, probably)",
+                "items": {
+                  "$ref":"#/components/schemas/ArticleResource"
+                }
+              }
+            }
+          },
+          "meta":{
+            "description": "Article meta information - each property relevant to specific blocks",
+            "type": "object",
+            "properties": {
+              "height":{
+                "type": "integer"
+              },
+              "width":{
+                "type": "integer"
+              },
+              "alt":{
+                "type": "string"
+              },
+              "caption":{
+                "type": "string"
+              },
+              "name":{
+                "type": "string"
+              },
+              "autoplay":{
+                "type": "boolean"
+              },
+              "loop":{
+                "type": "boolean"
+              },
+              "mute":{
+                "type": "boolean"
+              }
+            }
+          },
+          "otherArticle": {
+            "type": "object",
+            "properties": {
+              "id":{
+                "type": "integer",
+                "description": "Article ID"
+              },
+              "title":{
+                "type": "string",
+                "description": "Article title"
+              },
+              "address":{
+                "type": "string",
+                "description": "Article address"
+              },
+              "creator":{
+                "type": "object",
+                "properties": {
+                  "id":{
+                    "type": "integer",
+                    "description": "creator user ID"
+                  },
+                  "firstName":{
+                    "type": "string"
+                  },
+                  "lastName":{
+                    "type": "string"
+                  }
+                }
+              },
+              "thumbnail":{
+                "$ref":"#/components/schemas/ArticleResource"
+              }
+            }
+          },
+          "created":{
+            "$ref":"#/components/schemas/Timestamp"
+          },
+          "updated":{
+            "$ref":"#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "ArticleResource":{
+        "description": "Article resource info",
+        "properties": {
+          "address":{
+            "description": "Resource address",
+            "type": "string"
+          },
+          "local":{
+            "description": "Whether the resource is local (in this server), or remote (DB/Link)",
+            "type": "string"
+          },
+          "dataType":{
+            "description": "If set, the resouce is located in the DB. Otherwise, it's either local, or a direct link",
+            "type": "string"
+          },
+          "meta":{
+            "description": "Thumbnail meta information",
+            "properties": {
+              "alt":{
+                "description": "Thumbnail alt",
+                "type": "string"
+              },
+              "caption":{
+                "description": "Thumbnail caption",
+                "type": "string"
+              },
+              "name":{
+                "description": "Thumbnail name",
+                "type": "string"
+              },
+              "autoplay":{
+                "type": "boolean"
+              },
+              "loop":{
+                "type": "boolean"
+              },
+              "mute":{
+                "type": "boolean"
+              },
+              "height":{
+                "type": "integer"
+              },
+              "width":{
+                "type": "integer"
+              }
+            }
+          },
+          "updated": {
+            "$ref":"#/components/schemas/Timestamp"
+          }
+        }
+      }
+    },
+    "responses": {
+    },
+    "parameters": {
+    },
+    "headers": {
+    }
+  }
+}

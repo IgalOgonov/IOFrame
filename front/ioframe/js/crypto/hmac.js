@@ -117,9 +117,7 @@
             // Compute HMAC
             var innerHash = hasher.finalize(messageUpdate);
             hasher.reset();
-            var hmac = hasher.finalize(this._oKey.clone().concat(innerHash));
-
-            return hmac;
+            return hasher.finalize(this._oKey.clone().concat(innerHash));
         }
     });
 }());

@@ -1,0 +1,11 @@
+{
+	"minificationType":"css",
+	"minificationTargets":[""],
+	"minificationProperties":{
+		"minifyToFolder":"test",
+		"minifyName":"massiveDump"
+	},
+	"minificationIncludeOptions":{
+		"subFolders":true
+	}
+}

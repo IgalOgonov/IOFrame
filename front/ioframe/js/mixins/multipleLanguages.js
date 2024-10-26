@@ -1,7 +1,13 @@
 const multipleLanguages = {
     mixins:[eventHubManager],
-    data:{
-        currentLanguage:document.selectedLanguage
+    data: function (){
+        return {
+            languages:document.ioframe.languages,
+            defaultLanguage: document.ioframe.defaultLanguage,
+            preferredLanguage: document.ioframe.preferredLanguage,
+            currentLanguage: document.ioframe.selectedLanguage,
+            languagesMap: document.ioframe.languagesMap
+        };
     },
     created:function(){
         this.registerHub(eventHub);

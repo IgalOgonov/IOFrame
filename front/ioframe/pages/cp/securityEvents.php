@@ -7,8 +7,16 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_s
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'cp_redirect_to_login.php';
 
-array_push($CSS, 'cp.css', 'components/searchList.css', 'components/security/securityEventsEditor.css', 'modules/securityEvents.css', 'modules/CPMenu.css');
-array_push($JS, 'mixins/sourceUrl.js', 'mixins/eventHubManager.js', 'components/searchList.js', 'components/security/securityEventsEditor.js', 'modules/CPMenu.js', 'modules/securityEvents.js');
+array_push($CSS, 'cp.css', 'components/searchList.css', 'modules/CPMenu.css');
+array_push($JS, 'mixins/sourceUrl.js', 'components/searchList.js','modules/CPMenu.js');
+$CSSPackages['CPSecurityEventsCSS'] = [
+    'items'=>[ 'components/security/securityEventsEditor.css', 'modules/securityEvents.css'],
+    'order'=>-1
+];
+$JSPackages['CPSecurityEventsJS'] = [
+    'items'=>[ 'components/security/securityEventsEditor.js',  'modules/securityEvents.js'],
+    'order'=>-1
+];
 
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_get_resources.php';
@@ -57,5 +65,3 @@ $frontEndResourceTemplateManager->printResources('JS');
 
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'footers_end.php';
-
-?>

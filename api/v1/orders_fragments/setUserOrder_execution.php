@@ -1,21 +1,12 @@
 <?php
-if($action === 'assignUserToOrder')
-    $result = $PurchaseOrderHandler->assignUserToOrder(
-        $inputs['userID'],
-        $inputs['orderID'],
+$result = $PurchaseOrderHandler->setOrderUsers(
+    $inputs['orderID'],
+    [
         [
-            'relationType'=> $inputs['relationType'],
+            'user'=>$inputs['userID'],
+            'relation'=> $inputs['relationType'],
             'meta'=> $inputs['meta'],
-        ],
-        ['test'=>$test]
-    );
-else
-    $result = $PurchaseOrderHandler->updateOrderUserAssignment(
-        $inputs['userID'],
-        $inputs['orderID'],
-        [
-            'relationType'=> $inputs['relationType'],
-            'meta'=> $inputs['meta'],
-        ],
-        ['test'=>$test]
-    );
+        ]
+    ],
+    ['update'=>($action !== 'assignUserToOrder'),'overwrite'=>($action !== 'assignUserToOrder'),'test'=>$test]
+);

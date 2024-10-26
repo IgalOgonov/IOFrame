@@ -11,20 +11,19 @@ if(empty($inputs['keys'])){
     $retrieveParams['limit'] = $inputs['limit'];
     $retrieveParams['offset'] = $inputs['offset'];
     if(empty($inputs['orderBy']))
-        $inputs['orderBy'] = [$articleSetColumnMap['weight'],$articleSetColumnMap['articleId']];
+        $inputs['orderBy'] = empty($articleSetColumnMap['articleId'])?[$articleSetColumnMap['weight']]:[$articleSetColumnMap['weight'],$articleSetColumnMap['articleId']];
     else{
-        $inputs['orderBy'] = explode(',',$inputs['orderBy']);
         $setWeight = false;
         foreach($inputs['orderBy'] as $orderBy){
-            if($orderBy === 'weight')
+            if($orderBy === 'Article_Weight')
                 $setWeight = true;
-            array_push($retrieveParams['orderBy'],$articleSetColumnMap[$orderBy]);
         }
         if($setWeight)
             $requiredAuth = REQUIRED_AUTH_ADMIN;
         else
-            array_unshift($retrieveParams['orderBy'],$articleSetColumnMap['weight']);
+            array_unshift($inputs['orderBy'],'Article_Weight');
         unset($setWeight);
+        $retrieveParams['orderBy'] = $inputs['orderBy'];
     }
 
     if(isset($inputs['orderType']))
@@ -34,7 +33,7 @@ if(empty($inputs['keys'])){
 
     //Handle the filters
     $validArray = ['titleLike','languageIs','addressIn','addressIs','createdBefore','createdAfter','changedBefore','changedAfter','authAtMost'
-        ,'authIn','weightIn'];
+        ,'authIn','tagsIn','weightIn'];
 
     foreach($inputs as $potentialFilter => $value){
 
@@ -55,12 +54,17 @@ if(empty($inputs['keys'])){
                 break;
 
             case 'authIn':
+            case 'tagsIn':
             case 'weightIn':
             case 'addressIn':
-                if(empty($value))
-                    $value = [];
-                else
+                if($value && !is_array($value))
                     $value = explode(',',$value);
+                if($potentialFilter === 'tagsIn'){
+                    $temp = [];
+                    foreach ($value as $tag)
+                        $temp[] = ['type' => 'default-article-tags', 'name' => $tag];
+                    $value = $temp;
+                }
                 break;
 
             case 'createdBefore':
@@ -72,9 +76,7 @@ if(empty($inputs['keys'])){
                 break;
 
             default:
-                if($test)
-                    echo 'Somehow an invalid filter got through!'.EOL;
-                exit(INPUT_VALIDATION_FAILURE);
+                \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON(['error'=>INPUT_VALIDATION_FAILURE,'message'=>'Somehow an invalid filter got through!'],!$test);
                 break;
         }
 
@@ -96,8 +98,6 @@ else{
     $retrieveParams['orderBy'] = null;
     $retrieveParams['orderType'] = null;
 
-    $inputs['keys'] = explode(',',$inputs['keys']);
-
     //Handle the one possible filter
     if(!empty($inputs['authAtMost'])){
         if($inputs['authAtMost'] === 1)
@@ -108,7 +108,7 @@ else{
             $requiredAuth = max($requiredAuth,REQUIRED_AUTH_ADMIN);
 
         $retrieveParams['authAtMost'] = $inputs['authAtMost'];
-    };
+    }
 }
 
 //Set 'authAtMost' if not requested by the user
@@ -123,9 +123,9 @@ elseif($retrieveParams['languageIs'] === '@')
 
 //Allows restriction of article types via settings
 if(empty($apiSettings))
-    $apiSettings = new IOFrame\Handlers\SettingsHandler($rootFolder.'/localFiles/apiSettings/',$defaultSettingsParams);
+    $apiSettings = new \IOFrame\Handlers\SettingsHandler($rootFolder.'/localFiles/apiSettings/',$defaultSettingsParams);
 $relevantSetting = $apiSettings->getSetting('articles');
-if(\IOFrame\Util\is_json($relevantSetting)){
+if(\IOFrame\Util\PureUtilFunctions::is_json($relevantSetting)){
     $relevantSetting = json_decode($relevantSetting,true);
     if(!empty($relevantSetting['articleContactTypes'])){
         $types = explode(',',$relevantSetting['articleContactTypes']);

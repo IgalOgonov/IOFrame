@@ -8,7 +8,7 @@ $requiredAuth = REQUIRED_AUTH_OWNER;
 if($inputs['permanentDeletion'])
     $requiredAuth = REQUIRED_AUTH_ADMIN;
 
-if(!\IOFrame\Util\is_json($inputs['articles'])){
+if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs['articles'])){
     if($test)
         echo 'articles must be a valid JSON array!'.EOL;
     exit(INPUT_VALIDATION_FAILURE);

@@ -340,8 +340,8 @@
  *        0 failure
  * */
 
-if(!defined('coreInit'))
-    require __DIR__ . '/../../main/coreInit.php';
+if(!defined('IOFrameMainCoreInit'))
+    require __DIR__ . '/../../main/core_init.php';
 
 require __DIR__ . '/../apiSettingsChecks.php';
 require __DIR__ . '/../defaultInputChecks.php';
@@ -356,8 +356,12 @@ $action = $_REQUEST["action"];
 if($test)
     echo 'Testing mode!'.EOL;
 
-if(!checkApiEnabled('security',$apiSettings,$_REQUEST['action']))
+if(!checkApiEnabled('security',$apiSettings,$SecurityHandler,$_REQUEST['action']))
     exit(API_DISABLED);
+
+$SecurityHandler = new \IOFrame\Handlers\SecurityHandler($settings,$defaultSettingsParams);
+$IPHandler = new \IOFrame\Handlers\IPHandler($settings,$defaultSettingsParams);
+
 
 //Handle inputs
 $inputs = [];
@@ -396,7 +400,7 @@ switch($action){
         break;
 
     case 'setRulebookRules':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = ["inputs","override","update"];
@@ -413,7 +417,7 @@ switch($action){
         break;
 
     case 'deleteRulebookRules':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = ["inputs"];
@@ -442,7 +446,7 @@ switch($action){
         break;
 
     case 'setEventsMeta':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = ["inputs","override","update"];
@@ -459,7 +463,7 @@ switch($action){
         break;
 
     case 'deleteEventsMeta':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = ["inputs"];
@@ -506,7 +510,7 @@ switch($action){
 
     case 'addIP':
     case 'updateIP':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = ["ip","type","reliable","ttl"];
@@ -520,7 +524,7 @@ switch($action){
         break;
 
     case 'deleteIP':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = ["ip"];
@@ -535,7 +539,7 @@ switch($action){
 
     case 'addIPRange':
     case 'updateIPRange':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = ["prefix","from","to","newFrom","newTo","type","ttl"];
@@ -549,7 +553,7 @@ switch($action){
         break;
 
     case 'deleteIPRange':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = ["prefix","from","to"];
@@ -563,7 +567,7 @@ switch($action){
         break;
 
     case 'deleteExpired':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = ["range"];
@@ -578,5 +582,3 @@ switch($action){
     default:
         exit('Specified action is not recognized');
 }
-
-?>

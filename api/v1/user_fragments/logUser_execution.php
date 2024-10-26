@@ -1,16 +1,16 @@
 <?php
 
-if(!isset($UserHandler))
-    $UserHandler = new IOFrame\Handlers\UserHandler(
+if(!isset($UsersHandler))
+    $UsersHandler = new \IOFrame\Handlers\UsersHandler(
         $settings,
         $defaultSettingsParams
     );
 
 switch($inputs["log"]) {
     case 'out':
-        $UserHandler->logOut(['test'=>$test]);
+        $UsersHandler->logOut(['test'=>$test]);
         $result = 0;
         break;
     default:
-        $result =  $UserHandler->logIn($inputs,['language'=>$inputs['language'],'test'=>$test]);
+        $result =  $UsersHandler->logIn($inputs,['language'=>$inputs['language'],'test'=>$test]);
 }

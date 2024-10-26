@@ -1,3 +1,5 @@
+if(eventHub === undefined)
+    var eventHub = new Vue();
 
 //***************************
 //******USER LOGIN APP*******
@@ -17,6 +19,7 @@ var userReg = new Vue({
         parseRegistrationResponse: function(response){
             let responseBody = response.body;
             let responseType = response.type;
+            let alertOptions = {};
             /*This will display messages that the API could return
              **/
             switch(responseBody){
@@ -31,6 +34,7 @@ var userReg = new Vue({
                     break;
                 case '0':
                     responseBody = 'User created successfully!';
+                    alertOptions = {autoDismiss:2000};
                     break;
                 case '1':
                     responseBody = 'User creation failed - username already in use!';
@@ -43,7 +47,7 @@ var userReg = new Vue({
                     break;
                 default:
             }
-            alertLog(responseBody, responseType);
+            alertLog(responseBody, responseType, document.body, alertOptions);
         }
     }
 });

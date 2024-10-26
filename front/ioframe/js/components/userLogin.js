@@ -2,6 +2,7 @@ if(eventHub === undefined)
     var eventHub = new Vue();
 
 Vue.component('user-login', {
+    mixins:[eventHubManager,IOFrameCommons],
     props:{
         hasRememberMe:{
             type: Boolean,
@@ -16,7 +17,7 @@ Vue.component('user-login', {
         typesOf2FA:{
             type: Array,
             default: function(){
-                return ['app'];
+                return ['app','mail'];
             }
         },
         text: {
@@ -27,6 +28,7 @@ Vue.component('user-login', {
                     password: 'password',
                     rememberMe: 'Remember Me',
                     loginButton: 'Login',
+                    errors:'Input errors',
                     '2FA':{
                         'required':'Two-Factor Authentication Required',
                         'suggested':'Two-Factor Authentication required for this account?',
@@ -37,18 +39,22 @@ Vue.component('user-login', {
                         'methods': {
                             app:{
                                 'text':'Authenticator App',
-                                'url':document.rootURI+'front/ioframe/img/icons/CPMenu/security.svg',
+                                'url':document.ioframe.rootURI+'front/ioframe/img/icons/CPMenu/security.svg',
                                 'instruction':'Please enter the Authenticator code here:'
                             },
                             mail:{
                                 'text':'Email Code',
-                                'url':document.rootURI+'front/ioframe/img/icons/CPMenu/mails.svg',
+                                'url':document.ioframe.rootURI+'front/ioframe/img/icons/CPMenu/mails.svg',
                                 'request':'Send Code via Mail',
-                                'instruction':'Once you receive the email, enter the code here:'
+                                'instruction':'Once you receive the email, enter the code here:',
+                                'authResponse':'Either the email is not verified, or you need to login again',
+                                'invalidResponse':'Mail not sent',
+                                'rateLimit':'Rate limit reached, try again in ',
+                                'seconds':'seconds'
                             },
                             sms:{
                                 'text':'SMS Code',
-                                'url':document.rootURI+'front/ioframe/img/icons/CPMenu/sms.svg',
+                                'url':document.ioframe.rootURI+'front/ioframe/img/icons/CPMenu/sms.svg',
                                 'request':'Send Code via SMS',
                                 'instruction':'Once you receive the SMS, enter the code here:'
                             },
@@ -60,7 +66,7 @@ Vue.component('user-login', {
         //Selected language
         language: {
             type: String,
-            default: document.selectedLanguage ?? ''
+            default: document.ioframe.selectedLanguage ?? ''
         },
         //Identifier
         identifier: {
@@ -95,7 +101,7 @@ Vue.component('user-login', {
         },
         regex:{
             app:/^\d{6}$/,
-            mail:/^\[a-zA-Z0-9]{6}$/,
+            mail:/^[a-zA-Z0-9]{8}$/,
             sms:/^[a-zA-Z0-9]{6}$/,
         },
         twoFactorAuthType:'',
@@ -105,12 +111,67 @@ Vue.component('user-login', {
     }
     },
     created: function(){
-
+        this.registerHub(eventHub);
+        this.registerEvent('requestMail2FA', this.send2FAMailResponse);
     },
     methods:{
         //Requests SMS/Mail
         requestCode: function(type){
-            alertLog('Authentication method not supported!','error')
+            if(type !== 'mail'){
+                alertLog('Authentication method not supported!','error');
+                return;
+            }
+
+            this.requesting = true;
+
+            //Data to be sent
+            let data = new FormData();
+            data.append('action', 'requestMail2FA');
+
+            if(this.verbose)
+                console.log('Requesting 2FA via email');
+
+            this.apiRequest(
+                data,
+                'api/v1/users',
+                'requestMail2FA',
+                {
+                    'verbose': this.verbose,
+                    'parseJSON':true,
+                    'identifier':this.identifier
+                }
+            );
+        },
+        send2FAMailResponse: function (response){
+
+            if(this.identifier && (!response.from || (response.from !== this.identifier)) )
+                return;
+
+            if(this.verbose)
+                console.log('Got send2FAMailResponse response',response);
+
+            this.requesting = false;
+
+            response = this.identifier ? response.content : response;
+
+            if((typeof response === 'string')){
+                if(response.startsWith('RATE_LIMIT_REACHED')){
+                    let seconds = response.split('@')[1];
+                    alertLog(this.text['2FA'].methods.mail.rateLimit+' '+seconds+' '+this.text['2FA'].methods.mail.seconds,'warning',this.$el);
+                }
+                else if(response === 'AUTHENTICATION_FAILURE'){
+                    alertLog(this.text['2FA'].methods.mail.authResponse,'warning',this.$el);
+                    this.loginConfirmed = false;
+                    this.twoFactorAuthType = '';
+                    this.requires2FA = false;
+                }
+            }
+            else if((response-0) !== 0){
+                alertLog(this.text['2FA'].methods.mail.invalidResponse,'error',this.$el);
+            }
+            else{
+                this.requests.mail = true;
+            }
         },
         //Log in
         log: function(){
@@ -120,7 +181,7 @@ Vue.component('user-login', {
             if(this.verbose)
                 console.log('Inputs are ' + "Email:"+this.m.val+", password:"+this.p.val);
             //validate email
-            if(this.m.val==undefined || this.m.val=="" || !this.m.val.match(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/)){
+            if( (this.m.val===undefined) || (this.m.val==="") || !this.m.val.match(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/)){
                 this.m.class = "error";
                 errors++;
             }
@@ -167,7 +228,7 @@ Vue.component('user-login', {
                         if(context.language)
                             data.append('language', context.language);
                         //Api url
-                        let url=document.rootURI+"api\/v1\/users";
+                        let url=document.ioframe.rootURI+"api\/v1\/users";
                         context.requesting = true;
                         //Request itself
                         fetch(url, {
@@ -210,7 +271,7 @@ Vue.component('user-login', {
                                         }
                                         //Remember to udate session info!
                                         if(!context.test)
-                                            updateSesInfo(document.pathToRoot,{
+                                            updateSesInfo(document.ioframe.pathToRoot,{
                                                 'sessionInfoUpdated': function(){
                                                     location.reload();
                                                 }
@@ -241,24 +302,27 @@ Vue.component('user-login', {
                                     case '8':
                                         respType='error';
                                         break;
+                                    case '9':
+                                        respType='error';
+                                        break;
                                     default:
                                         let loginSuccess = false;
                                         if(response.length >= 32){
                                             //This means we got both sesID and IV
                                             if(IsJsonString(response) ){
                                                 let resp = JSON.parse(response);
-                                                if(resp['sesID'].length == 32){
+                                                if(resp['sesID'].length === 32){
                                                     localStorage.setItem("sesID",resp['sesID']);
                                                     loginSuccess = true;
                                                 }
-                                                if(resp['iv'].length == 32){
+                                                if(resp['iv'].length === 32){
                                                     localStorage.setItem("sesIV",resp['iv']);
                                                     loginSuccess = true;
                                                 }
                                             }
                                             //This means we just got a new ID
                                             else{
-                                                if(response.length == 32){
+                                                if(response.length === 32){
                                                     localStorage.setItem("sesID",response);
                                                     loginSuccess = true;
                                                 }
@@ -267,7 +331,7 @@ Vue.component('user-login', {
                                                 context.resp = '0';
                                                 respType='success';
                                                 //Remember to udate session info!
-                                                updateSesInfo(document.pathToRoot,{
+                                                updateSesInfo(document.ioframe.pathToRoot,{
                                                     'sessionInfoUpdated': function(){
                                                         location.reload();
                                                     }
@@ -301,22 +365,24 @@ Vue.component('user-login', {
                     }
                 );
             }
+            else
+                alertLog(this.text.errors,'error',this.$el);
         }
     },
     template:
         `<div class="user-login" :class="{requesting:requesting}">
             <form novalidate>
             
-                <input v-if="!loginConfirmed" :class="[m.class]" type="email" :id="identifier+'m_log'" name="m" :placeholder="text.email" v-model="m.val" required>
-                <input v-if="!loginConfirmed":class="[p.class]" type="password" :id="identifier+'p_log'" name="p" :placeholder="text.password" v-model="p.val" required>
-                <label v-if="!loginConfirmed && hasRememberMe"> <input type="checkbox" name="rMe" v-model="rMe"> <span v-text="text.rememberMe"></span> </label>
+                <input v-if="!loginConfirmed && !requesting" :class="[m.class]" type="email" :id="identifier+'m_log'" name="m" :placeholder="text.email" v-model="m.val" required>
+                <input v-if="!loginConfirmed && !requesting" :class="[p.class]" type="password" :id="identifier+'p_log'" name="p" :placeholder="text.password" v-model="p.val" required>
+                <label v-if="!loginConfirmed && !requesting && hasRememberMe"> <input type="checkbox" name="rMe" v-model="rMe"> <span v-text="text.rememberMe"></span> </label>
                 
                 <div class="suggest-2fa" v-if="!loginConfirmed && suggest2FA">
                     <span v-text="text['2FA'].suggested"></span>
                     <button @click.prevent="requires2FA = !requires2FA" v-text="requires2FA ? text['2FA'].suggestedNo2FA : text['2FA'].suggested2FA"></button>
                 </div>
                 
-                <div class="required-2fa" v-if="requires2FA">
+                <div class="required-2fa" v-if="requires2FA && !requesting">
                 
                     <div class="required" v-if="loginConfirmed" v-text="text['2FA'].required"></div>
                 
@@ -348,7 +414,7 @@ Vue.component('user-login', {
                     
                 </div>
                 
-                <button @click.prevent="log" v-text="text.loginButton"></button>
+                <button v-if="!requesting" @click.prevent="log" v-text="text.loginButton"></button>
             </form>
         </div>`
 });

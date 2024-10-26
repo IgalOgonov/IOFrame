@@ -1,1 +1,86 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22"><defs><style>.a{fill:#fff;}.a,.b{stroke:#000;}.b,.d{fill:none;}.b{stroke-linecap:round;stroke-width:2px;}.c{stroke:none;}</style></defs><g transform="translate(-1486.519 -228.519)"><g class="a" transform="translate(1486.519 228.519)"><circle class="c" cx="11" cy="11" r="11"/><circle class="d" cx="11" cy="11" r="10.5"/></g><g transform="translate(1493.622 235.622)"><line class="b" x2="7.794" y2="7.794"/><line class="b" x1="7.794" y2="7.794"/></g></g></svg>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="25.45546"
+   height="22.045139"
+   viewBox="0 0 25.45546 22.045139"
+   version="1.1"
+   id="svg20"
+   sodipodi:docname="cancel-icon.svg"
+   inkscape:version="1.0.1 (3bc2e813f5, 2020-09-07)">
+  <metadata
+     id="metadata24">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1186"
+     inkscape:window-height="760"
+     id="namedview22"
+     showgrid="false"
+     inkscape:zoom="18.52738"
+     inkscape:cx="13.045767"
+     inkscape:cy="18.055446"
+     inkscape:window-x="2488"
+     inkscape:window-y="47"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg20" />
+  <defs
+     id="defs4">
+    <style
+       id="style2">.a{fill:#fff;}.a,.b{stroke:#000;}.b,.d{fill:none;}.b{stroke-linecap:round;stroke-width:2px;}.c{stroke:none;}</style>
+  </defs>
+  <path
+     id="path857"
+     style="display:inline;fill:#fafcff;fill-opacity:1;stroke:#1c7786;stroke-width:1.577;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
+     d="M 18.636379,0.78850001 24.54498,11.02257 18.636379,21.25664 H 6.8190796 L 0.91047972,11.02257 6.8190796,0.78850001 Z" />
+  <g
+     transform="translate(-6.4434622,17.812038)"
+     id="g16-0"
+     style="display:inline;stroke:#1c7786;stroke-linecap:square;stroke-opacity:1">
+    <g
+       id="g878"
+       transform="translate(-12.090215,2.5367861)">
+      <g
+         id="g882"
+         transform="translate(6,4)">
+        <line
+           class="b"
+           x1="30.813282"
+           y2="-8.0692291"
+           id="line14-0"
+           y1="-18.93461"
+           x2="19.947891"
+           style="display:inline;stroke:#1c7786;stroke-linecap:square;stroke-opacity:1" />
+        <line
+           class="b"
+           x1="30.813271"
+           y2="-18.93461"
+           id="line14-0-2"
+           y1="-8.0692177"
+           x2="19.947891"
+           style="display:inline;fill:none;stroke:#1c7786;stroke-width:2;stroke-linecap:square;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      </g>
+    </g>
+  </g>
+</svg>

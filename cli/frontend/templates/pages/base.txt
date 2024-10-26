@@ -51,5 +51,3 @@ $siteConfig = array_merge($siteConfig,
 $frontEndResourceTemplateManager->printResources('JS');
 
 %%TEMPLATE_FOOTERS_END%%
-
-?>

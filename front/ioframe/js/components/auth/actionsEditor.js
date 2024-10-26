@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('auth-actions-editor', {
     mixins: [sourceURL,eventHubManager,IOFrameCommons],
     props: {
@@ -122,7 +119,7 @@ Vue.component('auth-actions-editor', {
                     alertLog('Failed to set !','error',this.$el);
                     break;
                 case 1:
-                    alertLog('Actions created!','success',this.$el);
+                    alertLog('Actions created!','success',this.$el,{autoDismiss:2000});
                     this.resetInputs();
                     break;
                 default:

@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('settings-editor', {
     mixins: [sourceURL,eventHubManager,IOFrameCommons],
     props: {
@@ -206,7 +203,7 @@ Vue.component('settings-editor', {
             switch (response) {
                 case 1:
                     if(!this.deleted)
-                        alertLog('Setting '+this.changing+' updated!','success',this.$el);
+                        alertLog('Setting '+this.changing+' updated!','success',this.$el,{autoDismiss:2000});
                     else
                         alertLog('Setting '+this.changing+' deleted!','warning',this.$el);
                     this.setInputsAsCurrent(this.changing, this.changing === this.newSetting.key);

@@ -3,10 +3,10 @@ $ArticleHandler = new \IOFrame\Handlers\ArticleHandler($settings,$defaultSetting
 
 $deleteItems = [];
 foreach($inputs['ids'] as $index => $id){
-    array_push($deleteItems,['Article_ID'=>$id]);
+    $deleteItems[] = ['Article_ID' => $id];
 }
 
-$result = !$inputs['permanent'] ?
+$result = !($inputs['permanent']??false) ?
     $ArticleHandler->hideArticles($inputs['ids'], ['test'=>$test])  : $ArticleHandler->deleteItems($deleteItems, 'articles', ['test'=>$test]) ;
 
 $individualResults = [];

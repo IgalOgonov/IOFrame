@@ -1,0 +1,624 @@
+if(eventHub === undefined)
+    var eventHub = new Vue();
+
+var %%VARIABLE_NAME%% = new Vue({
+    el: '#%%ELEMENT_NAME%%',
+    name: '%%VUE_NAME%%',
+    mixins:[%%MIXINS%%],
+    data(){
+        return {
+            identifier:'%%VUE_NAME%%',
+            configObject: JSON.parse(JSON.stringify(document.siteConfig)),
+            types: {
+                default:{
+                    title: 'Replace this',
+                    button: 'negative-1'
+                }
+            },
+            currentType: 'default',
+            eventParsingMap:{
+                'handleItemDeletion':{
+                    identifierFrom:this.identifier,
+                    apiResponses:true,
+                    alertErrors:true,
+                    valid:{
+                        type: 'number',
+                        value: 0
+                    },
+                    objectOfResults: false,
+                    errorMap:{
+                        '-1':{
+                            text:'Server error!',
+                            warningType: 'error',
+                        }
+                    }
+                },
+            },
+            searchLists:{
+                default:{ //TODO Replace name and create more
+                    //Filters to display for the search list //TODO Expend common filters
+                    filters:[
+                        {
+                            type:'Group',
+                            group: [
+                                {
+                                    name:'createdAfter',
+                                    title:'Created After',
+                                    type:'Datetime',
+                                    parser: function(value){ return Math.round(value/1000); }
+                                },
+                                {
+                                    name:'createdBefore',
+                                    title:'Created Before',
+                                    type:'Datetime',
+                                    parser: function(value){ return Math.round(value/1000); }
+                                }
+                            ]
+                        },
+                        {
+                            type:'Group',
+                            group: [
+                                {
+                                    name:'changedAfter',
+                                    title:'Changed After',
+                                    type:'Datetime',
+                                    parser: function(value){ return Math.round(value/1000); }
+                                },
+                                {
+                                    name:'changedBefore',
+                                    title:'Changed Before',
+                                    type:'Datetime',
+                                    parser: function(value){ return Math.round(value/1000); }
+                                }
+                            ]
+                        },
+                        {
+                            type:'Group',
+                            group: [
+                                {
+                                    name:'includeRegex',
+                                    title:'Include',
+                                    placeholder:'Text the name includes',
+                                    type:'String',
+                                    min:0,
+                                    max: 64,
+                                    validator: function(value){
+                                        return value.match(/^[\w\.\-\_ ]{1,64}$/) !== null;
+                                    }
+                                },
+                                {
+                                    name:'excludeRegex',
+                                    title:'Exclude',
+                                    placeholder:'Text the name excludes',
+                                    type:'String',
+                                    min:0,
+                                    max: 64,
+                                    validator: function(value){
+                                        return value.match(/^[\w\.\-\_ ]{1,64}$/) !== null;
+                                    }
+                                },
+                            ]
+                        }
+                    ],
+                    //Result columns to display, and how to parse them //TODO Expend with more
+                    columns:[
+                        {
+                            id:'identifier',
+                            title:'%%VUE_NAME%%'
+                        },
+                        {
+                            id:'created',
+                            title:'Date Created',
+                            parser:timeStampToReadableFullDate
+                        },
+                        {
+                            id:'updated',
+                            title:'Last Changed',
+                            parser:timeStampToReadableFullDate
+                        }
+                    ],
+                    //SearchList API (and probably the only relevant API) URL TODO Edit
+                    url: document.ioframe.rootURI+ '%%API_URL%%',
+                    //Current page  //TODO Remove if no search list
+                    page:0,
+                    //Go to page  //TODO Remove if no search list
+                    pageToGoTo: 1,
+                    //Limit  //TODO Remove if no search list
+                    limit:50,
+                    //Total available results //TODO Remove if no search list
+                    total: 0,
+                    //Main items
+                    items: [],
+                    extraParams: {}, //TODO Remove if no extra params for search list
+                    selected:-1, //TODO Remove if no selection (although unlikely),
+                    //Whether we are currently loading
+                    initiated: false,
+                }
+            }
+            //Current Mode of operation
+            currentMode:'search',
+            //Current operation
+            currentOperation: '',
+            //Current operation input
+            operationInput: '',
+            commonText:{ //TODO Add more relevant text
+                'title-prefix':'%%GENERAL_TITLE%%',
+                'title-edit':'Edit',
+                'title-editing':' - Editing',
+                'title-create':'Create',
+                'title-creation':' - Creation',
+                'title-type':'Item Type',
+                'title-actions':'Actions',
+                'title-filters-toggle-show':'Show Filters',
+                'title-filters-toggle-hide':'Hide Filters',
+                'switch-mode-no-item':'Please select an item before viewing/editing it!',
+                'operation-updating':'Operation already in progress',
+                'operation-cancel-title':'Cancel',
+                'operation-delete-title':'Delete',
+                'operation-delete':'Delete selected?',
+                'operation-confirm':'Confirm',
+                'operation-cancel':'Cancel',
+                'create-invalid-input-requires-regex':'regex to match',
+                'response-unknown':'Unknown response',
+                'response-db-connection-error':'Server internal connection error',
+                'response-create-missing':'Missing inputs for items',
+                'response-create-dependency':'Dependency no longer exists for items',
+                'response-create-exists':'Identifiers already exist for items',
+                'response-create-success':'Items created',
+                'response-delete-success':'Items deleted'
+            },
+            //Whether we are currently in the middle of an operation
+            updating:false,
+            verbose:true, //TODO remove this when done building
+            test:true //TODO remove this when done building
+        }
+    },
+    created:function(){
+        this.registerHub(eventHub);
+        this.registerEvent('requestSelection', this.selectElement);
+        this.registerEvent('searchResults', this.parseSearchResults);
+        this.registerEvent('resetSearchPage',this.resetSearchPage);
+        this.registerEvent('handleItemDeletion', this.handleItemDeletion);
+        this.registerEvent('goToPage', this.goToPage); //TODO Add relevant events
+        this.registerEvent('searchAgain', this.searchAgain);
+        this.registerEvent('returnToMainApp', this.returnToMainApp);
+    },
+    computed:{
+        //Modes, and array of available operations in each mode
+        modes:function() {
+            switch (this.currentType){
+                default:
+                    return {
+                        search:{
+                            operations:{
+                                'delete':{
+                                    title:this.commonText['operation-delete-title'],
+                                    button:'negative-1'
+                                },
+                                'cancel':{
+                                    title:this.commonText['operation-cancel-title'],
+                                    button:'cancel-1'
+                                }
+                            },
+                            title:'View items'
+                        },
+                        edit:{
+                            operations:{},
+                            title:'Edit item'
+                        },
+                        create:{
+                            operations:{},
+                            title:'Create item'
+                        }
+                    };
+            }
+        },
+        //Main title TODO
+        title:function(){
+            switch(this.currentMode){
+                case 'search':
+                    return this.commonText['title-prefix'];
+                    break;
+                case 'edit':
+                    return this.commonText['title-prefix']+this.commonText['title-edit'];
+                    break;
+                case 'create':
+                    return this.commonText['title-prefix']+this.commonText['title-create'];
+                    break;
+                default:
+            }
+        },
+        currentlySelected: function(){
+            return this.currentSearchList.items[this.currentSearchList.selected] ?? null;
+        },
+        //Text for current operation TODO
+        currentOperationPlaceholder:function(){
+            if(this.currentOperationHasInput){
+                switch(this.currentOperation){
+                    case 'temp':
+                        return 'temp';
+                    default:
+                        return '';
+                }
+            }
+            return '';
+        },
+        //Text for current operation TODO
+        currentOperationText:function(){
+            switch(this.currentOperation){
+                case 'delete':
+                    return 'Delete selected?';
+                default:
+                    return '';
+            }
+        },
+        //Whether current operation has input TODO
+        currentOperationHasInput:function(){
+            switch(this.currentOperation){
+                default:
+                    return false;
+            }
+        },
+        //Whether the current mode has operations
+        currentModeHasOperations:function(){
+            return Object.keys(this.modes[this.currentMode].operations).length>0;
+        },
+        %%IF(HAS_EDITOR)//Common text for the editor TODO Add more if editor present
+        commonTextEditor: function(){
+            let text = JSON.parse(JSON.stringify(this.commonText));
+            return text;
+        },%%
+         currentSearchList: function (){
+             return this.searchLists[this.currentType];
+         },
+    },
+    watch:{
+        'currentType':function(newVal){
+            if(this.verbose)
+                console.log('Changing type to '+newVal);
+            this.searchLists[newVal].initiated = false;
+            this.searchLists[newVal].selected = -1;
+            this.searchLists[newVal].page = 0;
+            this.searchLists[newVal].pageToGoTo = 0;
+            this.searchLists[newVal].items = [];
+        }
+    },
+    methods:{
+        //Returns to main app
+        returnToMainApp: function(){
+            if(this.verbose)
+                console.log('Returning to main app!');
+            this.switchModeTo('search');
+        },
+        //Searches again (meant to be invoked after relevant changes) TODO Remove if no searchlist
+        searchAgain: function(){
+            if(this.verbose)
+                console.log('Searching again!');
+            this.currentSearchList.items = [];
+            this.currentSearchList.total = 0;
+            this.currentSearchList.selected = -1;
+            this.currentSearchList.initiated = false;
+        },
+        //Resets search result page TODO Remove if no searchlist
+        resetSearchPage: function (response){
+            if(this.verbose)
+                console.log('Received response',response);
+
+            if(!response.from || response.from !== 'search')
+                return;
+
+            this.page = 0;
+        },
+        //Parses search results returned from a search list TODO Remove if no searchlist
+        parseSearchResults: function(response){
+            if(this.verbose)
+                console.log('Received response',response);
+
+            if(!response.from || response.from !== 'search')
+                return;
+
+            //Either way, the items should be considered initiated
+            this.currentSearchList.items = [];
+            this.currentSearchList.initiated = true;
+
+            //In this case the response was an error code, or the page no longer exists
+            if(response.content['@'] === undefined)
+                return;
+
+            this.currentSearchList.total = (response.content['@']['#'] - 0) ;
+            delete response.content['@'];
+
+            for(let k in response.content){
+                response.content[k].identifier = k;
+                this.currentSearchList.items.push(response.content[k]);
+            }
+        },
+        //Handles operation response
+        //Handles operation response
+        handleItemDeletion: function(response){
+
+            let eventResult = this.eventResponseParser(response,'handleItemDeletion'%%IF(API_VERSION_2),2%%);
+
+            if(!eventResult)
+                return;
+
+            this.updating = false;
+
+            if(eventResult.valid){ //TODO Add what's needed
+                this.searchAgain();
+            }
+        },
+        //Goes to relevant page  TODO Remove if no searchlist
+        goToPage: function(page){
+            if(!this.initiating && (page.from === 'search')){
+                let newPage;
+                page = page.content;
+
+                if(page === 'goto')
+                    page = this.currentSearchList.pageToGoTo-1;
+
+                if(page < 0)
+                    newPage = Math.max(this.currentSearchList.page - 1, 0);
+                else
+                    newPage = Math.min(page,Math.ceil(this.currentSearchList.total/this.currentSearchList.limit));
+
+                if(this.currentSearchList.page === newPage)
+                    return;
+
+                this.currentSearchList.page = newPage;
+
+                this.currentSearchList.initiated = false;
+
+                this.currentSearchList.selected = -1;
+            }
+        },
+        //Element selection from search list  TODO Remove if no searchlist
+        selectElement: function(request){
+
+            if(!request.from || (request.from !== 'search'))
+                return;
+
+            request = request.content;
+
+            if(this.verbose)
+                console.log('Selecting item ',request);
+
+            if(this.currentMode === 'search'){
+                if(this.currentSearchList.selected === request){
+                    this.switchModeTo('edit');
+                }
+                else{
+                    this.currentSearchList.selected = request;
+                }
+            }
+        },
+        shouldDisplayMode: function(index){
+            if(index==='edit' && (this.currentSearchList.selected === -1) )
+                return false;
+            if(index==='create' && (this.currentSearchList.selected !== -1))
+                return false;
+
+            return true;
+        },
+        //Switches to requested mode
+        switchModeTo: function(newMode){
+            if(this.currentMode === newMode)
+                return;
+            if(newMode === 'edit' && this.currentSearchList.selected===-1){
+                alertLog('Please select an item before you view/edit it!','warning',this.$el);
+                return;
+            };
+
+            if(newMode==='edit'){
+                switch (this.currentMode) {
+                    case 'search':
+                        this.currentMode = 'edit';
+                        return;
+                    default:
+                        return
+                }
+            }else {
+                this.currentSearchList.selected=-1;
+            }
+            this.currentMode = newMode;
+            this.currentOperation = '';
+        },
+        //Switches to requested type
+        switchTypeTo: function(newType){
+            if(this.currentType === newType)
+                return;
+            this.switchModeTo('search');
+            this.currentType = newType;
+        },
+        //Executes the operation
+        confirmOperation: function(payload){
+            if(this.test)
+                console.log('Current Operation ', this.currentOperation ,'Current input ',this.operationInput);
+
+            %%IF(!API_VERSION_2)let data = new FormData();%% %%IF(API_VERSION_2)
+            let queryParams = {};%%
+            let currentOperation = this.currentOperation;
+            let eventName = '';%%IF(API_VERSION_2)
+            let prefix = '';%% %%IF(API_VERSION_2)
+            let method = 'post';%%
+
+            if(this.currentMode === 'search'){
+                switch (currentOperation){ //TODO Add what's needed
+                    case 'delete':
+                        eventName = 'handleItemDeletion';
+                        %%IF(!API_VERSION_2)data.append('action','%%DELETE_ACTION_NAME%%');%% %%IF(API_VERSION_2)
+                        queryParams.something = [].join(',');%% %%IF(API_VERSION_2)  %%IF(API_VERSION_2)
+                        prefix = '/';%% %%IF(API_VERSION_2)
+                        method = 'delete';%%
+                        break;
+                    default:
+                        break;
+                };
+
+                if(!eventName){
+                    if(this.verbose)
+                        console.log('Returning, no operation set!');
+                    return;
+                }
+
+                if(this.test)
+                    %%IF(!API_VERSION_2)data.append('req','test');%% %%IF(API_VERSION_2)queryParams.req='test';%%
+
+                //TODO Add what's needed
+                 this.apiRequest(
+                     %%IF(!API_VERSION_2)data%% %%IF(API_VERSION_2)null%%,
+                     '%%API_URL%%' %%IF(API_VERSION_2)+ prefix%%,
+                     eventName,
+                      {
+                         %%IF(API_VERSION_2)queryParams : queryParams,
+                         %% %%IF(API_VERSION_2)method : method,
+                         %%verbose: this.verbose,
+                         parseJSON: true,
+                         identifier: this.identifier
+                      }
+                 );
+            }
+        },
+        //Initiates an operation
+        operation: function(operation){
+
+            if(this.test)
+                console.log('Operation',operation);
+            switch (operation){
+                case 'delete':
+                    this.currentOperation = 'delete';
+                    break;
+                case 'cancel':
+                    this.cancelOperation();
+                    break;
+                default:
+                    this.currentOperation = operation;
+            }
+        },
+        shouldDisplayOperation: function(index){
+            //Search mode
+            if(this.currentMode === 'search'){
+                if(this.currentSearchList.selected === -1 && index !== 'create')
+                    return false;
+                else if(this.currentSearchList.selected !== -1 && index === 'create')
+                    return false;
+            }
+            //Edit mode
+            else if(this.currentMode === 'edit'){
+            }
+
+            return true;
+        },
+        //Cancels the operation
+        cancelOperation: function(){
+
+            if(this.test)
+                console.log('Canceling operation');
+            if(this.currentMode === 'search'){
+                this.currentSearchList.selected = -1;
+            }
+            else if(this.currentMode === 'edit'){
+                this.currentMode = 'search';
+                this.currentSearchList.selected = -1;
+            };
+            this.operationInput= '';
+            this.currentOperation = '';
+
+        }
+    },
+    template:`
+        <div id="%%ELEMENT_NAME%%" class="main-app">
+            <div class="loading-cover" v-if="!currentSearchList.initiated && currentMode==='search'">
+            </div>
+
+            <h1 v-if="title!==''" v-text="title"></h1>
+
+            <div class="type-mode">
+                <span v-text="commonText['title-type']"></span>
+                <select class="types" v-model:value="currentType" :disabled="currentMode !== 'search'">
+                    <option v-for="(item, index) in types"
+                        class="type"
+                        :value="index"
+                        v-text="item.title"
+                        @click="switchTypeTo(index)"
+                        :class="[{selected:(currentType===index)},(item.button? item.button : ' positive-3')]"
+                    ></option>
+                </select>
+            </div>
+
+            <div class="modes">
+                <button
+                    v-for="(item,index) in modes"
+                    v-if="shouldDisplayMode(index)"
+                    v-text="item.title"
+                    @click="switchModeTo(index)"
+                    :class="[{selected:(currentMode===index)},(item.button? item.button : ' positive-3')]"
+                >
+                </button>
+            </div>
+
+            <div class="operations-container" v-if="currentModeHasOperations">
+                <div class="operations-title" v-text="'Actions'"></div>
+                <div class="operations" v-if="currentOperation===''">
+                    <button
+                        v-if="shouldDisplayOperation(index)"
+                        v-for="(item,index) in modes[currentMode].operations"
+                        @click="operation(index)"
+                        :class="[index,{selected:(currentOperation===index)},(item.button? item.button : 'positive-3')]"
+                    >
+                        <div v-text="item.title"></div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="operations" v-if="currentModeHasOperations && currentOperation !==''">
+                <label :for="currentOperation" v-text="currentOperationText" v-if="currentOperationText"></label>
+                <input
+                    v-if="currentOperationHasInput"
+                    :name="currentOperation"
+                    :placeholder="currentOperationPlaceholder"
+                    v-model:value="operationInput"
+                    type="text"
+                >
+                <button
+                    :class="(currentOperation === 'delete' ? 'negative-1' : 'positive-1')"
+                    @click="confirmOperation">
+                    <div v-text="'Confirm'"></div>
+                </button>
+                <button class="cancel-1" @click="cancelOperation">
+                    <div v-text="'Cancel'"></div>
+                </button>
+            </div>
+
+            <div is="search-list"
+                 v-if="currentMode==='search'"
+                 :api-url="url"
+                 api-action="%%API_GET_ACTION%%"
+                 :extra-params="extraParams"
+                 :page="page"
+                 :limit="limit"
+                 :total="total"
+                 :items="items"
+                 :initiate="!initiated"
+                 :columns="columns"
+                 :filters="filters"
+                 :selected="selected"
+                 :test="test"
+                 :verbose="verbose"
+                 identifier="search"
+            ></div>
+
+            %%IF(HAS_EDITOR)
+            <div is="%%COMPONENT_NAME%%"
+                 v-if="currentMode==='edit'"
+                 :mode="currentMode"
+                 identifier="editor" %%IF(PASS_ID)
+                 :id="currentMode === 'create' ? undefined : currentlySelected.identifier"%% %%IF(PASS_ITEM)
+                 :item="currentMode === 'create' ? undefined : currentlySelected"%%
+                 :passed-common-text="commonTextEditor"
+                 :test="test"
+                 :verbose="verbose"
+                ></div>%%
+        </div>
+    `
+});

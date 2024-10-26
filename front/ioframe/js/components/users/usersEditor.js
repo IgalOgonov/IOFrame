@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('users-editor', {
     mixins: [sourceURL,eventHubManager,IOFrameCommons],
     props: {
@@ -143,7 +140,7 @@ Vue.component('users-editor', {
                 'active':{
                     title: 'User Active?',
                     edit: true,
-                    type: 'boolean',
+                    type: 'number',
                     onUpdate:{
                     }
                 },
@@ -193,6 +190,25 @@ Vue.component('users-editor', {
                             return value === 0 || (value * 1000 > Date.now());
                         },
                         validateFailureMessage: 'Provided ban date must be larger than now, or not provided at all!'
+                    }
+                },
+                'lockedUntil':{
+                    title: 'Locked Until',
+                    edit: true,
+                    type: 'date',
+                    parseOnGet: function(timestamp){
+                        timestamp *= 1000;
+                        return timestamp? timestampToDate(timestamp) : '';
+                    },
+                    onUpdate:{
+                        setName:'lockedDate',
+                        parse: function(timestamp){
+                            return timestamp !== ''? dateToTimestamp(timestamp) / 1000 : 0;
+                        },
+                        validate: function(value){
+                            return value === 0 || (value * 1000 > Date.now());
+                        },
+                        validateFailureMessage: 'Provided lock date must be larger than now, or not provided at all!'
                     }
                 },
                 'suspiciousUntil':{
@@ -428,7 +444,7 @@ Vue.component('users-editor', {
                     alertLog('Server error!','error',this.$el);
                     break;
                  case 0:
-                     alertLog('User updated!','success',this.$el);
+                     alertLog('User updated!','success',this.$el,{autoDismiss:2000});
                      this.setInputsAsCurrent();
                      break;
                  case 1:

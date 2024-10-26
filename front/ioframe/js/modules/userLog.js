@@ -19,6 +19,7 @@ var userLog = new Vue({
         parseLoginResponse: function(response){
             let responseBody = response.body;
             let responseType = response.type;
+            let alertParams = {};
             /*This will display messages that the API could return
              **/
             switch(responseBody){
@@ -37,6 +38,7 @@ var userLog = new Vue({
                 case '0':
                     responseBody = 'User logged in successfully!';
                     responseType='success';
+                    alertParams = {autoDismiss:2000};
                     break;
                 case '1':
                     responseBody = 'User login failed - username and password combination is wrong!';
@@ -52,7 +54,7 @@ var userLog = new Vue({
                     break;
                 default:
             }
-            alertLog(responseBody, responseType);
+            alertLog(responseBody, responseType,alertParams);
         }
     }
 });

@@ -1,9 +1,8 @@
 <?php
 
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
 
-if(!\IOFrame\Util\validator::validateSQLTableName($target)){
+
+if(!\IOFrame\Util\ValidatorFunctions::validateSQLTableName($target)){
     if($test)
         echo 'Target must be a valid settings file name - which is a valid sql table name!'.EOL;
     exit(INPUT_VALIDATION_FAILURE);
@@ -36,7 +35,7 @@ if(!isset($params['settingName'])){
     exit(INPUT_VALIDATION_FAILURE);
 }
 
-if(!\IOFrame\Util\validator::validateSQLKey(str_replace('-','',$params['settingName']))){
+if(!\IOFrame\Util\ValidatorFunctions::validateSQLKey(str_replace('-','',$params['settingName']))){
     if($test)
         echo 'A setting must have a valid name!'.EOL;
     exit(INPUT_VALIDATION_FAILURE);

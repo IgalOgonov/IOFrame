@@ -1,11 +1,14 @@
 <?php
 $ArticleHandler = new \IOFrame\Handlers\ArticleHandler($settings,$defaultSettingsParams);
 
-$result = $ArticleHandler->getItems($inputs['keys'], 'articles', $retrieveParams);
+
+$result = $ArticleHandler->getItems($inputs['keys']??[], 'articles', $retrieveParams);
+$meta = null;
 
 foreach($result as $key=>$res){
     if($key === '@'){
-        $tempResult[$key] = $res;
+        $meta = $res;
+        unset($result[$key]);
         continue;
     }
     if(!is_array($res))
@@ -24,6 +27,9 @@ foreach($result as $key=>$res){
 
                 if(!empty($articleResultsColumnMap[$resKey]['type']) && gettype($resValue) !== 'array' && $resValue !== null)
                     switch($articleResultsColumnMap[$resKey]['type']){
+                        case 'csv':
+                            $resValue = $resValue? explode($articleResultsColumnMap[$resKey]['separator']??',',$resValue):[];
+                            break;
                         case 'string':
                             $resValue = (string)$resValue;
                             break;
@@ -37,14 +43,14 @@ foreach($result as $key=>$res){
                             $resValue = (double)$resValue;
                             break;
                         case 'json':
-                            if(!\IOFrame\Util\is_json($resValue))
+                            if(!\IOFrame\Util\PureUtilFunctions::is_json($resValue))
                                 break;
                             else
                                 $resValue = json_decode($resValue,true);
                             if(!empty($articleResultsColumnMap[$resKey]['validChildren'])){
                                 $tempRes = [];
                                 foreach($articleResultsColumnMap[$resKey]['validChildren'] as $validChild){
-                                    $tempRes[$validChild] = isset($resValue[$validChild])? $resValue[$validChild] : null;
+                                    $tempRes[$validChild] = $resValue[$validChild] ?? null;
                                 }
                                 $resValue = $tempRes;
                             }
@@ -79,3 +85,8 @@ foreach($result as $key=>$res){
 if(!empty($keysFailedAuth))
     foreach($keysFailedAuth as $key=>$code)
         $result[$key] = $code;
+
+$result = [
+    'articles'=>$result,
+    'meta'=>$meta
+];

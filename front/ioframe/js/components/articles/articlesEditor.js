@@ -1,8 +1,5 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('articles-editor', {
-    mixins: [sourceURL,eventHubManager,IOFrameCommons],
+    mixins: [sourceURL,eventHubManager,IOFrameCommons,cacheableObjectGetter,objectEditor],
     props: {
         //Default auth - whether you are an admin (0), owner (2), permitted to see (1), or public user (10000)
         defaultAuth:{
@@ -31,6 +28,13 @@ Vue.component('articles-editor', {
                 return {};
             }
         },
+        //Allows pre-loading tags without getting them from cache TODO Get from cache if empty
+        existingTagInfo:{
+            type: Object,
+            default: function(){
+                return {};
+            }
+        },
         //Whether to view default headline
         viewHeadline:{
             type: Boolean,
@@ -45,6 +49,11 @@ Vue.component('articles-editor', {
                     articleBlockEditor:{}
                 };
             }
+        },
+        //Language, mainly used for tags - otherwise uses article language
+        forceLanguage:{
+            type: String,
+            default: ''
         },
         //Starting mode - create or update
         mode: {
@@ -89,12 +98,68 @@ Vue.component('articles-editor', {
             //article
             article:{
             },
+            //language
+            language:this.forceLanguage,
             //New article thumbnail
             articleThumbnail: {
                 original:{},
                 current:{},
                 changed:false,
                 address:'',
+            },
+            //Event Parsing Map
+            eventParsingMap: {
+                //Fully filled as an example
+                'handleItemCreate':{
+                    identifierFrom:this.identifier,
+                    apiResponses:true,
+                    alertErrors:true,
+                    valid:{
+                        type: 'number', /*No value, as any number above 0 would be valid*/
+                        condition: function(value){return value > 0;}
+                    },
+                    objectOfResults: false, /*Doesn't really change anything, as the response isn't an object*/
+                    errorMap:{
+                        '-3':{
+                            text:'Missing inputs when creating article!',
+                            warningType: 'error',
+                        },
+                        '-2':{
+                            text:'One of the dependencies (likely thumbnail) no longer exists!',
+                            warningType: 'error',
+                        },
+                        '-1':{
+                            text:'Server error!',
+                            warningType: 'error',
+                        }
+                    }
+                },
+                'handleItemUpdate':{
+                    apiResponses:true,
+                    alertErrors:true,
+                    valid:{
+                        type: 'number',
+                        value: 0
+                    },
+                    errorMap:{
+                        '-2':{
+                            text:'One of the dependencies (likely thumbnail) no longer exists!',
+                            warningType: 'error',
+                        },
+                        '-1':{
+                            text:'Server error!',
+                        },
+                        '1':{
+                            text:'Article no longer exists!',
+                        },
+                        '2':{
+                            text:'Server error!',
+                        },
+                        '3':{
+                            text:'Server error!',
+                        }
+                    }
+                }
             },
             //Editable article part
             mainItem:{
@@ -108,8 +173,7 @@ Vue.component('articles-editor', {
                     type: "number",
                     required:this.mode !== 'create',
                     onUpdate: {
-                        //bool, default false - do no send this key on update
-                        ignore: this.mode === 'create'
+                        ignore: true
                     }
                 },
                 title:{
@@ -169,6 +233,7 @@ Vue.component('articles-editor', {
                             }
                             return item.length > 0 && item.length < 128;
                         },
+                        setName: 'address'
                     },
                     validateFailureMessage: `Address must be a sequence of low-case characters and numbers separated
                      by "-", each sequence no longer than 24 characters long`
@@ -183,18 +248,20 @@ Vue.component('articles-editor', {
                         },
                         setName: 'subtitle'
                     },
+                    replaceEmpty: '@',
                     pattern:'^.{0,128}$',
                     validateFailureMessage: `Thumbnail subtitle must be no longer than 128 characters`,
                 },
                 'meta.caption':{
                     title:'Caption',
                     type:'textArea',
-                    placeholder: "May appear bellow the subtitle in some implementations",
+                    placeholder: "May appear below the subtitle in some implementations",
                     pattern:'^.{0,1024}$',
                     onUpdate: {
                         validate: function(item){
                             return item.length < 1024;
                         },
+                        replaceEmpty: '@',
                         setName: 'caption'
                     },
                     validateFailureMessage: `Caption must be no longer than 1024 characters`,
@@ -206,6 +273,7 @@ Vue.component('articles-editor', {
                         validate: function(item){
                             return item.length < 128;
                         },
+                        replaceEmpty: '@',
                         setName: 'alt'
                     },
                     pattern:'^.{0,128}$',
@@ -218,6 +286,7 @@ Vue.component('articles-editor', {
                         validate: function(item){
                             return item.length < 128;
                         },
+                        replaceEmpty: '@',
                         setName: 'name'
                     },
                     pattern:'^.{0,128}$',
@@ -232,38 +301,29 @@ Vue.component('articles-editor', {
                 blocks:{
                     ignore:true,
                 },
-                articleAuth:{
-                    title:'Auth Level',
+                articleAuth: {
+                    title: 'Auth Level',
                     type: 'select',
-                    list:[
-                        {
-                            title:'Public',
-                            value:0,
-                        },
-                        {
-                            title:'Restricted',
-                            value:1,
-                        },
-                        {
-                            title:'Private',
-                            value:2,
-                        },
-                        {
-                            title:'Admin',
-                            value:3
-                        },
-                    ],
+                    list:{
+                        0:'Public',
+                        1:'Restricted',
+                        2:'Private',
+                        3:'Admin',
+                    },
                     onUpdate: {
                         validate: function(item){
                             return item>=0 && item<4;
                         },
+                        parse: function(item){
+                            return item-0;
+                        }
                     },
                     //Generally here to set a default for creation
                     parseOnGet: function(item){
                         if(item === null)
                             return 2;
                         else
-                            return item;
+                            return item-0;
                     },
                     validateFailureMessage: `Valid auth levels are 0 to 3`
                 },
@@ -271,17 +331,11 @@ Vue.component('articles-editor', {
                     title:'Language',
                     type: 'select',
                     list:function(){
-                        let list = [
-                            {
-                                value:'',
-                                title:'Default'
-                            }
-                        ];
-                        for(let i in document.languages){
-                            list.push({
-                                value:document.languages[i],
-                                title:document.languages[i]
-                            });
+                        let list = {
+                            '':'Default'
+                        };
+                        for(let i in document.ioframe.languages){
+                            list[document.ioframe.languages[i]] = document.ioframe.languages[i];
                         }
                         return list;
                     }(),
@@ -291,6 +345,9 @@ Vue.component('articles-editor', {
                             return '';
                         else
                             return item;
+                    },
+                    onUpdate:{
+                        replaceEmpty: '@'
                     },
                     validateFailureMessage: `Valid auth levels are 0 to 3`
                 },
@@ -343,13 +400,19 @@ Vue.component('articles-editor', {
             recompute:{
                 changed:false,
                 hasGhosts: false,
-                paramMap: false
+                paramMap: false,
+                newTags:false
             },
             //Block opeions
             blockOptions:{
                 allowModifying: this.allowModifying,
                 allowAdding: this.allowModifying,
                 allowMoving: this.allowModifying,
+            },
+            //tags
+            tags: {
+                obj:{},
+                newTag:null
             },
             //blocks
             blocks:[],
@@ -371,10 +434,12 @@ Vue.component('articles-editor', {
             passedHeadline:false,
             //Whether the item is up to date
             initiated: false,
-           //Whether we are currently initiating the item
-           initiating: false,
-           //Whether we are currently updating the item
-           updating: false
+            //Whether we are currently initiating the item
+            initiating: false,
+            //Whether we are currently updating the item
+            updating: false,
+            //Whether we are currently updating the tags
+            updatingTags: {add:false,remove:false}
         }
     },
     created:function(){
@@ -388,6 +453,8 @@ Vue.component('articles-editor', {
         this.registerEvent('editor-media-selector-selection-event' ,this.thumbnailSelection);
         this.registerEvent('updateBlock' ,this.updateBlock);
         this.registerEvent('deleteBlock' ,this.deleteBlock);
+        this.registerEvent('addedTagsResponse' ,this.handleTagsAdded);
+        this.registerEvent('removedTagsResponse' ,this.handleTagsRemoved);
 
         if(!this.allowModifying)
             this.currentMode = 'view';
@@ -427,7 +494,7 @@ Vue.component('articles-editor', {
             return false;
         },
         orderChanged: function(){
-            return this.article && this.newOrder != this.article.blockOrder;
+            return this.article && (this.newOrder !== this.article.blockOrder);
         },
         changed: function(){
             if(this.recompute.changed)
@@ -435,25 +502,39 @@ Vue.component('articles-editor', {
             for(let i in this.mainItem){
                 if(
                     this.mainItem[i] && this.mainItem[i].original !== undefined &&
-                    (this.mainItem[i].original != this.mainItem[i].current || this.paramMap[i].considerChanged)
+                    ( (this.mainItem[i].original != this.mainItem[i].current) || this.paramMap[i].considerChanged)
                 )
                     return true;
             }
             //If we changed the thumbnail, return true
-            if(this.articleThumbnail.changed)
-                return true;
-
+            return this.articleThumbnail.changed;
+        },
+        tagsChanged: function(){
+            if(this.recompute.newTags)
+                ;//Do nothing
+            for(let i in this.tags.obj)
+                if(this.tags.obj[i].added || this.tags.obj[i].removed)
+                    return true;
             return false;
         },
-        itemHasInfo: function(){
-            if(this.paramMap)
-                ;//Do nothing
-
-            for(let i in this.paramMap){
-                if(!this.paramMap[i].edit && this.paramMap[i].display)
-                    return true;
+        anyNewTags: function(){
+            if(this.recompute.newTags)
+                ;//DO NOTHING
+            let tags = JSON.parse(JSON.stringify(this.existingTagInfo.contents));
+            delete tags['@'];
+            for(let i in this.tags.obj){
+                delete tags[i];
             }
-            return false;
+            return Object.keys(tags).length;
+        },
+        allTags: function(){
+            let tags = {};
+            for(let i in this.existingTagInfo.contents){
+                if(i === '@')
+                    continue;
+                tags[i] = this.existingTagInfo.contents[i];
+            }
+            return tags;
         },
     },
     methods:{
@@ -481,8 +562,8 @@ Vue.component('articles-editor', {
                 this.$el.querySelector('.articles-editor > .wrapper > .article-info-editor');
             if(!headerStart)
                 return;
-            let controlsDelta = window.pageYOffset - (this.currentMode === 'view' ? headerStart.offsetTop : (headerStart.clientHeight + headerStart.offsetTop));
-            let headlineDelta =  window.pageYOffset -  (headerStart.clientHeight + headerStart.offsetTop) ;
+            let controlsDelta = window.scrollY - (this.currentMode === 'view' ? headerStart.offsetTop : (headerStart.clientHeight + headerStart.offsetTop));
+            let headlineDelta =  window.scrollY -  (headerStart.clientHeight + headerStart.offsetTop) ;
             this.passedControls = (controlsDelta > 0);
             this.passedHeadline = (headlineDelta > 0);
         },
@@ -502,16 +583,9 @@ Vue.component('articles-editor', {
             }
 
             //Data to be sent
-            let data = new FormData();
-            let sendParams = {
-                action: 'cleanArticleBlocks',
-                articleId: this.articleId
-            };
-            for(let i in sendParams){
-                data.append(i,sendParams[i]);
-            }
+            let queryParams = {};
             if(this.test)
-                data.append('req','test');
+                queryParams.req = 'test';
 
             if(this.verbose)
                 console.log('Cleaning article ghost blocks');
@@ -519,10 +593,12 @@ Vue.component('articles-editor', {
             this.updating = true;
 
             this.apiRequest(
-                data,
-                'api/v1/articles',
+                null,
+                'api/v2/articles/'+this.articleId+'/blocks/clean',
                 'cleanGhostsResponse',
                 {
+                    'method':'delete',
+                    'queryParams':queryParams,
                     'verbose': this.verbose,
                     'parseJSON':true,
                     'identifier':this.identifier
@@ -546,28 +622,24 @@ Vue.component('articles-editor', {
 
             //Data to be sent
             let data = new FormData();
-            let sendParams = {
-                action: 'setArticle',
-                articleId: this.articleId,
-                create: false,
+            let queryParams = {
                 blockOrder: this.newOrder
             };
-            for(let i in sendParams){
-                data.append(i,sendParams[i]);
-            }
             if(this.test)
                 data.append('req','test');
 
             if(this.verbose)
-                console.log('Deleting item with parameters ',sendParams);
+                console.log('Setting order ',this.newOrder);
 
             this.updating = true;
 
             this.apiRequest(
                 data,
-                'api/v1/articles',
+                'api/v2/articles/'+this.articleId,
                 'newOrderResponse',
                 {
+                    'method':'put',
+                    'queryParams':queryParams,
                     'verbose': this.verbose,
                     'parseJSON':true,
                     'identifier':this.identifier
@@ -638,8 +710,8 @@ Vue.component('articles-editor', {
                     console.log('Deleting all blocks with id '+key);
 
                 for(let i in this.blocks){
-                    if(this.blocks[i].blockId == key){
-                        this.blocks.splice(i,1);
+                    if(this.blocks[i].blockId === key){
+                        this.blocks.splice(i-0,1);
                     }
                 }
                 for(let i in order){
@@ -677,109 +749,11 @@ Vue.component('articles-editor', {
                 if(this.verbose)
                     console.log('Updating all blocks with id '+request.newBlock.blockId);
                 for(let i in this.blocks){
-                    if(this.blocks[i].blockId == request.newBlock.blockId){
+                    if(this.blocks[i].blockId === request.newBlock.blockId){
                         Vue.set(this.blocks,i,request.newBlock);
                     }
                 }
             }
-        },
-        //Extracts the image address from an image object
-        extractImageAddress: function(item){
-            if(this.verbose)
-                console.log('Extracting address from ',item);
-            let trueAddress = item.address;
-            if(item.local)
-                trueAddress = document.rootURI + document.imagePathLocal+trueAddress;
-            else if(item.dataType)
-                trueAddress = document.rootURI+'api/media?action=getDBMedia&address='+trueAddress+'&lastChanged='+item.updated;
-            return trueAddress;
-        },
-        //Sets main item
-        setMainItem(item){
-
-            for(let i in item){
-                if(typeof item[i] === 'object')
-                    continue;
-
-                this.setSingleParam(i);
-
-                if(!this.paramMap[i].ignore)
-                    this.mainItem[i] =
-                        this.paramMap[i].edit ?
-                        {
-                            original:this.paramMap[i].parseOnGet(item[i]),
-                            current:this.paramMap[i].parseOnGet(item[i])
-                        }
-                            :
-                            this.paramMap[i].parseOnGet(item[i]);
-            }
-
-            for(let i in this.paramMap){
-                if((item[i] === undefined || typeof item[i] === 'object') && !this.paramMap[i].ignore){
-                    this.setSingleParam(i);
-                    let prefixes = i.split('.');
-                    let target = JSON.parse(JSON.stringify(item));
-                    let j = 0;
-                    while(target !== undefined && typeof target === 'object' && prefixes[j] && target[prefixes[j]]!== undefined){
-                        target = target[prefixes[j++]];
-                    }
-                    let newItem = (target !== undefined && typeof target !== 'object')? target : null;
-                    this.setSingleMainItem(i,newItem);
-                }
-            }
-
-            this.initiated = true;
-        },
-        //Helper function for setMainItem
-        setSingleParam: function(i){
-            if(!this.paramMap[i])
-                this.paramMap[i] ={};
-            this.paramMap[i].ignore = this.paramMap[i].ignore !== undefined ? this.paramMap[i].ignore : false;
-            this.paramMap[i].title = this.paramMap[i].title !== undefined ? this.paramMap[i].title : i;
-            this.paramMap[i].edit = this.paramMap[i].edit !== undefined ? this.paramMap[i].edit: true;
-            this.paramMap[i].type = this.paramMap[i].type !== undefined ? this.paramMap[i].type : "text";
-            this.paramMap[i].display = this.paramMap[i].display !== undefined ?  this.paramMap[i].display: true;
-            this.paramMap[i].considerChanged = this.paramMap[i].considerChanged !== undefined ?  this.paramMap[i].considerChanged: false;
-            this.paramMap[i].required = this.paramMap[i].required !== undefined ?  this.paramMap[i].required: false;
-
-            if(!this.paramMap[i].onUpdate)
-                this.paramMap[i].onUpdate = {};
-            this.paramMap[i].onUpdate.ignore = this.paramMap[i].onUpdate.ignore !== undefined ? this.paramMap[i].onUpdate.ignore : false;
-            this.paramMap[i].onUpdate.parse = this.paramMap[i].onUpdate.parse !== undefined ? this.paramMap[i].onUpdate.parse : function(value){
-                return value;
-            };
-            this.paramMap[i].onUpdate.validate = this.paramMap[i].onUpdate.validate !== undefined ? this.paramMap[i].onUpdate.validate : function(value){
-                return true;
-            };
-            this.paramMap[i].onUpdate.validateFailureMessage = this.paramMap[i].onUpdate.validateFailureMessage !== undefined ? this.paramMap[i].onUpdate.validateFailureMessage : 'Parameter '+i+' failed validation!';
-            this.paramMap[i].onUpdate.setName = this.paramMap[i].onUpdate.setName !== undefined ? this.paramMap[i].onUpdate.setName : i;
-
-            this.paramMap[i].parseOnGet = this.paramMap[i].parseOnGet !== undefined ? this.paramMap[i].parseOnGet : function(value){
-                return value;
-            };
-            this.paramMap[i].parseOnDisplay = this.paramMap[i].parseOnDisplay !== undefined ? this.paramMap[i].parseOnDisplay : function(value){
-                return value;
-            };
-            this.paramMap[i].parseOnChange = this.paramMap[i].parseOnChange !== undefined ? this.paramMap[i].parseOnChange : function(value){
-                return value;
-            };
-            this.paramMap[i].displayHTML = this.paramMap[i].displayHTML !== undefined ? this.paramMap[i].displayHTML : false;
-
-            if(!this.paramMap[i].button)
-                this.paramMap[i].button = {};
-            this.paramMap[i].button.positive = this.paramMap[i].button.positive !== undefined ? this.paramMap[i].button.positive : 'Yes';
-            this.paramMap[i].button.negative = this.paramMap[i].button.negative !== undefined ? this.paramMap[i].button.negative : 'No';
-        },
-        //Helper functin for setMainItem
-        setSingleMainItem: function(i, item){
-            this.mainItem[i] =
-                this.paramMap[i].edit ?
-                {
-                    original:this.paramMap[i].parseOnGet(item),
-                    current:this.paramMap[i].parseOnGet(item)
-                }
-                    :
-                    this.paramMap[i].parseOnGet(item);
         },
 
         //Initiates article
@@ -791,38 +765,51 @@ Vue.component('articles-editor', {
             if(this.identifier && (response.from !== this.identifier))
                 return;
 
+            this.initiating = false;
+            this.initiated = true;
             this.setArticleInfo(response.content);
         },
 
         //Sets main item
-        setArticleInfo(article){
+        setArticleInfo(response){
             if(this.verbose)
-                console.log('Setting article info  with ',article);
-            if(typeof article !== 'object'){
-                switch(article){
-                    case 1:
-                        alertLog('Article no longer exists!','error',this.$el);
-                        break;
-                    case 'INPUT_VALIDATION_FAILURE':
-                        alertLog('Unexpected error occurred!','error',this.$el);
-                        break;
-                    case 'OBJECT_AUTHENTICATION_FAILURE':
-                    case 'AUTHENTICATION_FAILURE':
-                        alertLog('Article view not authorized! Check if you are logged in.','error',this.$el);
-                        break;
-                    case 'WRONG_CSRF_TOKEN':
-                        alertLog('CSRF token wrong. Try refreshing the page if this continues.','warning',this.$el);
-                        break;
-                    case 'SECURITY_FAILURE':
-                        alertLog('Security related operation failure.','warning',this.$el);
-                        break;
-                    default :
-                        alertLog('Error initiating article, unknown response '+article,'error',this.$el);
-                }
+                console.log('Setting article info  with ',response);
+            if(typeof response !== 'object'){
+                alertLog('Unknown response '+response,'error',this.$el);
                 return;
             }
-            this.initiating = false;
+            switch(response.error){
+                case 1:
+                    alertLog('Article no longer exists!','error',this.$el);
+                    break;
+                case 'INPUT_VALIDATION_FAILURE':
+                    alertLog('Unexpected error occurred!','error',this.$el);
+                    break;
+                case 'OBJECT_AUTHENTICATION_FAILURE':
+                case 'AUTHENTICATION_FAILURE':
+                    alertLog('Article view not authorized! Check if you are logged in.','error',this.$el);
+                    break;
+                case 'WRONG_CSRF_TOKEN':
+                    alertLog('CSRF token wrong. Try refreshing the page if this continues.','warning',this.$el);
+                    break;
+                case 'SECURITY_FAILURE':
+                    alertLog('Security related operation failure.','warning',this.$el);
+                    break;
+                default :
+            }
+            if(response.error)
+                return;
+
+            let article = response.article;
+            //tags
+            if(article.tags && article.tags.length){
+                for (let i in article.tags)
+                    Vue.set(this.tags.obj,article.tags[i],{original:true,removed:false,added:false});
+            }
+
+            //blocks
             let blocks = JSON.parse(JSON.stringify(article.blocks));
+            this.blocks.splice(0,this.blocks.length);
             for(let i in blocks){
                 if(!blocks[i].meta || blocks[i].meta.length !== undefined)
                     blocks[i].meta = {};
@@ -842,6 +829,9 @@ Vue.component('articles-editor', {
             if(article['thumbnail'].address)
                 Vue.set(this.articleThumbnail,'address',this.extractImageAddress(article['thumbnail']));
 
+            if(!this.language && article.language)
+                this.language = article.language;
+
             this.newOrder = this.article.blockOrder;
             this.setMainItem(JSON.parse(JSON.stringify(article)));
             this.resetInputs();
@@ -857,20 +847,18 @@ Vue.component('articles-editor', {
             }
 
             this.initiating = true;
-            let data = new FormData();
-            data.append('action', 'getArticle');
-            if(this.articleId>0)
-                data.append('id', this.articleId);
-            else
-                data.append('articleAddress', this.articleAddress);
+            let queryParams = {};
+
             if(this.defaultAuth < 10000)
-            data.append('authAtMost', this.defaultAuth);
+                queryParams.authAtMost = this.defaultAuth;
 
             this.apiRequest(
-                data,
-                'api/v1/articles',
+                null,
+                'api/v2/articles/'+(this.articleId>0 ? this.articleId : this.articleAddress),
                 'articleInfo',
                 {
+                    'method':'get',
+                    'queryParams':queryParams,
                     'verbose': this.verbose,
                     'parseJSON':true,
                     'identifier':this.identifier,
@@ -896,54 +884,27 @@ Vue.component('articles-editor', {
 
             //Data to be sent
             let data = new FormData();
-            data.append('action', 'setArticle');
-            data.append('create', this.currentMode === 'create' ? true : false);
             if(this.test)
                 data.append('req','test');
 
-            let sendParams = {};
-
-            for(let paramName in this.paramMap){
-
-                let param = this.paramMap[paramName];
-                let item = this.mainItem[paramName];
-
-                if(
-                    param.ignore ||
-                    param.onUpdate.ignore ||
-                    (item.current !== undefined && item.current === item.original && !param.considerChanged && !param.required)
-                )
-                    continue;
-                else if(item.current === undefined){
-                    data.append(param.onUpdate.setName, item);
-                    sendParams[param.onUpdate.setName] = item;
-                    continue;
-                }
-
-                if(param.required && item.current === null){
-                    let title = param.title? param.title : paramName;
-                    alertLog(title+' must be set!','warning',this.$el);
-                    return;
-                }
-
-                let paramValue = param.onUpdate.parse(item.current);
-
-                if(!param.onUpdate.validate(paramValue)){
-                    alertLog(param.onUpdate.validateFailureMessage,'warning',this.$el);
-                    return;
-                }
-
-                //Meta params are sent as '@' instead of "null", to signify their deletion
-                if( ( (paramName.substr(0,4) === 'meta') || (paramName === 'language') ) && (paramValue === '') )
-                    paramValue = '@';
-
-                data.append(param.onUpdate.setName, paramValue);
-                sendParams[param.onUpdate.setName] = paramValue;
+            let sendParams = this['_setItemHelper']();
+            if(this.articleThumbnail.changed){
+                if(this.articleThumbnail.current.local)
+                    sendParams.toSend.resourceAddressLocal = this.articleThumbnail.current.address;
+                else if(!this.articleThumbnail.current.dataType)
+                    sendParams.toSend.resourceAddressURI = this.articleThumbnail.current.address;
+                else
+                    sendParams.toSend.resourceAddressDB = this.articleThumbnail.current.address
             }
 
-            if(this.articleThumbnail.changed){
-                data.append('thumbnailAddress',  this.articleThumbnail.current.address);
-                sendParams['thumbnailAddress'] = this.articleThumbnail.current.address;
+            if(Object.keys(sendParams.errors).length){
+                for (let i in sendParams.errors)
+                    alertLog(sendParams.errors[i].message,'warning',this.$el);
+            }
+            if(Object.keys(sendParams.toSend).length){
+                for (let i in sendParams.toSend){
+                    data.append(i, sendParams.toSend[i]);
+                }
             }
 
             if(this.verbose)
@@ -953,9 +914,10 @@ Vue.component('articles-editor', {
 
             this.apiRequest(
                 data,
-                'api/v1/articles',
+                'api/v2/articles' + (this.currentMode === 'create'? '' : ('/'+this.articleId)),
                 'setResponse',
                 {
+                    'method': this.currentMode === 'create' ? 'post': 'put',
                     'verbose': this.verbose,
                     'parseJSON':true,
                     'identifier':this.identifier
@@ -965,18 +927,59 @@ Vue.component('articles-editor', {
         //Handles item  update
         handleItemSet: function(response){
 
-            if(this.verbose)
-                console.log('Received handleItemSet',response);
+            let eventResult = this.eventResponseParser(response,(this.currentMode === 'create')?'handleItemCreate':'handleItemUpdate',2);
 
-            if(this.identifier && (response.from !== this.identifier))
+            if(!eventResult)
                 return;
 
             this.updating = false;
 
-            if(response.from)
-                response = response.content;
+            if(eventResult.valid){
+                if(this.currentMode === 'create'){
+                    this.articleId = response.content.response;
+                    this.paramMap.articleId.required = true;
+                    this.paramMap.articleId.ignore = false;
+                    this.paramMap.articleId.onUpdate.ignore = false;
+                    this.initiated = false;
+                    this.initiating = false;
+                    this.currentMode = 'update';
+                    eventHub.$emit('searchAgain');
+                }
+                else if(this.currentMode === 'update'){
+                    alertLog('Article updated!','success',this.$el,{autoDismiss:2000});
+                    this.initiating = false;
+                    this.getArticleInfo();
+                    eventHub.$emit('searchAgain');
+                }
+            }
+        },
+        handleTagsAdded:function(response){
+            this['_handleTags'](response,'add');
+        },
+        handleTagsRemoved:function(response){
+            this['_handleTags'](response,'remove');
+        },
 
-            switch(response){
+        _handleTags:function(response,type){
+
+            if(this.verbose)
+                console.log('Received tags response of type '+type,response);
+
+            if(this.identifier && (response.from !== this.identifier))
+                return;
+
+            this.updatingTags[type] = false;
+
+            response = response.content;
+            if(typeof response !== 'object'){
+                if(this.test)
+                    alertLog(response,'info',this.$el);
+                else
+                    alertLog('Unknown Response','error',this.$el);
+                return;
+            }
+
+            switch(response.error){
                 case 'INPUT_VALIDATION_FAILURE':
                     alertLog('Input validation error!','error',this.$el);
                     return;
@@ -991,52 +994,65 @@ Vue.component('articles-editor', {
                     alertLog('Security related operation failure.','warning',this.$el);
                     return;
             }
-
-            if(this.currentMode === 'create')
-                switch (response) {
-                    case -3:
-                        alertLog('Missing inputs when creating article!','error',this.$el);
-                        break;
-                    case -2:
-                        alertLog('One of the dependencies (likely thumbnail) no longer exists!','error',this.$el);
-                        break;
-                    case -1:
-                        alertLog('Server error!','error',this.$el);
-                        break;
-                    default:
-                        if(typeof response === 'number' || (typeof  response === 'string' && response.match(/^\d+$/))){
-                            this.articleId = response - 0;
-                            this.initiated = false;
-                            this.initiating = false;
-                            this.currentMode = 'update';
-                            eventHub.$emit('searchAgain');
-                        }
-                        else
-                            alertLog('Unknown response '+response,'error',this.$el);
+            response = response.response;
+            if(type === 'add'){
+                if(typeof response !== 'object'){
+                    if(this.test)
+                        alertLog(response,'info',this.$el);
+                    else{
+                        alertLog('Invalid response: <br>'+response,'error',this.$el);
+                    }
+                    return;
                 }
-            else if(this.currentMode === 'update')
-                switch (response) {
-                    case -2:
-                        alertLog('One of the dependencies (likely thumbnail) no longer exists!','error',this.$el);
-                        break;
+
+                for (let tagId in response){
+                    let realId = tagId.split('/')[2];
+                    let type = tagId.split('/')[1];
+
+                    switch (response[tagId]-0) {
+                        case -2:
+                            alertLog('Tag (or article) no longer exists!','error',this.$el);
+                            break;
+                        case -1:
+                            alertLog('Server error!','error',this.$el);
+                            break;
+                        case 0:
+                            for(let i in this.tags.obj){
+                                console.log(tagId,i);
+                                if(i === type+'/'+realId){
+                                    Vue.set(this.tags.obj[i],'added',false);
+                                    Vue.set(this.tags.obj[i],'original',true);
+                                }
+                            }
+                            eventHub.$emit('searchAgain');
+                            this.recompute.newTags = !this.recompute.newTags;
+                            break;
+                        default:
+                            alertLog('Unknown tag response '+response,'error',this.$el);
+                            break;
+                    }
+                }
+
+            }
+            else {
+
+                switch (response-0) {
                     case -1:
-                    case 2:
-                    case 3:
                         alertLog('Server error!','error',this.$el);
                         break;
                     case 0:
-                        alertLog('Article updated!','success',this.$el);
-                        this.initiating = false;
-                        this.getArticleInfo();
+                        for(let i in this.tags.obj){
+                            if(this.tags.obj[i].removed)
+                                delete this.tags.obj[i];
+                        }
                         eventHub.$emit('searchAgain');
-                        break;
-                    case 1:
-                        alertLog('Article no longer exists!','error',this.$el);
+                        this.recompute.newTags = !this.recompute.newTags;
                         break;
                     default:
-                        alertLog('Unknown response '+response,'error',this.$el);
+                        alertLog('Unknown tags response '+response,this.test?'info':'error',this.$el);
                         break;
                 }
+            }
         },
 
         //Handles cleaning unexisting blocks
@@ -1053,7 +1069,7 @@ Vue.component('articles-editor', {
             if(response.from)
                 response = response.content;
 
-            switch(response){
+            switch(response.error??null){
                 case 'INPUT_VALIDATION_FAILURE':
                     alertLog('Input validation error!','error',this.$el);
                     return;
@@ -1067,13 +1083,14 @@ Vue.component('articles-editor', {
                 case 'SECURITY_FAILURE':
                     alertLog('Security related operation failure.','warning',this.$el);
                     return;
+                default:
             }
-            switch (response) {
+            switch (response.response -0) {
                 case -1:
                     alertLog('Server error!','error',this.$el);
                     break;
                 case 0:
-                    alertLog('Non-existant blocks removed!','success',this.$el);
+                    alertLog('Non-existant blocks removed!','success',this.$el,{autoDismiss:2000});
                     let removeIDs = [];
                     for(let i in this.blocks){
                         if(!this.blocks[i].exists){
@@ -1115,7 +1132,7 @@ Vue.component('articles-editor', {
             if(response.from)
                 response = response.content;
 
-            switch(response){
+            switch(response.error??null){
                 case 'INPUT_VALIDATION_FAILURE':
                     alertLog('Input validation error!','error',this.$el);
                     return;
@@ -1129,8 +1146,9 @@ Vue.component('articles-editor', {
                 case 'SECURITY_FAILURE':
                     alertLog('Security related operation failure.','warning',this.$el);
                     return;
+                default:
             }
-            switch (response) {
+            switch (response.response - 0) {
                 case -1:
                 case 2:
                 case 3:
@@ -1138,7 +1156,7 @@ Vue.component('articles-editor', {
                     alertLog('Server error!','error',this.$el);
                     break;
                 case 0:
-                    alertLog('Order updated!','success',this.$el);
+                    alertLog('Order updated!','success',this.$el,{autoDismiss:2000});
                     this.article.blockOrder = this.newOrder;
                     eventHub.$emit('searchAgain');
                     break;
@@ -1200,6 +1218,93 @@ Vue.component('articles-editor', {
             Vue.set(this.articleThumbnail,'current',item);
             Vue.set(this.articleThumbnail,'changed',true);
             Vue.set(this.articleThumbnail,'address',this.extractImageAddress(item));
+        },
+        //Translates tag
+        translateTag: function(tag){
+            let tagInfo = this.existingTagInfo.contents[tag];
+            if(!tagInfo)
+                return tag;
+            return tagInfo[this.language]??tagInfo['eng']??tag;
+        },
+        modifyTag: function(tag){
+            if(this.tags.obj[tag].added)
+                delete this.tags.obj[tag];
+            else
+                this.tags.obj[tag].removed = !this.tags.obj[tag].removed;
+            this.recompute.newTags = !this.recompute.newTags;
+        },
+        addTag: function(){
+            if(this.tags.newTag && !this.tags.obj[this.tags.newTag])
+                Vue.set(this.tags.obj,this.tags.newTag,{original:false,removed:false,added:true});
+            this.recompute.newTags = !this.recompute.newTags;
+        },
+        resetTags:function(){
+            for(let i in this.tags.obj){
+                let tag = this.tags.obj[i];
+                if(tag.original)
+                    Vue.set(this.tags.obj[i],'removed',false);
+                else if(tag.added)
+                    delete this.tags.obj[i];
+            }
+            this.recompute.newTags = !this.recompute.newTags;
+        },
+        saveTags:function(){
+
+            if(this.updatingTags.add || this.updatingTags.remove){
+                if(this.verbose)
+                    console.log('Still updating tags!');
+                return;
+            }
+
+            let tagsToAdd = [];
+            let tagsToRemove = [];
+            for(let tag in this.tags.obj){
+                let tagInfo = {
+                    type:tag.split('/')[0],
+                    name:tag.split('/')[1],
+                };
+                if(tagInfo.type !== 'default-article-tags')
+                    continue;
+                if(this.tags.obj[tag].added)
+                    tagsToAdd.push(tagInfo.name);
+                else if(this.tags.obj[tag].removed)
+                    tagsToRemove.push(tagInfo.name);
+            }
+
+            if(!tagsToAdd.length && !tagsToRemove.length)
+                return;
+            let toSend = {
+                add:tagsToAdd,
+                remove:tagsToRemove,
+            };
+            for(let i in toSend){
+                if(!toSend[i].length)
+                    continue;
+                //Data to be sent
+                let queryParams = {};
+                let data = new FormData();
+                queryParams.tags = toSend[i].join(',');
+                if(this.test)
+                    data.append('req','test');
+
+                if(this.verbose)
+                    console.log(i==='add'?'Adding tags ':'Removing Tags',toSend[i]);
+
+                this.updatingTags[i] = true;
+
+                this.apiRequest(
+                    data,
+                    'api/v2/articles/'+this.articleId+'/tags/default-article-tags',
+                    i==='add'?'addedTagsResponse':'removedTagsResponse',
+                    {
+                        'queryParams':queryParams,
+                        'method' : i==='add'? 'post' :'delete',
+                        'verbose': this.verbose,
+                        'parseJSON':true,
+                        'identifier':this.identifier
+                    }
+                );
+            }
         }
     },
     watch: {
@@ -1249,7 +1354,39 @@ Vue.component('articles-editor', {
 
                 <div class="thumbnail-preview" :class="{changed:articleThumbnail.changed}" @click.prevent="mediaSelector.open = true">
                     <img v-if="articleThumbnail.current.address"  :src="articleThumbnail.address" :alt="articleThumbnail.current.meta.alt? articleThumbnail.current.meta.alt : false">
-                    <img v-else="" :src="sourceURL()+'img/icons/image-generic.svg'">
+                    <img v-else="" class="image-generic" :src="sourceURL()+'img/icons/image-generic.svg'">
+                </div>
+
+                <div v-if="initiated" class="tags" :class="{changed:tagsChanged}">
+                    <span v-for="item,index in tags.obj" :class="['tag', {removed:item.removed, added:item.added}]">
+                        <span class="title" v-text="translateTag(index)"></span>
+                        <button 
+                        v-text="item.removed?'+':'X'"
+                        @click.prevent="modifyTag(index)"
+                        ></button>
+                    </span>
+                    <span class="tag new" v-if="anyNewTags">
+                        <button 
+                        class="add" 
+                        v-text="'+'"
+                        @click.prevent="addTag()"
+                        ></button>
+                        <select v-model:value="tags.newTag">
+                            <option v-for="item, index in allTags" v-if="!tags.obj[index]" :value="index" v-text="translateTag(index)"></option>
+                        </select>
+                    </span>
+                    <div class="buttons" v-if="tagsChanged"> 
+                        <button 
+                        class="reset cancel-1" 
+                        v-text="'Reset'"
+                        @click.prevent="resetTags()"
+                        ></button>
+                        <button 
+                        class="add positive-1" 
+                        v-text="'Save'"
+                        @click.prevent="saveTags()"
+                        ></button>
+                    </div>
                 </div>
 
                 <div
@@ -1258,7 +1395,7 @@ Vue.component('articles-editor', {
                 :class="['static',key.replace('.','-')]"
                 >
 
-                    <span class="title" v-text="paramMap[key].title? paramMap[key].title : key"></span>
+                    <span class="title" v-text="paramMap[key].title?? key"></span>
 
                     <div
                      v-if="paramMap[key].type !== 'boolean'"
@@ -1270,41 +1407,41 @@ Vue.component('articles-editor', {
                     <button
                     v-else-if="paramMap[key].type === 'boolean'"
                     class="item-param"
-                    v-text="item?(paramMap[key].button.positive? paramMap[key].button.positive : 'Yes'):(paramMap[key].button.negative? paramMap[key].button.negative : 'No')"
+                    v-text="item?(paramMap[key].button.positive?? 'Yes'):(paramMap[key].button.negative?? 'No')"
                      ></button>
 
                 </div>
-            
+
                 <div
                 v-for="(item, key) in mainItem"
                 v-if="paramMap[key].edit && !paramMap[key].ignore"
                 :class="[{changed:(item.current !== item.original || paramMap[key].considerChanged)},key.replace('.','-'),{required:paramMap[key].required},paramMap[key].type]"
                 >
 
-                    <span class="title" v-text="paramMap[key].title? paramMap[key].title : key"></span>
+                    <span class="title" v-text="paramMap[key].title?? key"></span>
 
                     <input
                      v-if="!paramMap[key].type || ['text','date','number','email'].indexOf(paramMap[key].type) !== -1"
                      class="item-param"
                      :type="paramMap[key].type"
-                     :min="(['date','number'].indexOf(paramMap[key].type) !== -1) && (paramMap[key].min !== undefined) ? paramMap[key].min : false"
-                     :max="(['date','number'].indexOf(paramMap[key].type) !== -1) && (paramMap[key].max !== undefined)  ? paramMap[key].max : false"
-                     :pattern="(['text'].indexOf(paramMap[key].type) !== -1) && (paramMap[key].pattern !== undefined)  ? paramMap[key].pattern : false"
-                     :placeholder="paramMap[key].placeholder !== undefined  ? paramMap[key].placeholder : false"
+                     :min="(['date','number'].indexOf(paramMap[key].type) !== -1) && (paramMap[key].min ?? false)"
+                     :max="(['date','number'].indexOf(paramMap[key].type) !== -1) && (paramMap[key].max ?? false)"
+                     :pattern="(['text'].indexOf(paramMap[key].type) !== -1) && (paramMap[key].pattern ?? false)"
+                     :placeholder="paramMap[key].placeholder ?? false"
                      v-model:value="item.current"
                      @change="item.current = paramMap[key].parseOnChange($event.target.value);recompute.changed = ! recompute.changed"
                     >
                     <button
                     v-else-if="paramMap[key].type === 'boolean'"
                     class="item-param"
-                    v-text="item.current?(paramMap[key].button.positive? paramMap[key].button.positive : 'Yes'):(paramMap[key].button.negative? paramMap[key].button.negative : 'No')"
+                    v-text="item.current?(paramMap[key].button.positive ?? 'Yes'):(paramMap[key].button.negative ?? 'No')"
                      @click.prevent="item.current = paramMap[key].parseOnChange(!item.current);recompute.changed = ! recompute.changed"
                      ></button>
 
                     <textarea
                     v-else-if="paramMap[key].type === 'textArea'"
                     class="item-param"
-                     :placeholder="paramMap[key].placeholder !== undefined  ? paramMap[key].placeholder : false"
+                     :placeholder="paramMap[key].placeholder ?? false"
                      v-model:value="item.current"
                      @change="item.current = paramMap[key].parseOnChange($event.target.value);recompute.changed = ! recompute.changed"
                      ></textarea>
@@ -1315,7 +1452,7 @@ Vue.component('articles-editor', {
                      v-model:value="item.current"
                      @change="item.current = paramMap[key].parseOnChange($event.target.value);recompute.changed = ! recompute.changed"
                      >
-                        <option v-for="listItem in paramMap[key].list" :value="listItem.value" v-text="listItem.title? listItem.title: listItem.value"></option>
+                        <option v-for="(title,value) in paramMap[key].list" :value="value" v-text="title"></option>
                      </select>
 
                 </div>
@@ -1330,7 +1467,7 @@ Vue.component('articles-editor', {
 
             <div class="media-selector-container"  v-if="mediaSelector.open">
                 <div class="control-buttons">
-                    <img :src="sourceURL()+'img/icons/close-red.svg'"  @click.prevent="mediaSelector.open = false">
+                    <img :src="sourceURL()+'img/icons/cancel-icon.svg'"  @click.prevent="mediaSelector.open = false">
                 </div>
 
                 <div
@@ -1359,11 +1496,13 @@ Vue.component('articles-editor', {
                 <div class="block-controls placeholder">
                 </div>
 
-                <header  v-if="currentMode === 'view' && viewHeadline"
+                <header  v-if="(currentMode === 'view') && viewHeadline"
                 is="default-headline-renderer"
                 :article="article"
                 :share-options="viewParams.defaultHeadlineRenderer.shareOptions !== undefined ? viewParams.defaultHeadlineRenderer.shareOptions : {}"
                 :render-options="viewParams.defaultHeadlineRenderer.renderOptions !== undefined ? viewParams.defaultHeadlineRenderer.renderOptions : {}"
+                :existing-tag-info="existingTagInfo"
+                :language:="language"
                 :identifier="identifier+'-headline-renderer'"
                 :test="test"
                 :verbose="verbose"

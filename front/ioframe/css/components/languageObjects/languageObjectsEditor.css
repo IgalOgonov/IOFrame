@@ -1,0 +1,44 @@
+.tags-editor .wrapper{
+    display: flex;
+    flex-direction: column;
+}
+.tags-editor .wrapper label{
+    color: #000;
+    font-weight: 700;
+}
+.tags-editor .wrapper input{
+    height: 35px;
+    width: max-content;
+    font-size: 1.5em;
+}
+
+.tags-editor .fields{
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.tags-editor .fields .field{
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    margin: 10px;
+    padding: 10px 5px;
+    border-radius: 5px;
+    transition: 0.5s ease-in-out;
+}
+
+.tags-editor .fields .field.changed{
+    background: rgba(50, 200, 100, 0.5);
+}
+
+.tags-editor .fields .field > :not(label) {
+    margin: 0px 10px;
+}
+
+/*Required*/
+.tags-editor .fields .field.required label::after {
+    content: '*';
+    display: inline-block;
+    color: var(--button-negative-color-1);
+}

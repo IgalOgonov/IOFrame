@@ -1,5 +1,3 @@
-
-//The bridge between each plugin, and the main VM.
 if(eventHub === undefined)
     var eventHub = new Vue();
 
@@ -19,7 +17,8 @@ Vue.component('pluginInstallPrompt', {
         placeholder:String,
         maxLength:Number,
         maxNum:Number,
-        optional:Boolean
+        optional:Boolean,
+        default:Boolean
     },
     computed:{
         //This computed property basically renders different options dynamically, depending on the option type
@@ -32,6 +31,8 @@ Vue.component('pluginInstallPrompt', {
                         return '';
                     for(let key in this.list){
                         res +='<input type="'+this.type+'" name="'+this.optionName+'" value="'+this.list[key]+'"';
+                        if((this.default !== undefined) && (this.default === this.list[key]))
+                            res+= ' checked="1"';
                         if(this.optional !== true)
                             res+= ' required';
                         res +='> '+key;
@@ -41,6 +42,8 @@ Vue.component('pluginInstallPrompt', {
                     if(this.list === undefined)     //Must have a list
                         return '';
                     res +='<select name="'+this.optionName+'"';
+                    if((this.default !== undefined) )
+                        res+= ' value="'+this.default+'"';
                     if(this.optional !== true)
                         res+= ' required';
                     res+='>';
@@ -54,6 +57,8 @@ Vue.component('pluginInstallPrompt', {
                         return '';
                     for(let key in this.list){
                         res +='<input type="'+this.type+'" name="'+this.list[key]+'"';
+                        if((this.default !== undefined) && (this.default === this.list[key]))
+                            res+= ' checked="1"';
                         if(this.optional !== true)
                             res+= ' required';
                         res +='> '+key;
@@ -61,6 +66,8 @@ Vue.component('pluginInstallPrompt', {
                     break;
                 case 'textarea':
                     res +='<textarea name="'+this.optionName+'" ';
+                    if((this.default !== undefined) )
+                        res+= ' value="'+this.default+'"';
                     if(this.maxLength !== undefined){
                         res += 'maxlength="'+this.maxLength+'" ';
                     }
@@ -73,6 +80,8 @@ Vue.component('pluginInstallPrompt', {
                     break;
                 default:
                     res +='<input type="'+this.type+'" name="'+this.optionName+'" ';
+                    if((this.default !== undefined) )
+                        res+= ' value="'+this.default+'"';
                     if(this.maxLength !== undefined){
                         res += 'maxlength="'+this.maxLength+'" ';
                     }
@@ -123,7 +132,9 @@ Vue.component('plugin', {
           <td class = "plugin-names"><span class="plugin-name">{{computeName}}</span><a href="#" class="real-name-popup" :id="lowerCaseFilename">*</a></td>\
           <td>\
             <span class ="plugin-summary">{{summary}}</span><br>\
-            <span class ="plugin-version" v-text="\'Available Version: \'+version"></span> <span class ="plugin-version" v-if="currentVersion" v-text="\'Current Version: \'+currentVersion"></span><br>\
+                <span class ="plugin-version" v-text="\'Base Version: \'+version"></span> \
+                <span class ="plugin-version" v-if="currentVersion" v-text="\'Current Version: \'+currentVersion"></span>\
+                <span class ="plugin-version" v-if="maxVersion" v-text="\'Max Version: \'+maxVersion"></span><br>\
             <span class ="plugin-description">{{description}}</span>    \
           </td>\
           <td class ="plugin-statuses"> {{status}}</td>\
@@ -159,15 +170,13 @@ Vue.component('plugin', {
             eventHub.$emit('updateLatest',this.filename);
         },
         installButtons: function(type){
-            if(this.status == 'active')
+            if(this.status === 'active')
                 return false;
             switch(type){
                 case 'quick':
-                    return this.installStatus=='quick' || this.installStatus == 'both';
-                    break;
+                    return (this.installStatus==='quick') || (this.installStatus === 'both');
                 case 'full':
-                    return this.installStatus=='full' || this.installStatus == 'both';
-                    break;
+                    return (this.installStatus==='full') || (this.installStatus === 'both');
                 default:
                     return true;
             }
@@ -194,11 +203,9 @@ Vue.component('plugin', {
         uninstallButtons: function(type){
             switch(type){
                 case 'quick':
-                    return this.uninstallStatus=='quick' || this.uninstallStatus == 'both';
-                    break;
+                    return (this.uninstallStatus==='quick') || (this.uninstallStatus === 'both');
                 case 'full':
-                    return this.uninstallStatus=='full' || this.uninstallStatus == 'both';
-                    break;
+                    return (this.uninstallStatus==='full') || (this.uninstallStatus === 'both');
                 default:
                     return true;
             }
@@ -226,16 +233,24 @@ Vue.component('plugin', {
     },
     computed:{
         iconURL: function(){
-            return document.pathToRoot+this.icon;
+            return document.ioframe.pathToRoot+this.icon;
         },
         thumbURL: function(){
-            return document.pathToRoot+this.thumbnail;
+            return document.ioframe.pathToRoot+this.thumbnail;
         },
         lowerCaseFilename: function(){
             return this.filename.toLowerCase()+'realname';
         },
         computeName: function(){
             return pluginList.testMode? this.filename+' | '+this.name : this.name;
+        },
+        maxVersion: function (){
+            if(!this.hasUpdateFiles || !this.updateRanges.length)
+                return false;
+            let maxVersion = this.updateRanges[this.updateRanges.length -1];
+            if(typeof maxVersion === 'object')
+                maxVersion = maxVersion[1];
+            return (maxVersion > this.currentVersion)? maxVersion : false;
         }
     },
     mounted: function(){
@@ -276,7 +291,7 @@ var pluginList = new Vue({
             icon:'front/ioframe/img/pluginImages/def_icon.png',
             thumbnail:'front/ioframe/img/pluginImages/def_thumbnail.png',
             installOptions:{"testOption1":{"name":"Test Select","type":"select", list:{"Opt1":1,"Opt2":2}, desc:"Select test"},
-                "testOption2":{"name":"Test Number","type":"number", desc:"Number test", maxNum:1000, placeholder:"number bellow 1000"},
+                "testOption2":{"name":"Test Number","type":"number", desc:"Number test", maxNum:1000, placeholder:"number below 1000"},
                 "testOption3":{"name":"Test Textarea","type":"textarea", desc:"Text area test", maxLength:20, placeholder:"up to 20 characters"},
                 "testOption4":{"name":"Test Email","type":"email", desc:"Email test", placeholder:"mail"},
                 "testOption5":{"name":"Test Password","type":"password", desc:"Password test", placeholder:"password"},
@@ -287,7 +302,8 @@ var pluginList = new Vue({
             uninstallOptions:{}
         },
         plugins: {
-        }
+        },
+        loading:false
     },
     methods: {
         //We are doing a quick install
@@ -359,6 +375,7 @@ var pluginList = new Vue({
         //Main function to handle the install form
         handleForm: function(){
             let expectedOptions = '';
+            let context = this;
             switch(this.currentAction){
                 case 'install':
                     expectedOptions = this.plugins[this.currentPlugin].installOptions;
@@ -414,7 +431,7 @@ var pluginList = new Vue({
                 let valid = true;
                 for(let key in values){
                     this.setOptionBG(key);
-                    if( (values[key] == '' || values[key] == []) && (expectedOptions[key]['optional'] === undefined) ){
+                    if( ( (values[key] == '') || (values[key] == []) ) && (expectedOptions[key]['optional'] === undefined) ){
                         this.setOptionBG(key, 'rgba(255,0,0,0.75)');
                         if(this.testMode === true){
                             //alertLog('Please fill all required fields! Missing: '+expectedOptions[key]['name'],'warning');
@@ -434,28 +451,30 @@ var pluginList = new Vue({
                 requestData['action'] = this.currentAction;
                 requestData['name'] = this.currentPlugin;
                 requestData['options'] = JSON.stringify(values);
-                let url=document.pathToRoot+'api\/plugins';
+                let url=document.ioframe.pathToRoot+'api\/plugins';
                 let sendData = '';
                 for (let key in requestData) {
                     sendData += encodeURIComponent(key) + '=' +
                         encodeURIComponent(requestData[key]) + '&';
-                };
+                }
                 updateCSRFToken().then(
                     function(token){
                         sendData += 'CSRF_token='+token;
                         if(pluginList.testMode === true)
                             console.log('Data to send:',sendData, 'Url: ', url);
                         //Request itself
-                        var xhr = new XMLHttpRequest();
+                        let xhr = new XMLHttpRequest();
                         xhr.open('POST', url+'?'+sendData);
                         xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
                         xhr.send(null);
+                        context.loading = true;
                         xhr.onreadystatechange = function () {
-                            var DONE = 4; // readyState 4 means the request is done.
-                            var OK = 200; // status 200 is a successful return.
+                            let DONE = 4; // readyState 4 means the request is done.
+                            let OK = 200; // status 200 is a successful return.
                             if (xhr.readyState === DONE) {
                                 if (xhr.status === OK){
                                     let response = xhr.responseText;
+                                    context.loading = false;
                                     //How we handle it in test mode
                                     if(pluginList.testMode === true){
                                         pluginList.serverResponse = response;
@@ -474,16 +493,16 @@ var pluginList = new Vue({
                                             alertLog('CSRF Token wrong! Refresh the page','danger');
                                             break;
                                         case "0":
-                                            if(pluginList.currentAction == 'install' || pluginList.currentAction == 'perform full installation on'){
-                                                alertLog('Plugin installation successful!','success');
+                                            if((pluginList.currentAction === 'install') || (pluginList.currentAction === 'perform full installation on')){
+                                                alertLog('Plugin installation successful!','success',document.body,{autoDismiss:2000});
                                             }
                                             else{
-                                                alertLog('Plugin uninstall successful!','success');
+                                                alertLog('Plugin uninstall successful!','success',document.body,{autoDismiss:2000});
                                             }
                                             pluginList.updatePlugin(pluginList.currentPlugin);
                                             break;
                                         case "1":
-                                            if(pluginList.currentAction == 'install' || pluginList.currentAction == 'perform full installation on'){
+                                            if((pluginList.currentAction === 'install') || (pluginList.currentAction === 'perform full installation on')){
                                                 alertLog('Plugin has already been installed, or is installed incorrectly.','warning');
                                             }
                                             else{
@@ -491,7 +510,7 @@ var pluginList = new Vue({
                                             }
                                             break;
                                         case "2":
-                                            if(pluginList.currentAction == 'install' || pluginList.currentAction == 'perform full installation on'){
+                                            if((pluginList.currentAction === 'install') || (pluginList.currentAction === 'perform full installation on')){
                                                 alertLog('Plugin install file is missing, or plugin format is illegal!','warning');
                                             }
                                             else{
@@ -499,7 +518,7 @@ var pluginList = new Vue({
                                             }
                                             break;
                                         case "3":
-                                            if(pluginList.currentAction == 'install' || pluginList.currentAction == 'perform full installation on'){
+                                            if((pluginList.currentAction === 'install') || (pluginList.currentAction === 'perform full installation on')){
                                                 alertLog('Dependencies missing! Could not install plugin!','warning');
                                             }
                                             else{
@@ -510,7 +529,7 @@ var pluginList = new Vue({
                                             alertLog('Options mismatch - provided options do not match plugin options. Try running in test mode.','warning');
                                             break;
                                         case "5":
-                                            if(pluginList.currentAction == 'install' || pluginList.currentAction == 'perform full installation on'){
+                                            if((pluginList.currentAction === 'install') || (pluginList.currentAction === 'perform full installation on')){
                                                 alertLog('Plugin definitions could not be added - possibly because similar ones already exist!','warning');
                                             }
                                             else{
@@ -575,25 +594,25 @@ var pluginList = new Vue({
                 requestData['action'] = 'update';
                 requestData['name'] = this.currentPlugin;
                 requestData['once'] = this.currentAction === 'update (once)';
-                let url=document.pathToRoot+'api\/plugins';
+                let url=document.ioframe.pathToRoot+'api\/plugins';
                 let sendData = '';
                 for (let key in requestData) {
                     sendData += encodeURIComponent(key) + '=' +
                         encodeURIComponent(requestData[key]) + '&';
-                };
+                }
                 updateCSRFToken().then(
                     function(token){
                         sendData += 'CSRF_token='+token;
                         if(pluginList.testMode === true)
                             console.log('Data to send:',sendData, 'Url: ', url);
                         //Request itself
-                        var xhr = new XMLHttpRequest();
+                        let xhr = new XMLHttpRequest();
                         xhr.open('POST', url+'?'+sendData);
                         xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
                         xhr.send(null);
                         xhr.onreadystatechange = function () {
-                            var DONE = 4; // readyState 4 means the request is done.
-                            var OK = 200; // status 200 is a successful return.
+                            let DONE = 4; // readyState 4 means the request is done.
+                            let OK = 200; // status 200 is a successful return.
                             if (xhr.readyState === DONE) {
                                 if (xhr.status === OK){
                                     let response = xhr.responseText;
@@ -705,15 +724,15 @@ var pluginList = new Vue({
                 action +='&name='+name;
             //---- Get available plugins
             //Api url
-            let url=document.pathToRoot+'api\/plugins';
+            let url=document.ioframe.pathToRoot+'api\/plugins';
             //Request itself
-            var xhr = new XMLHttpRequest();
+            let xhr = new XMLHttpRequest();
             xhr.open('GET', url+'?'+action);
             xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
             xhr.send(null);
             xhr.onreadystatechange = function () {
-                var DONE = 4; // readyState 4 means the request is done.
-                var OK = 200; // status 200 is a successful return.
+                let DONE = 4; // readyState 4 means the request is done.
+                let OK = 200; // status 200 is a successful return.
                 if (xhr.readyState === DONE) {
                     if (xhr.status === OK){
                         if(!IsJsonString(xhr.responseText)){
@@ -729,7 +748,7 @@ var pluginList = new Vue({
                             (resPlugins[i].thumbnail)?
                                 resPlugins[i].thumbnail = 'front/ioframe/img/pluginImages/'+resPlugins[i].fileName+'/thumbnail.'+resPlugins[i].thumbnail :
                                 resPlugins[i].thumbnail = 'front/ioframe/img/pluginImages/def_thumbnail.png';
-                            if(resPlugins[i].status == 'active' || resPlugins[i].status == 'legal'){
+                            if((resPlugins[i].status === 'active') || (resPlugins[i].status === 'legal')){
                                 let fileName = resPlugins[i].fileName;
                                 resPlugins[i].version = parseInt(resPlugins[i].version);
                                 delete resPlugins[i].fileName;
@@ -763,5 +782,80 @@ var pluginList = new Vue({
         eventHub.$on('updateOnce', this.updateOnce);
         eventHub.$on('updateLatest', this.updateLatest);
         this.updatePlugin();
-    }
+    },
+    template: `
+    <div id="plugin-list" :class="{loading:loading}">
+        <h1 class ="plugins">Plugins</h1>
+        <div v-bind:class="{isVisible:testMode, isInvisible:!testMode}" class=" alert alert-warning">
+            Running in test mode!
+        </div>
+    
+        <form id="options-form"
+              v-bind:class="{isActive:showPrompt, isInactive:!showPrompt}"
+            >
+    
+            <div is="plugin-install-prompt"
+                 v-for="(value, key) in currentOptions"
+                 v-bind:key="key"
+                 v-bind:option-name="key"
+                 v-bind:name="value.name"
+                 v-bind:type="value.type"
+                 v-bind:list="value.list"
+                 v-bind:desc="value.desc"
+                 v-bind:optional="value.optional"
+                 v-bind:default="value.default"
+                 v-bind:placeholder="value.placeholder"
+                 v-bind:max-length="value.maxLength"
+                 v-bind:max-num="value.maxNum"
+                 class="option">
+            </div>
+    
+            <span>Are you sure you want to {{currentAction}} {{currentPluginName}}?</span>
+    
+            <div class="buttons">
+                <button class="positive-1 plugin-button" @click.prevent="handleForm">Yes</button>
+                <button class="cancel-1 plugin-button" @click.prevent="togglePrompt">No</button>
+            </div>
+        </form>
+    
+        <table class = plugins>
+            <tr>
+                <th></th>
+                <th>Plugin</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Install</th>
+                <th>Uninstall</th>
+            </tr>
+            <tr
+                is="plugin"
+                v-for="(value, key) in plugins"
+                v-bind:key="key"
+                v-bind:filename="key"
+                v-bind:name="value.name"
+                v-bind:status="value.status"
+                v-bind:version="value.version"
+                v-bind:current-version="value.currentVersion ? value.currentVersion : 0"
+                v-bind:summary="value.summary"
+                v-bind:description="value.description"
+                v-bind:icon="value.icon"
+                v-bind:thumbnail="value.thumbnail"
+                v-bind:thumbnail="value.thumbnail"
+                v-bind:has-update-files="value.hasUpdateFiles"
+                v-bind:update-ranges="value.updateRanges ? value.updateRanges : []"
+                v-bind:install-status="value.installStatus"
+                v-bind:uninstall-status="value.uninstallStatus"
+                v-bind:install-options="value.installOptions"
+                v-bind:uninstall-options="value.uninstallOptions"
+                @remove="remove(key)"
+                @reverse="reverse(key)"
+                ></tr>
+        </table>
+        <div class="ui-button"><button class="dangerous-1" @click="toggleTest">Toggle Test Mode</button></div>
+        <div v-bind:class="{isActive:(showResponse && testMode), isInactive:!showResponse || !testMode}"><b>Server response:</b><br>
+                <span v-html="serverResponse"></span>
+        </div>
+    </div>
+
+    `
 });

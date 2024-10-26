@@ -1,4 +1,5 @@
-
+if(eventHub === undefined)
+    var eventHub = new Vue();
 //***************************
 //*****USER LOGOUT****
 //***************************//

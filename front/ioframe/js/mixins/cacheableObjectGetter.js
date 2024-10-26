@@ -1,7 +1,3 @@
-
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 /** Gets objects - first from their client side cache, if that exists (localstorage), then from the relevant API.
  * ALL
  * **/
@@ -74,8 +70,8 @@ const cacheableObjectGetter = {
                             //Update cache
                             context.setCacheableObjectCache(objectName, resp);
                             //Update contents
-                            context.cacheableObjects[objectName]['contents'] = resp;
-                            context.cacheableObjects[objectName]['upToDate'] = true;
+                            Vue.set(context.cacheableObjects[objectName],'contents', resp);
+                            Vue.set(context.cacheableObjects[objectName],'upToDate', true);
                         }
                         else {
                             console.log('Got illegal response to ' + objectName + ' api call: ', response);
@@ -131,15 +127,15 @@ const cacheableObjectGetter = {
             //Indexed DB Defaults
             let indexedDBParams = params['indexedDBParams'] ?? {};
             indexedDBParams.db = indexedDBParams.db??{};
-            indexedDBParams.db.name = 'Cacheable_Objects';
+            indexedDBParams.db.name = indexedDBParams.db.name??'Cacheable_Objects';
 
             //Get from local cache
             this.getFromIndexedDB(indexedDBParams.db.name,[cacheName,'_updated'],indexedDBParams).then(function(res){
                 //if(context.verbose)
                 let updatedFromDB = (res.items && res.items['_updated'] && res.items['_updated'].cacheName) ? res.items['_updated'].cacheName : false;
                 if(updatedFromDB){
-                    context.cacheableObjects[objectName]['contents'] = res.items[cacheName].contents;
-                    context.cacheableObjects[objectName]['upToDate'] = setUpToDateOnLocalCache;
+                    Vue.set(context.cacheableObjects[objectName],'contents', res.items[cacheName].contents);
+                    Vue.set(context.cacheableObjects[objectName],'upToDate', setUpToDateOnLocalCache);
                 }
                 res.db.close();
                 //Api request
@@ -170,7 +166,7 @@ const cacheableObjectGetter = {
                 let cacheName = objectArray['cacheName'] ?? (params['cacheName'] ?? '_'+objectName+'_Cache');
                 let indexedDBParams = params['indexedDBParams'] ?? {};
                 indexedDBParams.db = indexedDBParams.db??{};
-                indexedDBParams.db.name = 'Cacheable_Objects';
+                indexedDBParams.db.name = indexedDBParams.db.name??'Cacheable_Objects';
 
                 let received = {};
                 received[cacheName] = (Date.now()/1000).toFixed(0) - 30000;//30 sec - account for maximum API delay
@@ -205,6 +201,17 @@ const cacheableObjectGetter = {
             catch (e){
                 console.warn(e);
             }
-        }
+        },
+        //A small extension to the common functions
+        extractCacheableImageURL: function(id,objectType){
+            if(!this.cacheableObjects[objectType].contents ||
+                !this.cacheableObjects[objectType].contents[id] ||
+                !this.cacheableObjects[objectType].contents[id].img)
+                return false;
+            let img = this.cacheableObjects[objectType].contents[id].img;
+            return (img.local-0)?
+                this.absoluteMediaURL(img.address) :
+                (img.dataType? this.calculateDBImageLink(img) : img.identifier)
+        },
     }
 };

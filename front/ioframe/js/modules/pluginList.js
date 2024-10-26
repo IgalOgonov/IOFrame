@@ -1,4 +1,5 @@
-
+if(eventHub === undefined)
+    var eventHub = new Vue();
 
 //-----------This component is responsible for each plugin
 Vue.component('plugin-order', {
@@ -27,7 +28,7 @@ Vue.component('plugin-order', {
     },
     computed:{
         iconURL: function(){
-            return document.pathToRoot+this.icon;
+            return document.ioframe.pathToRoot+this.icon;
         },
         dynamicIdIcon: function(){
             return 'pluginorder'+this.fileName+'icon';
@@ -54,7 +55,7 @@ var pluginOrderList = new Vue({
     },
     methods: {
 
-        //STARTS HERE --- All of the functions bellow handle drag and drop
+        //STARTS HERE --- All of the functions below handle drag and drop
         dragStart: function(ev){
             // Add the target element's id to the data transfer object
             ev.dataTransfer.setData("text/plain", ev.target.id);
@@ -64,7 +65,7 @@ var pluginOrderList = new Vue({
             ev.preventDefault();
             let draggedID = ev.dataTransfer.getData("text/plain");
             let targetID = ev.target.id;
-            if(draggedID == targetID)
+            if(draggedID === targetID)
                 return;
             ev.target.parentElement.parentElement.className = 'active-order';
             //console.log('Element ',draggedID,' entered element ',targetID);
@@ -72,7 +73,7 @@ var pluginOrderList = new Vue({
         dragLeave: function(ev){
             let draggedID = ev.dataTransfer.getData("text/plain");
             let targetID = ev.target.id;
-            if(draggedID == targetID)
+            if(draggedID === targetID)
                 return;
             ev.target.parentElement.parentElement.className = '';
             //console.log('Element ',draggedID,' exited element ',targetID);
@@ -83,12 +84,12 @@ var pluginOrderList = new Vue({
         dragDrop: function(ev){
             ev.preventDefault();
             let draggedID = ev.dataTransfer.getData("text/plain");
-            draggedIndexID = draggedID.substring(0,draggedID.length-4)+'index';
+            let draggedIndexID = draggedID.substring(0,draggedID.length-4)+'index';
             let indexDragged = document.getElementById(draggedIndexID).innerHTML;
             let targetID = ev.target.id;
-            targetIndexID = targetID.substring(0,targetID.length-4)+'index';
+            let targetIndexID = targetID.substring(0,targetID.length-4)+'index';
             let indexTarget = document.getElementById(targetIndexID).innerHTML;
-            if(draggedID == targetID)
+            if(draggedID === targetID)
                 return;
             ev.target.parentElement.parentElement.className = '';
             switch(pluginOrderList.movementType){
@@ -116,15 +117,15 @@ var pluginOrderList = new Vue({
             let action;
             action = 'action=getOrder';
             //Api url
-            let url=document.pathToRoot+'api\/plugins';
+            let url=document.ioframe.pathToRoot+'api\/plugins';
             //Request itself
-            var xhr = new XMLHttpRequest();
+            let xhr = new XMLHttpRequest();
             xhr.open('GET', url+'?'+action);
             xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
             xhr.send(null);
             xhr.onreadystatechange = function () {
-                var DONE = 4; // readyState 4 means the request is done.
-                var OK = 200; // status 200 is a successful return.
+                let DONE = 4; // readyState 4 means the request is done.
+                let OK = 200; // status 200 is a successful return.
                 if (xhr.readyState === DONE) {
                     if (xhr.status === OK){
                         //Handle the response, then populate the plugins with their info
@@ -141,16 +142,16 @@ var pluginOrderList = new Vue({
         //---- Populate plugins inside "order" with the info we need
         populatePluginOrder: function(forceAPICall = false, timeOut = 0, maxTimeOut = 10){
             //First try to get info from the plugins module, which could be in the same page as this module
-            if(pluginList.updateComplete != undefined && !forceAPICall){
+            if((pluginList.updateComplete !== undefined) && !forceAPICall){
                 //Wait up to timeOut seconds
-                if((maxTimeOut-timeOut>0) && (pluginList.updateComplete == false)){
+                if((maxTimeOut-timeOut>0) && !pluginList.updateComplete){
                     setTimeout(function(){
                         pluginOrderList.populatePluginOrder(timeOut+1,maxTimeOut);
                     },1000);
                     return;
                 }
                 //If we did not manage that, try to get plugins info from the api
-                if(pluginList.updateComplete == false){
+                if(!pluginList.updateComplete){
                     console.log('Getting plugins timed out after '+(timeOut)+' seconds!');
                     pluginOrderList.populatePluginOrder(true);
                 }
@@ -172,15 +173,15 @@ var pluginOrderList = new Vue({
                 let action;
                 action = 'action=getInfo';
                 //Api url
-                let url=document.pathToRoot+'api\/plugins';
+                let url=document.ioframe.pathToRoot+'api\/plugins';
                 //Request itself
-                var xhr = new XMLHttpRequest();
+                let xhr = new XMLHttpRequest();
                 xhr.open('GET', url+'?'+action);
                 xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
                 xhr.send(null);
                 xhr.onreadystatechange = function () {
-                    var DONE = 4; // readyState 4 means the request is done.
-                    var OK = 200; // status 200 is a successful return.
+                    let DONE = 4; // readyState 4 means the request is done.
+                    let OK = 200; // status 200 is a successful return.
                     if (xhr.readyState === DONE) {
                         if (xhr.status === OK){
                             if(!IsJsonString(xhr.responseText)){
@@ -233,17 +234,17 @@ var pluginOrderList = new Vue({
                         action += '&CSRF_token='+token;
                         //---- Get available plugins
                         //Api url
-                        let url=document.pathToRoot+'api\/plugins';
+                        let url=document.ioframe.pathToRoot+'api\/plugins';
                         //Request itself
-                        var xhr = new XMLHttpRequest();
+                        let xhr = new XMLHttpRequest();
                         xhr.open('POST', url+'?'+action);
                         //console.log('swapping numbers, sending',action);
                         xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
                         pluginOrderList.replyInTransit = true;
                         xhr.send(null);
                         xhr.onreadystatechange = function () {
-                            var DONE = 4; // readyState 4 means the request is done.
-                            var OK = 200; // status 200 is a successful return.
+                            let DONE = 4; // readyState 4 means the request is done.
+                            let OK = 200; // status 200 is a successful return.
                             if (xhr.readyState === DONE) {
                                 if (xhr.status === OK){
                                     if(!IsJsonString(xhr.responseText) || xhr.responseText.length<3){   //Remember a 1/2 digits are valid JSON!
@@ -320,16 +321,16 @@ var pluginOrderList = new Vue({
                         action += '&CSRF_token='+token;
                         //---- Get available plugins
                         //Api url
-                        let url=document.pathToRoot+'api\/plugins';
+                        let url=document.ioframe.pathToRoot+'api\/plugins';
                         //Request itself
-                        var xhr = new XMLHttpRequest();
+                        let xhr = new XMLHttpRequest();
                         xhr.open('POST', url+'?'+action);
                         xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
                         pluginOrderList.replyInTransit = true;
                         xhr.send(null);
                         xhr.onreadystatechange = function () {
-                            var DONE = 4; // readyState 4 means the request is done.
-                            var OK = 200; // status 200 is a successful return.
+                            let DONE = 4; // readyState 4 means the request is done.
+                            let OK = 200; // status 200 is a successful return.
                             if (xhr.readyState === DONE) {
                                 if (xhr.status === OK){
                                     if(!IsJsonString(xhr.responseText) || xhr.responseText.length<3){  //Remember a 1/2 digits are valid JSON!

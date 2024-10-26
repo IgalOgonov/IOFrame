@@ -12,10 +12,11 @@ $params = [
     'createdBefore'=>$inputs['createdBefore'],
     'changedAfter'=>$inputs['changedAfter'],
     'changedBefore'=>$inputs['changedBefore'],
+    'usersIn' => [$inputs['userID']],
     'test'=>$test,
 ];
 
-$result = $PurchaseOrderHandler->getUserOrders(
-    $inputs['userID'],
+$result = $PurchaseOrderHandler->getOrders(
+    [],
     $params
 );

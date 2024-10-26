@@ -15,11 +15,11 @@ echo EOL.'Modifying user 1 groups - adding to TEST_G1, removing from TEST_G2, re
 var_dump($auth->modifyUserGroups(1,['TEST_G1'=>true,'TEST_G2'=>false,'Another Test Group'=>false],['test'=>true]));
 echo EOL;
 
-echo EOL.'Modifying group Test Group - removing TREE_R_AUTH, adding STRANGE_ACTION, removing FAKE, adding TREE_C_AUTH:'.EOL;
+echo EOL.'Modifying group Test Group - adding STRANGE_ACTION, removing FAKE:'.EOL;
 var_dump(
     $auth->modifyGroupActions(
         'Test Group',
-        ['TREE_R_AUTH'=>false,'STRANGE_ACTION'=>true,'FAKE'=>false,'TREE_C_AUTH'=>true],
+        ['STRANGE_ACTION'=>true,'FAKE'=>false],
         ['test'=>true]
     )
 );
@@ -70,10 +70,10 @@ var_dump($auth->getUsersWithActions(
     );
 echo EOL;
 
-echo EOL.'Getting groups that have the action BAN_USERS_AUTH, or have the action TREE_C_AUTH:'.EOL;
+echo EOL.'Getting groups that have the action BAN_USERS_AUTH, or have the action PLUGIN_GET_INFO_AUTH:'.EOL;
 var_dump($auth->getGroups(
         [
-            'action'=>[['=','BAN_USERS_AUTH'],['=','TREE_C_AUTH']],
+            'action'=>[['=','BAN_USERS_AUTH'],['=','PLUGIN_GET_INFO_AUTH']],
             'separator'=>'OR',
             'test'=>true
         ]

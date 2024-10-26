@@ -1,8 +1,7 @@
 <?php
-if(!defined('FrontEndResourceHandler'))
-    require __DIR__ . '/../../../IOFrame/Handlers/FrontEndResourceHandler.php';
 
-$FrontEndResourceHandler = new IOFrame\Handlers\FrontEndResourceHandler($settings,$defaultSettingsParams);
+
+$FrontEndResources = new \IOFrame\Handlers\Extenders\FrontEndResources($settings,$defaultSettingsParams);
 
 $requestParams = ['test'=>$test,'includeChildFolders'=>true,'includeChildFiles'=>true];
 
@@ -26,17 +25,17 @@ if($inputs['getDB']){
     if($inputs['dataType'] !== null){
         $requestParams['dataType'] = $inputs['dataType'];
     }
-    $requestParams['ignoreLocal'] = $inputs['includeLocal']? false : true;
+    $requestParams['ignoreLocal'] = !$inputs['includeLocal'];
 }
 
 $result = (
     $action === 'getImages' ?
-        $FrontEndResourceHandler->getImages(
+        $FrontEndResources->getImages(
             $inputs['addresses'],
             $requestParams
         )
         :
-        $FrontEndResourceHandler->getVideos(
+        $FrontEndResources->getVideos(
             $inputs['addresses'],
             $requestParams
         )
@@ -61,16 +60,16 @@ foreach($result as $address => $infoArray){
     //Handle meta
     $meta = $result[$address]['meta'];
     unset($result[$address]['meta']);
-    if(\IOFrame\Util\is_json($meta)){
+    if(\IOFrame\Util\PureUtilFunctions::is_json($meta)){
         $meta = json_decode($meta,true);
 
         $expected = ['name','caption','size'];
         foreach($languages as $lang){
-            array_push($expected,$lang.'_name');
-            array_push($expected,$lang.'_caption');
+            $expected[] = $lang . '_name';
+            $expected[] = $lang . '_caption';
         }
         if($action === 'getImages'){
-            array_push($expected,'alt');
+            $expected[] = 'alt';
         }
         elseif($action === 'getVideos'){
             array_push($expected,'autoplay','loop','mute','controls','autoplay','poster','preload');

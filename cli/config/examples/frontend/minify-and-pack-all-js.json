@@ -1,0 +1,11 @@
+{
+	"minificationType":"js",
+	"minificationTargets":[""],
+	"minificationProperties":{
+		"minifyToFolder":"min",
+		"minifyName":"massiveDump"
+	},
+	"minificationIncludeOptions":{
+		"subFolders":true
+	}
+}

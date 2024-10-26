@@ -22,12 +22,12 @@ $meta = [];
 //Meta information
 $nameArr = ['name'];
 foreach($languages as $lang){
-    array_push($nameArr,$lang.'_name');
+    $nameArr[] = $lang . '_name';
 }
 foreach($nameArr as $nameParam){
 
     if($inputs[$nameParam] !== null)
-        $inputs[$nameParam] = $purifier->purify($inputs[$nameParam]);;
+        $inputs[$nameParam] = $purifier->purify($inputs[$nameParam]);
 
     if($inputs[$nameParam] !== null){
         if(strlen($inputs[$nameParam])>GALLERY_NAME_MAX_LENGTH){

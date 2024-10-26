@@ -1,20 +1,17 @@
 <?php
 
 //ID
-if($action == 'updateTemplate' && !$inputs['id']){
+if(!$inputs['id']){
     if($test)
         echo 'ID must be set!'.EOL;
     exit(INPUT_VALIDATION_FAILURE);
 }
 else{
-    if($action === 'createTemplate')
-        $inputs['id'] = -1;
-    else
-        if(!filter_var($inputs['id'],FILTER_VALIDATE_INT)){
-            if($test)
-                echo 'ID must be an integer!'.EOL;
-            exit(INPUT_VALIDATION_FAILURE);
-        }
+    if(!preg_match('/'.TEMPLATE_ID_REGEX.'/',$inputs['id'])){
+        if($test)
+            echo 'ID must be valid!'.EOL;
+        exit(INPUT_VALIDATION_FAILURE);
+    }
 }
 
 //Title or Content

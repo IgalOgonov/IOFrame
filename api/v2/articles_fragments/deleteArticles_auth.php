@@ -3,7 +3,7 @@
 //Convert keys
 $authKeys = [];
 foreach($inputs['ids'] as $key)
-    array_push($authKeys,['Article_ID'=>$key]);
+    $authKeys[] = ['Article_ID' => $key];
 $authCheck = checkAuth([
     'test'=>$test,
     'authRequired' => $requiredAuth,
@@ -17,9 +17,7 @@ $authCheck = checkAuth([
 ]);
 
 if($authCheck === false){
-    if($test)
-        echo 'Authentication failed!'.EOL;
-    die(AUTHENTICATION_FAILURE);
+    \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON(['error'=>AUTHENTICATION_FAILURE,'message'=>'Authentication failed'],!$test);
 }
 elseif(gettype($authCheck) === 'array'){
 
@@ -37,7 +35,7 @@ elseif(gettype($authCheck) === 'array'){
         if($test)
             echo 'Authentication failed, cannot delete any of the articles!'.EOL;
         die(json_encode([
-            'error'=>'AuthenticationIndividual',
+            'error'=>AUTHENTICATION_FAILURE,
             'message'=>'Authentication failed for all of the keys!'
         ]));
     }

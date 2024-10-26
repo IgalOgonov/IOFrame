@@ -1,6 +1,6 @@
 <?php
 //Auth check
-if(!$auth->isAuthorized(0) && !$auth->hasAction(AUTH_MODIFY_RANK)){
+if(!$auth->isAuthorized() && !$auth->hasAction(AUTH_MODIFY_RANK)){
     if($test)
         echo 'Must have rank 0, or relevant action!';
     exit(AUTHENTICATION_FAILURE);
@@ -13,14 +13,14 @@ if($params['newRank'] < $auth->getRank()){
 }
 
 if(gettype($params['identifier']) == 'integer'){
-    $identityCond = [$SQLHandler->getSQLPrefix().'USERS.ID',$params['identifier'],'='];
+    $identityCond = [$SQLManager->getSQLPrefix().'USERS.ID',$params['identifier'],'='];
 }
 else{
-    $identityCond = [$SQLHandler->getSQLPrefix().'USERS.Email',[$params['identifier'],'STRING'],'='];
+    $identityCond = [$SQLManager->getSQLPrefix().'USERS.Email',[$params['identifier'],'STRING'],'='];
 }
 
-$targetUser = $SQLHandler->selectFromTable(
-    $SQLHandler->getSQLPrefix().'USERS',
+$targetUser = $SQLManager->selectFromTable(
+    $SQLManager->getSQLPrefix().'USERS',
     $identityCond,
     ['Auth_Rank'],
     ['test'=>$test]

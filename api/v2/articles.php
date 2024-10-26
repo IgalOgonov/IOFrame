@@ -1,39 +1,39 @@
 <?php
-/* Handles articles in IOFrame.
+/* Handles logs in IOFrame.
  *
  *
  * */
 
-require __DIR__.'/../../vendor/autoload.php';
+require_once __DIR__ . '/../../main/core_init.php';
 
-use League\OpenAPIValidation\PSR7\Exception\NoContentType;
-use League\OpenAPIValidation\PSR7\Exception\NoOperation;
-use League\OpenAPIValidation\PSR7\Exception\NoPath;
-use League\OpenAPIValidation\PSR7\Exception\NoResponseCode;
-use League\OpenAPIValidation\PSR7\Exception\Validation\InvalidBody;
-use League\OpenAPIValidation\PSR7\Exception\Validation\InvalidCookies;
-use League\OpenAPIValidation\PSR7\Exception\Validation\InvalidHeaders;
-use League\OpenAPIValidation\PSR7\Exception\Validation\InvalidPath;
-use League\OpenAPIValidation\PSR7\Exception\Validation\InvalidQueryArgs;
-use League\OpenAPIValidation\PSR7\Exception\Validation\InvalidSecurity;
-use League\OpenAPIValidation\PSR7\Exception\ValidationFailed;
-use League\OpenAPIValidation\Schema\Exception\FormatMismatch;
-use League\OpenAPIValidation\Schema\Exception\KeywordMismatch;
-use League\OpenAPIValidation\Schema\Exception\TypeMismatch;
-use League\OpenAPIValidation\PSR7\SpecFinder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use IOFrame\Handlers\FileHandler;
-use IOFrame\Util\v2APIManager;
 
-require_once __DIR__.'/../../main/coreInit.php';
 require __DIR__ . '/../apiSettingsChecks.php';
+require __DIR__ . '/../defaultInputResults.php';
 
 $request = Request::createFromGlobals();
 $response = new Response();
-$FileHandler = new FileHandler();
-$openAPIjson = $FileHandler->readFile($settings->getSetting('absPathToRoot').'api/v2/openapi.json');
-$APIManager = new v2APIManager($settings,json_decode($openAPIjson,true),array_merge($defaultSettingsParams,[
+
+$openAPIJSON = \IOFrame\Util\FileSystemFunctions::readFile($settings->getSetting('absPathToRoot').'api/v2/articles.json');
+
+$tagSettings = new \IOFrame\Handlers\SettingsHandler(
+    $settings->getSetting('absPathToRoot').'localFiles/tagSettings/',
+    array_merge($defaultSettingsParams,['base64Storage'=>true])
+);
+$currentTags = $tagSettings->getSetting('availableTagTypes');
+$currentTags = \IOFrame\Util\PureUtilFunctions::is_json($currentTags)? json_decode($currentTags,true) : [];
+$tagsArr = [];
+foreach ($currentTags as $tagType=>$arr)
+    $tagsArr[] = '"'.$tagType.'"';
+
+$openAPIJSON = str_replace(
+    ['%%ROOT_URL%%', '"%%ARTICLE_VALID_TAGS%%"'],
+    [$settings->getSetting('pathToRoot'), empty($tagsArr)?'':implode(',',$tagsArr)],
+    $openAPIJSON
+);
+
+$v2APIManager = new \IOFrame\Managers\v2APIManager($settings,json_decode($openAPIJSON,true),array_merge($defaultSettingsParams,[
     'request'=> null,
     'formats'=> [
         [
@@ -63,62 +63,84 @@ foreach($formats as $format){
     \League\OpenAPIValidation\Schema\TypeFormats\FormatsContainer::registerFormat($format['type'],$format['name'],$format['callback']);
 }
 
-$match = $APIManager->validateAction();
+$match = $v2APIManager->validateAction();
 if(gettype($match) === 'array' && isset($match['error']))
     die(json_encode($match));
-$APIManager->initParams(['test'=>$test]);
+$v2APIManager->initParams(['test'=>$test]);
 
 //On error, return the error
-if(gettype($APIManager->match) === 'array' && isset($APIManager->match['error']))
-    die(json_encode($APIManager->match));
+if(gettype($v2APIManager->match) === 'array' && isset($v2APIManager->match['error']))
+    die(json_encode($v2APIManager->match));
 elseif(get_class($match)!=='League\OpenAPIValidation\PSR7\OperationAddress')
     die(json_encode(['error'=>'Unknown error']));
 
 $ArticleHandler = new \IOFrame\Handlers\ArticleHandler($settings,$defaultSettingsParams);
 require 'articles_fragments/definitions.php';
-$APIAction = strtolower($APIManager->match->method()).$APIManager->match->path();
+$APIAction = strtolower($v2APIManager->match->method()).$v2APIManager->match->path();
+
+if(!checkApiEnabled('articles',$apiSettings,$SecurityHandler,$APIAction))
+    \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON(['error'=>API_DISABLED],!$test);
 
 switch ($APIAction){
 
     case 'get/articles':
-        $inputs = $APIManager->parameters['query'];
+        $inputs = $v2APIManager->parameters['query'];
         require 'articles_fragments/getArticles_checks.php';
         require 'articles_fragments/getArticles_auth.php';
         require 'articles_fragments/getArticles_execution.php';
-
-        echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS);
+        \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON($result,!$test);
         break;
 
     case 'get/articles/{id}':
     case 'get/articles/{address}':
-        $inputs = array_merge($APIManager->parameters['query'],$APIManager->parameters['uri']);
+        $inputs = array_merge($v2APIManager->parameters['query'],$v2APIManager->parameters['uri']);
         require 'articles_fragments/getArticle_checks.php';
         require 'articles_fragments/getArticle_auth.php';
         require 'articles_fragments/getArticle_execution.php';
-        echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS);
+        \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON($result,!$test);
         break;
 
     case 'delete/articles/{id}':
     case 'delete/articles':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             die(json_encode(['error'=>'CSRF']));
-        $inputs = array_merge($APIManager->parameters['query'],$APIManager->parameters['uri']);
+        $inputs = array_merge($v2APIManager->parameters['query'],$v2APIManager->parameters['uri']);
         require 'articles_fragments/deleteArticles_checks.php';
         require 'articles_fragments/deleteArticles_auth.php';
         require 'articles_fragments/deleteArticles_execution.php';
-        echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_FORCE_OBJECT);
+        \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON($result,!$test);
         break;
 
     case 'put/articles/{id}':
     case 'post/articles':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             die(json_encode(['error'=>'CSRF']));
-        $inputs = array_merge($APIManager->parameters['body'],$APIManager->parameters['uri']);
+        $inputs = array_merge($v2APIManager->parameters['body'],$v2APIManager->parameters['query'],$v2APIManager->parameters['uri']);
         $inputs['create'] = $APIAction === 'post/articles';
         require 'articles_fragments/setArticle_checks.php';
         require 'articles_fragments/setArticle_auth.php';
         require 'articles_fragments/setArticle_execution.php';
-        echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_FORCE_OBJECT);
+        \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON($result,!$test);
+        break;
+
+    case 'post/articles/{id}/tags/{type}':
+        if(!validateThenRefreshCSRFToken($SessionManager))
+            die(json_encode(['error'=>'CSRF']));
+        $inputs = array_merge($v2APIManager->parameters['query'],$v2APIManager->parameters['uri']);
+        require 'articles_fragments/addArticleTags_checks.php';
+        require 'articles_fragments/addArticleTags_auth.php';
+        require 'articles_fragments/addArticleTags_execution.php';
+        \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON($result,!$test);
+        break;
+
+    case 'delete/articles/{id}/tags/{type}':
+        if(!validateThenRefreshCSRFToken($SessionManager))
+            die(json_encode(['error'=>'CSRF']));
+        $inputs = array_merge($v2APIManager->parameters['query'],$v2APIManager->parameters['uri']);
+        require 'articles_fragments/removeArticleTags_checks.php';
+        require 'articles_fragments/removeArticleTags_auth.php';
+        require 'articles_fragments/removeArticleTags_execution.php';
+        \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON($result,!$test);
         break;
 
     case 'post/articles/{id}/block/markdown':
@@ -135,44 +157,44 @@ switch ($APIAction){
     case 'put/articles/{id}/block/{blockId}/video':
     case 'put/articles/{id}/block/{blockId}/youtube':
     case 'put/articles/{id}/block/{blockId}/article':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             die(json_encode(['error'=>'CSRF']));
-        $inputs = array_merge($APIManager->parameters['body'],$APIManager->parameters['uri']);
-        $inputs['create'] = substr($APIAction,0,4) === 'post';
+        $inputs = array_merge($v2APIManager->parameters['body'],$v2APIManager->parameters['uri']);
+        $inputs['create'] = str_starts_with($APIAction, 'post');
         require 'articles_fragments/setArticleBlock_checks.php';
         require 'articles_fragments/setArticleBlock_auth.php';
         require 'articles_fragments/setArticleBlock_execution.php';
-        echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_FORCE_OBJECT);
+        \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON($result,!$test);
         break;
 
     case 'delete/articles/{id}/blocks':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             die(json_encode(['error'=>'CSRF']));
-        $inputs = array_merge($APIManager->parameters['query'],$APIManager->parameters['uri']);
+        $inputs = array_merge($v2APIManager->parameters['query'],$v2APIManager->parameters['uri']);
         require 'articles_fragments/deleteArticleBlocks_checks.php';
         require 'articles_fragments/deleteArticleBlocks_auth.php';
         require 'articles_fragments/deleteArticleBlocks_execution.php';
-        echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_FORCE_OBJECT);
+        \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON($result,!$test);
         break;
 
-    case 'post/articles/{id}/blocks/clean':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+    case 'delete/articles/{id}/blocks/clean':
+        if(!validateThenRefreshCSRFToken($SessionManager))
             die(json_encode(['error'=>'CSRF']));
-        $inputs = array_merge($APIManager->parameters['body'],$APIManager->parameters['uri']);
+        $inputs = array_merge($v2APIManager->parameters['body'],$v2APIManager->parameters['uri']);
         require 'articles_fragments/cleanArticleBlocks_checks.php';
         require 'articles_fragments/cleanArticleBlocks_auth.php';
         require 'articles_fragments/cleanArticleBlocks_execution.php';
-        echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_FORCE_OBJECT);
+        \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON($result,!$test);
         break;
 
     case 'put/articles/{id}/blocks/{from}/{to}':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             die(json_encode(['error'=>'CSRF']));
-        $inputs = array_merge($APIManager->parameters['body'],$APIManager->parameters['uri']);
+        $inputs = array_merge($v2APIManager->parameters['body'],$v2APIManager->parameters['uri']);
         require 'articles_fragments/moveBlockInArticle_checks.php';
         require 'articles_fragments/moveBlockInArticle_auth.php';
         require 'articles_fragments/moveBlockInArticle_execution.php';
-        echo json_encode($result,JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_FORCE_OBJECT);
+        \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON($result,!$test);
         break;
 
     default:

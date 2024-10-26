@@ -1,11 +1,10 @@
 <?php
-if(!defined('FrontEndResourceHandler'))
-    require __DIR__ . '/../../../IOFrame/Handlers/FrontEndResourceHandler.php';
+
 
 //Handlers
-$FrontEndResourceHandler = new IOFrame\Handlers\FrontEndResourceHandler($settings,$defaultSettingsParams);
+$FrontEndResources = new \IOFrame\Handlers\Extenders\FrontEndResources($settings,$defaultSettingsParams);
 
-$result = $FrontEndResourceHandler->swapFrontendResourceCollectionOrder(
+$result = $FrontEndResources->swapFrontendResourceCollectionOrder(
     $inputs['num1'],
     $inputs['num2'],
     $inputs['gallery'],

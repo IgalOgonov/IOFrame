@@ -1,6 +1,5 @@
 <?php
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 require_once $settings->getSetting('absPathToRoot').'vendor/autoload.php';
 
 $config = HTMLPurifier_Config::createDefault();
@@ -10,7 +9,7 @@ $purifier = new HTMLPurifier($config);
 //Address
 if($inputs['address'] !== null){
 
-    $valid = \IOFrame\Util\validator::validateRelativeFilePath($inputs['address']);
+    $valid = \IOFrame\Util\ValidatorFunctions::validateRelativeFilePath($inputs['address']);
     $valid = $valid || filter_var($inputs['address'],FILTER_VALIDATE_URL);
 
     if(!$valid){
@@ -33,13 +32,13 @@ $expected = ['name','caption'];
 if($action === 'updateVideo')
     array_push($expected,'autoplay','loop','mute','controls','poster','preload');
 else
-    array_push($expected,'alt');
+    $expected[] = 'alt';
 $purify = ['name','alt','caption'];
 foreach($languages as $lang){
-    array_push($expected,$lang.'_name');
-    array_push($purify,$lang.'_name');
-    array_push($expected,$lang.'_caption');
-    array_push($purify,$lang.'_caption');
+    $expected[] = $lang . '_name';
+    $purify[] = $lang . '_name';
+    $expected[] = $lang . '_caption';
+    $purify[] = $lang . '_caption';
 }
 $anythingSet = false;
 foreach($expected as $attr)
@@ -58,7 +57,7 @@ if($action === 'updateImage'){
             exit(INPUT_VALIDATION_FAILURE);
         }
 
-        if( !( $auth->hasAction(IMAGE_ALT_AUTH) || $auth->hasAction(IMAGE_UPDATE_AUTH) || $auth->isAuthorized(0) ) ){
+        if( !( $auth->hasAction(IMAGE_ALT_AUTH) || $auth->hasAction(IMAGE_UPDATE_AUTH) || $auth->isAuthorized() ) ){
             if($test)
                 echo 'Cannot upload media with specific alt tags!'.EOL;
             exit(AUTHENTICATION_FAILURE);
@@ -103,7 +102,7 @@ if(!$inputs['deleteEmpty'] && !$anythingSet ){
 
 $nameArr = ['name'];
 foreach($languages as $lang){
-    array_push($nameArr,$lang.'_name');
+    $nameArr[] = $lang . '_name';
 }
 foreach($nameArr as $nameParam)
     if($inputs[$nameParam] !== null){
@@ -118,7 +117,7 @@ foreach($nameArr as $nameParam)
 
 $captionArr = ['caption'];
 foreach($languages as $lang){
-    array_push($captionArr,$lang.'_caption');
+    $captionArr[] = $lang . '_caption';
 }
 foreach($captionArr as $captionParam)
     if($inputs[$captionParam] !== null){
@@ -134,7 +133,7 @@ if($inputs['deleteEmpty']){
     foreach($expected as $attr)
         if($inputs[$attr] === null){
             $meta[$attr] = null;
-        };
+        }
 }
 
 $meta = json_encode($meta);

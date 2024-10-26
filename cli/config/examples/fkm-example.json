@@ -1,0 +1,11 @@
+{
+	"cli/config/examples/load-from-file-extra-1":{
+		"loadWithFKM1":{},
+		"loadWithFKMNested1":{"key":"wontBeLoadedWithFileBecauseNotPredefined.loadWithFKMNested1"}
+	},
+	"cli/config/examples/load-from-file-extra-2":{
+		"loadWithFKM2":{},
+		"loadWithFKMNested2":{"key":"nestedObject.loadWithFKMNested"},
+		"loadWithFKMNested3":{"key":"nestedObject.loadWithFKMObjetKey"}
+	}
+}

@@ -3,39 +3,56 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <?php
-require __DIR__.'/../../ioframe/templates/ioframe_core_headers.php';
+require 'ioframe_core_headers.php';
+require 'check_if_user_banned.php';
 
-$details = isset($_SESSION['details']) && \IOFrame\Util\is_json($_SESSION['details'])? json_decode($_SESSION['details'],true) : [];
-
-$signedIn = !empty($details['logged_in']);
+$details = isset($_SESSION['details']) && \IOFrame\Util\PureUtilFunctions::is_json($_SESSION['details'])? json_decode($_SESSION['details'],true) : [];
 $active = !empty($details['Active']);
 $requires2FA = !empty($details['require2FA']);
 
 $siteConfig = [
-    'signedIn'=>$signedIn,
     'active'=>$active,
     'requires2FA'=>$requires2FA,
-    'isAdmin'=>$auth->isAuthorized(0)
+    'isAdmin'=>$auth->isAuthorized()
 ];
 
 //Allows modification of the menu via the setting CPMenu
 $CPMenuSetting = $siteSettings->getSetting('CPMenu');
-if(\IOFrame\Util\is_json($CPMenuSetting)){
+if(\IOFrame\Util\PureUtilFunctions::is_json($CPMenuSetting)){
     $siteConfig['cp'] = json_decode($CPMenuSetting,true);
 }
 
 $devMode = true;
-$auth->isAuthorized(0) ||
-( isset($_REQUEST['devMode']) && $_REQUEST['devMode'] && $auth->hasAction('DEV_MODE') )||
-(isset($_SESSION['devMode']) && $_SESSION['devMode']);
+
+if( $siteSettings->getSetting('devMode') ||
+    $auth->isAuthorized() ||
+    ( !empty($_REQUEST['devMode']) && $auth->hasAction('DEV_MODE') )||
+    !empty($_SESSION['devMode'])
+)
+    $devMode = $siteSettings->getSetting('allowTesting') || $siteSettings->getSetting('devMode');
 
 if($devMode)
-    echo '<script src="'.$dirToRoot.'front/ioframe/js/ext/vue/2.6.10/vue.js"></script>';
+    echo '<script src="'.$dirToRoot.'front/ioframe/js/ext/vue/2.7.16/vue.js"></script>';
 else
-    echo '<script src="'.$dirToRoot.'front/ioframe/js/ext/vue/2.6.10/vue.min.js"></script>';
+    echo '<script src="'.$dirToRoot.'front/ioframe/js/ext/vue/2.7.16/vue.min.js"></script>';
 
-$JS = ['mixins/commons.js','mixins/componentHookFunctions.js','components/userLogin.js','components/userRegistration.js','components/userLogout.js'];
-$CSS = ['standard.css','global.css','fonts.css'];
+$JS = [];
+$JSPackages = [
+        'commonJSMixinsComponents'=>
+        [
+            'items'=>['mixins/commons.js','mixins/componentHookFunctions.js', 'mixins/eventHubManager.js',
+                'mixins/multipleLanguages.js','components/userLogin.js','components/userRegistration.js',
+                'components/userLogout.js','components/languageSelector.js'],
+            'order'=> 0
+        ]
+];
+$CSS = [];
+$CSSPackages = [
+    'commonCSS'=>
+        [
+            'items'=>['standard.css','global.css','fonts.css','components/languageSelector.css'],
+            'order'=>0
+        ]
+];
+$languageObjects = [];
 
-
-?>

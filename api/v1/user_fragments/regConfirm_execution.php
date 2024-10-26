@@ -1,43 +1,41 @@
 <?php
 
-if(!defined('UserHandler'))
-    require __DIR__ . '/../../../IOFrame/Handlers/UserHandler.php';
 
 //Attempts to activate the user, if the REQUEST contains both the ID and the code
 if(isset($inputs['id']) && isset($inputs['code']) ){
 
-    if(!isset($UserHandler))
-        $UserHandler = new IOFrame\Handlers\UserHandler(
+    if(!isset($UsersHandler))
+        $UsersHandler = new \IOFrame\Handlers\UsersHandler(
             $settings,
             $defaultSettingsParams
         );
 
     if(!isset($pageSettings))
-        $pageSettings = new IOFrame\Handlers\SettingsHandler(
-            $settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/pageSettings/',
+        $pageSettings = new \IOFrame\Handlers\SettingsHandler(
+            $settings->getSetting('absPathToRoot').'/'.\IOFrame\Handlers\SettingsHandler::SETTINGS_DIR_FROM_ROOT.'/pageSettings/',
             $defaultSettingsParams
         );
 
-    $result = $UserHandler->confirmRegistration($inputs['id'], $inputs['code'],['test'=>$test]);
+    $result = $UsersHandler->confirmRegistration($inputs['id'], $inputs['code'],['test'=>$test]);
 
     if($pageSettings->getSetting('regConfirm') && !isset($inputs['async'])){
 
         if(!$test)
-            header('Location: http://'.$_SERVER['SERVER_NAME'].'/'.$settings->getSetting('pathToRoot').$pageSettings->getSetting('regConfirm').'?res='.$result);
+            header('Location: https://' .$_SERVER['SERVER_NAME'].'/'.$settings->getSetting('pathToRoot').$pageSettings->getSetting('regConfirm').'?res='.$result);
         else
-            echo 'Changing header location to http://'.$_SERVER['SERVER_NAME'].'/'.$settings->getSetting('pathToRoot').$pageSettings->getSetting('regConfirm').'?res='.$result.EOL;
+            echo 'Changing header location to https://' .$_SERVER['SERVER_NAME'].'/'.$settings->getSetting('pathToRoot').$pageSettings->getSetting('regConfirm').'?res='.$result.EOL;
     }
 }
 elseif(isset($inputs['mail']) ){
-    if(!isset($UserHandler))
-        $UserHandler = new IOFrame\Handlers\UserHandler(
+    if(!isset($UsersHandler))
+        $UsersHandler = new \IOFrame\Handlers\UsersHandler(
             $settings,
             $defaultSettingsParams
         );
 
     if(!isset($userSettings))
-        $userSettings = new IOFrame\Handlers\SettingsHandler(
-            $settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/userSettings/',
+        $userSettings = new \IOFrame\Handlers\SettingsHandler(
+            $settings->getSetting('absPathToRoot').'/'.\IOFrame\Handlers\SettingsHandler::SETTINGS_DIR_FROM_ROOT.'/userSettings/',
             $defaultSettingsParams
         );
 
@@ -47,7 +45,7 @@ elseif(isset($inputs['mail']) ){
         $result =  '1';
     }
     else{
-        $result = $UserHandler->accountActivation($inputs['mail'], null, ['async' => false,'language'=>$inputs['language'],'test'=>$test]);
+        $result = $UsersHandler->accountActivation($inputs['mail'], null, ['async' => false,'language'=>$inputs['language'],'test'=>$test]);
     }
 }
 else{

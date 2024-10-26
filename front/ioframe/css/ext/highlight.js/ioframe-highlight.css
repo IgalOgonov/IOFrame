@@ -10,7 +10,7 @@ IOFrame docs - Igal Ogonov (igal1333@hotmail.com)
     padding: 0.5em;
     color: var(--dark-1);
     background: var(--main-color-2);
-    box-shadow: 2px 2px 4px 0px var(--shadow-dark-3);
+    border-left: 3px solid var(--main-color-8);
 }
 
 .hljs::selection , .hljs *::selection {

@@ -1,10 +1,13 @@
 <?php
 
-if(!defined('safeSTR'))
-    require __DIR__ . '/../../../IOFrame/Util/safeSTR.php';
+
+$MailManager = new \IOFrame\Managers\MailManager(
+    $settings,
+    array_merge($defaultSettingsParams,['mode'=>'none'])
+);
 
 $params = ['test'=>$test];
-if($inputs['ids'] === null){
+if(empty($inputs['ids'])){
     $params = array_merge($params,
         [
             'limit'=>$inputs['limit'],
@@ -18,4 +21,4 @@ if($inputs['ids'] === null){
         ]);
 }
 
-$result = $MailHandler->getTemplates($inputs['ids'],$params);
+$result = $MailManager->getTemplates($inputs['ids'],$params);

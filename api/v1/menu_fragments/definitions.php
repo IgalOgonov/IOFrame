@@ -40,7 +40,7 @@ CONST MENU_TITLE_MAX_LENGTH = 1024;
 CONST MENU_ITEM_TITLE_MAX_LENGTH = 128;
 
 //A function to recursively convert menu children from a lookup array into a regular array, based on order.
-function parseMenuItems(&$menu){
+function parseMenuItems(&$menu): void {
     if(!isset($menu['children']))
         return;
     $newChildren = [];
@@ -52,14 +52,14 @@ function parseMenuItems(&$menu){
 
     foreach($order as $identifier)
         if(!empty($menu['children'][$identifier])){
-            array_push($newChildren,$menu['children'][$identifier]);
+            $newChildren[] = $menu['children'][$identifier];
             unset($menu['children'][$identifier]);
         }
 
     foreach($menu['children'] as $identifier => $childMenu){
         if(!empty($menu['children'][$identifier])){
-            array_push($newChildren,$menu['children'][$identifier]);
-            array_push($order,$identifier);
+            $newChildren[] = $menu['children'][$identifier];
+            $order[] = $identifier;
         }
     }
 

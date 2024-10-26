@@ -31,7 +31,7 @@ if($inputs['keys'] === null){
 
     if($inputs['orderBy'] !== null){
 
-        if(!\IOFrame\Util\is_json($inputs['orderBy'])){
+        if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs['orderBy'])){
             if($test)
                 echo 'orderBy must be a valid json!'.EOL;
             exit(INPUT_VALIDATION_FAILURE);
@@ -48,7 +48,7 @@ if($inputs['keys'] === null){
 
         $retrieveParams['orderBy'] = [];
         foreach($inputs['orderBy'] as $orderBy){
-            array_push($retrieveParams['orderBy'],$articleSetColumnMap[$orderBy]);
+            $retrieveParams['orderBy'][] = $articleSetColumnMap[$orderBy];
         }
     }
     else
@@ -67,7 +67,7 @@ if($inputs['keys'] === null){
 
     //Handle the filters
     $validArray = ['titleLike','languageIs','addressIn','addressIs','createdBefore','createdAfter','changedBefore','changedAfter','authAtMost'
-        ,'authIn','weightIn'];
+        ,'authIn','weightIn','tagsIn'];
 
     foreach($inputs as $potentialFilter => $value){
 
@@ -112,17 +112,19 @@ if($inputs['keys'] === null){
             case 'authIn':
             case 'weightIn':
             case 'addressIn':
-                if(!\IOFrame\Util\is_json($value)){
+                if(!\IOFrame\Util\PureUtilFunctions::is_json($value)){
                     if($test)
                         echo 'addressIn must be a valid json arrays if set!'.EOL;
                     exit(INPUT_VALIDATION_FAILURE);
                 }
                 $value = json_decode($value,true);
 
+                if(in_array($potentialFilter,['authIn','weightIn']))
+                    $requiredAuth = max($requiredAuth,REQUIRED_AUTH_ADMIN);
+
                 if($potentialFilter !== 'addressIn')
                     foreach($value as $val){
                         if(!filter_var($val,FILTER_VALIDATE_INT) && $val !== 0){
-                            var_dump($val);
                             if($test)
                                 echo $potentialFilter.' must be a valid integer (or 0)!'.EOL;
                             exit(INPUT_VALIDATION_FAILURE);
@@ -146,6 +148,34 @@ if($inputs['keys'] === null){
                     }
                 break;
 
+            case 'tagsIn':
+                require_once __DIR__.'/../tags_fragments/definitions.php';
+                if(!\IOFrame\Util\PureUtilFunctions::is_json($value)){
+                    if($test)
+                        echo 'tagsIn must be a valid json array if set!'.EOL;
+                    exit(INPUT_VALIDATION_FAILURE);
+                }
+                $value = json_decode($value,true);
+                foreach($value as $key => $val){
+                    if(!is_array($val)){
+                        $value[$key] = [
+                            'type'=>'default-article-tags',
+                            'name'=>$val
+                        ];
+                    }
+                    if(!preg_match('/'.$TAGS_API_DEFINITIONS['validation']['tagRegex'].'/',$value[$key]['name'])){
+                        if($test)
+                            echo $potentialFilter.' tag names must all be valid'.EOL;
+                        exit(INPUT_VALIDATION_FAILURE);
+                    }
+                    if(!in_array($value[$key]['type'],$TagHandlerBaseTagTypes)){
+                        if($test)
+                            echo $potentialFilter.' types must be valid'.EOL;
+                        exit(INPUT_VALIDATION_FAILURE);
+                    }
+                }
+                break;
+
             case 'createdBefore':
             case 'createdAfter':
             case 'changedBefore':
@@ -157,9 +187,7 @@ if($inputs['keys'] === null){
                     exit(INPUT_VALIDATION_FAILURE);
                 }
 
-                if(in_array($potentialFilter,['authIn','weightIn']))
-                    $requiredAuth = max($requiredAuth,REQUIRED_AUTH_ADMIN);
-                elseif($potentialFilter === 'authAtMost'){
+                if($potentialFilter === 'authAtMost'){
                     if($value > 0 && $value < 3)
                         $requiredAuth = max($requiredAuth,REQUIRED_AUTH_OWNER);
                     else
@@ -171,7 +199,6 @@ if($inputs['keys'] === null){
                 if($test)
                     echo 'Somehow an invalid filter got through!'.EOL;
                 exit(INPUT_VALIDATION_FAILURE);
-                break;
         }
 
         $retrieveParams[$potentialFilter] = $value;
@@ -183,7 +210,7 @@ else{
     $retrieveParams['orderBy'] = null;
     $retrieveParams['orderType'] = null;
 
-    if(!\IOFrame\Util\is_json($inputs['keys'])){
+    if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs['keys'])){
         if($test)
             echo 'keys must be a valid JSON array!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);
@@ -217,7 +244,7 @@ else{
             $requiredAuth = max($requiredAuth,REQUIRED_AUTH_ADMIN);
 
         $retrieveParams['authAtMost'] = $inputs['authAtMost'];
-    };
+    }
 }
 
 //Set 'authAtMost' if not requested by the user
@@ -232,9 +259,9 @@ elseif($retrieveParams['languageIs'] === '@')
 
 //Allows restriction of article types via settings
 if(empty($apiSettings))
-    $apiSettings = new IOFrame\Handlers\SettingsHandler($rootFolder.'/localFiles/apiSettings/',$defaultSettingsParams);
+    $apiSettings = new \IOFrame\Handlers\SettingsHandler($rootFolder.'/localFiles/apiSettings/',$defaultSettingsParams);
 $relevantSetting = $apiSettings->getSetting('articles');
-if(\IOFrame\Util\is_json($relevantSetting)){
+if(\IOFrame\Util\PureUtilFunctions::is_json($relevantSetting)){
     $relevantSetting = json_decode($relevantSetting,true);
     if(!empty($relevantSetting['articleContactTypes'])){
         $types = explode(',',$relevantSetting['articleContactTypes']);

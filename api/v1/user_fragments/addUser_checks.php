@@ -1,10 +1,9 @@
 <?php
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 
 if(!isset($userSettings))
-    $userSettings = new IOFrame\Handlers\SettingsHandler(
-        $settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/userSettings/',
+    $userSettings = new \IOFrame\Handlers\SettingsHandler(
+        $settings->getSetting('absPathToRoot').'/'.\IOFrame\Handlers\SettingsHandler::SETTINGS_DIR_FROM_ROOT.'/userSettings/',
         $defaultSettingsParams
     );
 
@@ -28,18 +27,18 @@ if($inputs["p"]==null||$inputs["m"]==null){
     exit(INPUT_VALIDATION_FAILURE);
 }
 else{
-    $u= isset($inputs["u"]) ? $inputs["u"] : null;
+    $u= $inputs["u"] ?? null;
     $p=$inputs["p"];
     $m=$inputs["m"];
     //Validate Username
     if($u != null)
-        if(!\IOFrame\Util\validator::validateUsername($u)){
+        if(!\IOFrame\Util\ValidatorFunctions::validateUsername($u)){
             if($test)
                 echo 'Username illegal!'.EOL;
             exit(INPUT_VALIDATION_FAILURE);
         }
         //Validate Password
-        else if(!IOFrame\Util\validator::validatePassword($p)){
+        else if(!\IOFrame\Util\ValidatorFunctions::validatePassword($p)){
             if($test)
                 echo 'Password illegal!'.EOL;
             exit(INPUT_VALIDATION_FAILURE);
@@ -64,6 +63,3 @@ if($inputs['token']!==null && !preg_match('/'.TOKEN_REGEX.'/',$inputs['token']) 
         echo 'Illegal token!';
     exit(INPUT_VALIDATION_FAILURE);
 }
-
-
-?>

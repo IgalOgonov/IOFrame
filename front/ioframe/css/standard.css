@@ -1,8 +1,5 @@
 /*Define most colors that will be found in the color platte*/
 :root{
-    /*scrolling*/
-    --scrollbarBG: rgb(218, 221, 239);
-    --thumbBG: rgb(111, 121, 166);
     /*general colors*/
     --soft-red-1: rgb(220,200,200);
     --soft-red-2: rgb(180,120,130);
@@ -199,6 +196,9 @@
     --button-dangerous-3-border-1-5: rgba(90,81, 0, 0.5);
     --button-dangerous-3-bg-2-5: rgba(255, 230, 124, 0.5);
     --button-dangerous-3-border-2-5: rgba(105,91, 0, 0.5);
+    /*scrolling*/
+    --scrollbarBG: var(--main-color-2);
+    --thumbBG: var(--main-color-8);
 }
 
 /*Messages*/
@@ -211,85 +211,85 @@
 }
 
 .message-dull{
-    background: var(--gray-4);
+    background-color: var(--gray-4);
     color: var(--dark-2);
     border: 1px var(--gray-1) solid;
 }
 .message-info-1{
-    background: var(--main-color-1);
+    background-color: var(--main-color-1);
     color: var(--secondary-color-8);
     border: 1px var(--secondary-color-4) solid;
 }
 .message-info-2, .alert.alert-info{
-    background: var(--main-color-2);
+    background-color: var(--main-color-2);
     color: var(--dark-1);
     border: 1px var(--secondary-color-4) solid;
 }
 .message-warning-1{
-    background: var(--message-warning-bg-1);
+    background-color: var(--message-warning-bg-1);
     color: var(--dark-1);
     border: 1px var(--message-warning-border-1) solid;
 }
 .message-warning-2, .alert.alert-warning{
-    background: var(--main-color-2);
+    background-color: var(--main-color-2);
     color: var(--message-warning-color-1);
     border: 1px var(--secondary-color-4) solid;
 }
 .message-error-1{
-    background: var(--message-error-bg-1);
+    background-color: var(--message-error-bg-1);
     color: var(--dark-2);
     border: 1px var(--message-error-border-1) solid;
 }
 .message-error-2, .alert.alert-error{
-    background: var(--main-color-2);
+    background-color: var(--main-color-2);
     color: var(--message-error-color-1);
     border: 1px var(--secondary-color-4) solid;
 }
 .message-success-1{
-    background: var(--message-success-bg-1);
+    background-color: var(--message-success-bg-1);
     color: var(--dark-2);
     border: 1px var(--message-success-border-1) solid;
 }
 .message-success-2, .alert.alert-success{
-    background: var(--main-color-2);
+    background-color: var(--main-color-2);
     color: var(--message-success-color-1);
     border: 1px var(--secondary-color-4) solid;
 }
 /*transparent variations*/
 .message-dull.transparent{
-    background: var(--shadow-gray-5);
+    background-color: var(--shadow-gray-5);
     border: 1px var(--shadow-dark-1) solid;
 }
 .message-info-1.transparent{
-    background: var(--main-color-1-5);
+    background-color: var(--main-color-1-5);
     border: 1px var(--secondary-color-4-5) solid;
 }
 .message-info-2, .alert.alert-info.transparent{
-    background: var(--main-color-2-5);
+    background-color: var(--main-color-2-5);
     border: 1px var(--secondary-color-4-5) solid;
 }
 .message-warning-1.transparent{
-    background: var(--message-warning-bg-1-5);
+    background-color: var(--message-warning-bg-1-5);
     border: 1px var(--message-warning-border-1-5) solid;
 }
 .message-warning-2, .alert.alert-warning.transparent{
-    background: var(--main-color-2-5);
+    background-color: var(--main-color-2-5);
     border: 1px var(--secondary-color-4-5) solid;
 }
 .message-error-1.transparent{
-    background: var(--message-error-bg-1-5);
+    background-color: var(--message-error-bg-1-5);
     border: 1px var(--message-error-border-1-5) solid;
 }
 .message-error-2, .alert.alert-error.transparent{
-    background: var(--main-color-2-5);
+    background-color: var(--main-color-2-5);
     border: 1px var(--secondary-color-4-5) solid;
 }
 .message-success-1.transparent{
-    background: var(--message-success-bg-1-5);
+    background-color: var(--message-success-bg-1-5);
     border: 1px var(--message-success-border-1-5) solid;
 }
 .message-success-2, .alert.alert-success.transparent{
-    background: var(--main-color-2-5);
+    background-color: var(--main-color-2-5);
     border: 1px var(--secondary-color-4-5) solid;
 }
 
@@ -313,111 +313,111 @@ button{
 }
 
 button.cancel-1{
-    background: var(--secondary-color-1);
+    background-color: var(--secondary-color-1);
     color: var(--secondary-color-8);
     border: 1px var(--secondary-color-4) solid;
 }
 button.cancel-1:hover{
-    background: var(--secondary-color-1);
+    background-color: var(--secondary-color-1);
     color: var(--secondary-color-4);
     border: 1px var(--gray-3) solid;
 }
 
 button.cancel-2{
-    background: var(--gray-4);
+    background-color: var(--gray-4);
     color: var(--dark-2);
     border: 1px var(--gray-1) solid;
 }
 button.cancel-2:hover{
-    background: var(--gray-2);
+    background-color: var(--gray-2);
     color: var(--dark-1);
     border: 1px var(--gray-3) solid;
 }
 
 button.positive-1{
-    background: var(--main-color-2);
+    background-color: var(--main-color-2);
     color: var(--button-positive-color-1);
     border: 1px var(--main-color-5) solid;
 }
 button.positive-1:hover{
-    background: var(--main-color-3);
+    background-color: var(--main-color-3);
     color: var(--button-positive-color-2);
     border: 1px var(--main-color-5) solid;
 }
 
 button.positive-2{
-    background: var(--button-positive-2-bg-1);
+    background-color: var(--button-positive-2-bg-1);
     color: var(--dark-1);
     border: 1px var(--button-positive-2-border-1) solid;
 }
 button.positive-2:hover{
-    background: var(--button-positive-2-bg-2);
+    background-color: var(--button-positive-2-bg-2);
     color: var(--dark-1);
     border: 1px var(--button-positive-2-border-2) solid;
 }
 
 button.positive-3{
-    background: var(--main-color-2);
+    background-color: var(--main-color-2);
     color: var(--main-color-8);
     border: 1px var(--main-color-5) solid;
 }
 button.positive-3:hover{
-    background: var(--main-color-3);
+    background-color: var(--main-color-3);
     color: var(--main-color-7);
     border: 1px var(--main-color-5) solid;
 }
 
 button.dangerous-1{
-    background: var(--main-color-2);
+    background-color: var(--main-color-2);
     color: var(--button-dangerous-color-1);
     border: 1px var(--button-dangerous-border-1) solid;
 }
 button.dangerous-1:hover{
-    background: var(--main-color-3);
+    background-color: var(--main-color-3);
     color: var(--button-dangerous-color-2);
     border: 1px var(--button-dangerous-border-2) solid;
 }
 
 button.dangerous-2{
-    background: var(--button-dangerous-2-bg-1);
+    background-color: var(--button-dangerous-2-bg-1);
     color: var(--dark-1);
     border: 1px var(--button-dangerous-2-border-1) solid;
 }
 button.dangerous-2:hover{
-    background: var(--button-dangerous-2-bg-2);
+    background-color: var(--button-dangerous-2-bg-2);
     color: var(--button-dangerous-2-color-2);
     border: 1px var(--button-dangerous-2-border-2) solid;
 }
 
 button.dangerous-3{
-    background: var(--button-dangerous-3-bg-1);
+    background-color: var(--button-dangerous-3-bg-1);
     color: var(--button-dangerous-3-color-1);
     border: 1px var(--button-dangerous-3-border-1) solid;
 }
 button.dangerous-3:hover{
-    background: var(--button-dangerous-3-bg-2);
+    background-color: var(--button-dangerous-3-bg-2);
     color: var(--button-dangerous-3-color-2);
     border: 1px var(--button-dangerous-3-border-2) solid;
 }
 
 button.negative-1{
-    background: var(--main-color-2);
+    background-color: var(--main-color-2);
     color: var(--button-negative-color-1);
     border: 1px var(--button-negative-border-1) solid;
 }
 button.negative-1:hover{
-    background: var(--main-color-3);
+    background-color: var(--main-color-3);
     color: var(--button-negative-color-2);
     border: 1px var(--button-negative-border-2) solid;
 }
 
 button.negative-2{
-    background: var(--button-negative-2-bg-1);
+    background-color: var(--button-negative-2-bg-1);
     color: var(--button-negative-2-color-1);
     border: 1px var(--button-negative-2-border-1) solid;
 }
 button.negative-2:hover{
-    background: var(--button-negative-2-bg-2);
+    background-color: var(--button-negative-2-bg-2);
     color: var(--button-negative-2-color-2);
     border: 1px var(--button-negative-2-border-2) solid;
 }
@@ -429,10 +429,10 @@ button.negative-2:hover{
 ::-webkit-scrollbar {
     height: 12px;
     width: 12px;
-    background: var(--scrollbarBG);
+    background-color: var(--scrollbarBG);
 }
 ::-webkit-scrollbar-thumb {
-    background: var(--thumbBG);
+    background-color: var(--thumbBG);
     -webkit-border-radius: 1ex;
 }
 
@@ -450,6 +450,11 @@ form{
     border: 1px var(--secondary-color-4) solid;
 }
 /*input, textarea, select*/
+input:invalid,
+textarea:invalid{
+    color: var(--button-negative-color-2);
+}
+
 form input:not([type=submit]) {
     margin: 3px 0px 3px 0px;
     padding:5px;
@@ -477,7 +482,7 @@ form textarea:hover:not(:focus){
 /* Select */
 select{
     padding: 5px;
-    background: var(--main-color-1);
+    background-color: var(--main-color-1);
     border: 1px var(--secondary-color-4) solid;
     transition: background 0.2s ease-in-out;
     /*remove annoying arrow*/
@@ -486,10 +491,10 @@ select{
     appearance: none;
 }
 select:not([disabled]):hover{
-    background: var(--main-color-4);
+    background-color: var(--main-color-4);
 }
 select[disabled]{
-    background: var(--secondary-color-2);
+    background-color: var(--secondary-color-2);
 }
 
 /*Standard media sizes*/

@@ -5,7 +5,7 @@
  *      See standard return values at defaultInputResults.php
  *
  * Parameters:
- * "action"     - Requested action - described bellow
+ * "action"     - Requested action - described below
  * "contactType"- String, contacts type. While not needed for getting a specific contact (or contact types), it's needed for
  *                anything that changes contact state.
  *
@@ -32,7 +32,7 @@
  *          'changedAfter' => String, Unix timestamp, default null - only returns results changed after this date.
  *          'includeRegex' => String, default null - only includes identifiers containing this regex.
  *          'excludeRegex' => String, default null - only includes identifiers excluding this regex.
- *          ------ Using the parameters bellow disables caching ------
+ *          ------ Using the parameters below disables caching ------
  *          'fullNameLike' => String, default null - returns results where first name together with last name matche a regex.
  *          'companyNameIDLike' => String, Unix timestamp, default null - returns results where company name together with company ID matche a regex.
  *          'orderBy'            - string, defaults to null. Possible values are 'Created','Last_Updated','Email',
@@ -164,8 +164,8 @@
  *      Examples: action=renameContact&contactType=test&identifier=Test Contact 1&newIdentifier=Test Contact 5
  * */
 
-if(!defined('coreInit'))
-    require __DIR__ . '/../../main/coreInit.php';
+if(!defined('IOFrameMainCoreInit'))
+    require __DIR__ . '/../../main/core_init.php';
 
 require __DIR__ . '/../../IOFrame/Handlers/ContactHandler.php';
 require __DIR__ . '/../apiSettingsChecks.php';
@@ -180,7 +180,7 @@ if(!isset($_REQUEST["action"]))
     exit('Action not specified!');
 $action = $_REQUEST["action"];
 
-if(!checkApiEnabled('contacts',$apiSettings,$_REQUEST['action']))
+if(!checkApiEnabled('contacts',$apiSettings,$SecurityHandler,$_REQUEST['action']))
     exit(API_DISABLED);
 
 $contactType = null;
@@ -195,7 +195,7 @@ elseif(isset($_REQUEST['contactType'])){
     }
 }
 
-$ContactHandler = new IOFrame\Handlers\ContactHandler(
+$ContactHandler = new \IOFrame\Handlers\ContactHandler(
     $settings,
     $contactType,
     array_merge($defaultSettingsParams, ['siteSettings'=>$siteSettings])
@@ -233,7 +233,7 @@ switch($action){
         break;
 
     case 'setContact':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
         $arrExpected =["id","firstName","lastName","email","phone","fax","country","state","city","street",
             "zipCode","companyName","companyID","contactInfo","address","extraInfo","update","override"];
@@ -246,7 +246,7 @@ switch($action){
         break;
 
     case 'deleteContacts':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
         $arrExpected =["identifiers"];
 
@@ -254,11 +254,11 @@ switch($action){
         require 'contacts_fragments/deleteContacts_auth.php';
         require 'contacts_fragments/deleteContacts_checks.php';
         require 'contacts_fragments/deleteContacts_execution.php';
-        echo $result? $result : '0';
+        echo $result?: '0';
         break;
 
     case 'renameContact':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
         $arrExpected =["identifier","newIdentifier"];
 
@@ -266,13 +266,12 @@ switch($action){
         require 'contacts_fragments/renameContact_auth.php';
         require 'contacts_fragments/renameContact_checks.php';
         require 'contacts_fragments/renameContact_execution.php';
-        echo $result? $result : '0';
+        echo $result?: '0';
         break;
 
     default:
         exit('Specified action is not recognized');
 }
 
-?>
 
 

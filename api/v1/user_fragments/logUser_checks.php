@@ -1,12 +1,11 @@
 <?php
 
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 
 
 if(!isset($userSettings))
-    $userSettings = new IOFrame\Handlers\SettingsHandler(
-        $settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/userSettings/',
+    $userSettings = new \IOFrame\Handlers\SettingsHandler(
+        $settings->getSetting('absPathToRoot').'/'.\IOFrame\Handlers\SettingsHandler::SETTINGS_DIR_FROM_ROOT.'/userSettings/',
         $defaultSettingsParams
     );
 
@@ -48,7 +47,7 @@ if($inputs["log"]!=='out'){
         }
         //Validate Password
         else if( $inputs["log"]!= 'temp'){
-            if(!IOFrame\Util\validator::validatePassword($p)){
+            if(!\IOFrame\Util\ValidatorFunctions::validatePassword($p)){
                 if($test)
                     echo 'Password illegal.';
                 exit(INPUT_VALIDATION_FAILURE);
@@ -79,10 +78,9 @@ if($inputs["log"]!=='out'){
             }
         }
         //If this is a temp login, check if sesKey is valid
-        else if( ($inputs["log"]== 'temp')
-            &&( preg_match_all('/[a-f]|[0-9]/',$inputs["sesKey"])!=strlen($inputs["sesKey"])
-                || strlen($inputs["sesKey"])>64 //64 will always be the length, unless you increase the sesID length
-            )
+        else if(
+            preg_match_all('/[a-f]|[0-9]/',$inputs["sesKey"])!=strlen($inputs["sesKey"]) ||
+            strlen($inputs["sesKey"])>64 //64 will always be the length, unless you increase the sesID length
         ){
             if($test)
                 echo 'Session key illegal.';

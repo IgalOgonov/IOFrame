@@ -1,0 +1,192 @@
+#tags[dir="rtl"]{
+    text-align: right;
+}
+/* Inputs */
+#tags .operations .input-container{
+    width: 100%;
+    display: grid;
+    align-items: center;
+    grid-auto-columns: 170px 1fr auto;
+    justify-items: baseline;
+}
+#tags .operations .input-container > label {
+    grid-column: 1;
+    font-size: 1.5em;
+    font-weight: 800;
+}
+#tags .operations .input-container > * {
+    grid-column: 2;
+}
+#tags .operations .input-container.required label::after {
+    content: '*';
+    display: inline-block;
+    color: var(--button-negative-color-1);
+}
+#tags .operations .input-container.color {
+}
+#tags .operations input,
+#tags .operations select{
+    margin: 10px;
+    font-size: 1.5em;
+}
+
+/* Color */
+#tags .operations span.color {
+    grid-column: 3;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 35px;
+    height: 35px;
+    border: 1px black solid;
+}
+
+/* Thumbnail Preview */
+#tags .operations .thumbnail-preview {
+    display: flex;
+    min-height: 100px;
+    padding: 10px;
+}
+#tags .operations > .thumbnail-preview:hover {
+    /*background: var(--shadow-dark-1);*/
+    background: rgba(0,0,0,0.3);
+    cursor: pointer;
+}
+#tags .operations .thumbnail-preview img {
+    min-width: 50px;
+    min-height: 50px;
+    max-width: 200px;
+    max-height: 200px;
+    height: auto;
+    margin: auto;
+}
+
+/*Attribute List*/
+#tags .operations .tags-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+#tags .operations .tags-list > div {
+    display: inline-flex;
+    flex-wrap: wrap;
+    margin: 10px 0px;
+    font-size: 1.25em;
+}
+#tags .operations .tags-list > div > span{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0px 5px;
+}
+#tags .operations .tags-list > div > span > span {
+    margin: 0px 5px;
+}
+#tags .operations .tags-list > div > span > h5 {
+    background: rgba(0,0,0,0.1);
+    padding: 0px 3px;
+}
+#tags .operations .tags-list > div > img {
+    max-width: 60px;
+    max-height: 60px;
+    min-width: 20px;
+    min-height: 20px;
+}
+#tags .operations .tags-list > div > img.no-image {
+    height: 48px;
+    border: 1px rgba(0,0,0,0.5) solid;
+    padding: 2px;
+}
+#tags .operations .tags-list button {
+    margin: 0px 5px;
+    padding: 5px 10px;
+    font-weight: 800;
+}
+
+/* Search List */
+#tags .search-list .search-results > * > :first-child {
+    flex: 5;
+    font-weight: 800;
+}
+#tags .search-list .search-results > * > * {
+    min-width: 150px;
+}
+#tags .search-list .search-item {
+    transition: 0.5s;
+}
+#tags .search-list .search-item:hover,
+#tags .search-list .search-item.selected {
+    background: var(--main-color-3);
+}
+#tags .search-list .search-results > .search-titles {
+    font-size: 1.125em;
+    background: none;
+}
+#tags .search-list .search-item .search-item-property.color .color{
+    display: block;
+    height: 20px;
+    width: 20px;
+    border: 1px black solid;
+}
+#tags .search-list .search-item .search-item-property.img img{
+    max-width: 100px;
+    max-height: 30px;
+    padding: 3px;
+    background: rgba(0,0,0,0.5);
+}
+#tags .search-list .search-item .search-item-property.created,
+#tags .search-list .search-item .search-item-property.updated{
+    direction: ltr;
+}
+
+
+/* Media Selector (for editor too)*/
+#tags .media-selector-container{
+    position: fixed;
+    z-index: 9999;
+    top: 5vh;
+    right: 125px;
+    width: calc(100vw - 250px);
+    /*box-shadow: 0px 0px 6px var(--dark-1);*/
+    box-shadow: 0px 0px 6px rgba(50,50,50,1);
+    border-radius: 5px;
+    text-align: left;
+}
+#tags .media-selector-container.hidden{
+    z-index: -1;
+    right: 100vw;
+}
+
+#tags .media-selector-container > .control-buttons {
+    /*background: var(--main-color-5);*/
+    display: flex;
+    justify-content: end;
+    align-items: center;
+    background: rgb(220, 220, 220);
+    border-radius: 5px 5px 0px 0px;
+}
+#tags .media-selector-container > .control-buttons > img{
+    cursor: pointer;
+    height: 40px;
+    width: 40px;
+    margin: 5px 5px 0px 0px;
+}
+#tags .media-selector-container > .control-buttons > button {
+    margin: 0px 5px;
+    font-size: 0.85em;
+    padding: 2px 5px;
+    border-radius: 2px;
+}
+
+#tags .media-selector {
+    /*background: var(--main-color-3);
+    border: 1px var(--main-color-5) solid;*/
+    background: rgba(220,220,220,1);
+    border: 1px rgba(70,70,70,1) solid;
+    border-top: none;
+    border-radius: 0px 0px 5px 5px;
+    overflow-y: auto;
+    max-width: 90vw;
+    max-height: 85vh;
+    width: 100%;
+}

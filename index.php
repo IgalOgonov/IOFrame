@@ -1,12 +1,23 @@
-<?php
+<?php /** @noinspection ALL */
 
-require 'main/coreInit.php';
+if(!file_exists(__DIR__.'/localFiles/_installComplete')){
+    $installationFileURI = explode('/',$_SERVER['SCRIPT_NAME']);
+    array_pop($installationFileURI);
+    array_push($installationFileURI,'_install.php');
+    $redirectionAddress = '';
+    $requestScheme =  empty($_SERVER['REQUEST_SCHEME'])? 'https://' : $_SERVER['REQUEST_SCHEME'].'://';
+    $redirectionAddress = $requestScheme . $_SERVER['HTTP_HOST'] . implode('/',$installationFileURI);
+    header('Location: ' . $redirectionAddress);
+    exit();
+}
+
+require 'main/core_init.php';
 require 'vendor/autoload.php';
 Use IOFrame\Handlers\RouteHandler;
-Use IOFrame\Handlers\SettingsHandler;
+
 define('REQUEST_PASSED_THROUGH_ROUTER',true);
 
-$pageSettings = new SettingsHandler(SETTINGS_DIR_FROM_ROOT.'/pageSettings/',$defaultSettingsParams);
+$pageSettings = new \IOFrame\Handlers\SettingsHandler(\IOFrame\Handlers\SettingsHandler::SETTINGS_DIR_FROM_ROOT.'/pageSettings/',$defaultSettingsParams);
 
 //Allow for a custom routing script at a different location. The "preRoutingScript" page setting should be the RELATIVE location
 //of the custom routing script from here (framework root)
@@ -16,7 +27,6 @@ if($pageSettings->getSetting('preRoutingScript')){
         require $url;
     unset($url);
 }
-
 
 $router = new AltoRouter();
 
@@ -38,7 +48,7 @@ foreach($routes as $index => $routeArray){
         array_push($matchNames,$routeArray['Match_Name']);
     //Map routes
     $router->map( $routeArray['Method'], $routeArray['Route'], $routeArray['Match_Name'], $routeArray['Map_Name']);
-};
+}
 
 //Allow custom mapping via include
 if($pageSettings->getSetting('preMappingScript')){
@@ -49,7 +59,7 @@ if($pageSettings->getSetting('preMappingScript')){
 }
 
 //Get URI, and possible fix it
-$uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '/';
+$uri = $_SERVER['REQUEST_URI'] ?? '/';
 $uri = preg_replace('/\/\/+/','/',$uri);
 $requestStringPos = strpos($uri,'?');
 if($requestStringPos !== false)
@@ -105,7 +115,7 @@ if(isset($matches[$routeTarget]) && is_array($matches[$routeTarget])){
         unset($defaultAPIVersion,$originalURL);
     }
     //If the match is a string, enclose it in a JSON object
-    elseif(!\IOFrame\Util\is_json($matchArray['URL']))
+    elseif(!\IOFrame\Util\PureUtilFunctions::is_json($matchArray['URL']))
         $matchArray['URL'] = [
             ['include' => $matchArray['URL'], 'exclude'=>[]]
         ];
@@ -175,13 +185,22 @@ if(isset($matches[$routeTarget]) && is_array($matches[$routeTarget])){
     }
 }
 
-//If we are here, we have to get our page without the match rules
-
-//If the homepage was requested, and is defined in the settings, try to require the homepage
-if(
-    ($uri == '/' || $uri == '' || $uri == $settings->getSetting('pathToRoot') || $uri == $settings->getSetting('pathToRoot').'/')
-    &&
-    (gettype($pageSettings->getSetting('homepage')) == 'string')
+/*  If we had an API match but couldn't find the endpoint, it means it doesnt exist. */
+if ($routeTarget === 'api'){
+    \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON(['error'=>'No API']);
+}
+/*  If we are here, we have to get our page without the match rules.
+    If the homepage was requested, and is defined in the settings, try to require the homepage
+    If SPA app, automatically redirect every unmatched request to the homepage, and let the frontend handle invalid routes */
+elseif(
+    (
+        ($uri === '/') ||
+        ($uri === '') ||
+        ($uri === $settings->getSetting('pathToRoot')) ||
+        ($uri === $settings->getSetting('pathToRoot').'/') ||
+        $pageSettings->getSetting('isSPA')
+    ) &&
+    (gettype($pageSettings->getSetting('homepage')) === 'string')
 ){
     $extensions = ['php','html','htm'];
     //The homepage resides at the address defined at 'homepage'
@@ -202,21 +221,16 @@ if($pageSettings->getSetting('postRoutingScript')){
     unset($url);
 }
 
-//The default is to require a 404 page - but we might have a dynamic one!
-if(gettype($pageSettings->getSetting('404')) == 'string'  && $pageSettings->getSetting('404')){
-    $extensions = ['php','html','htm','png','jpg','gif'];
-    //The homepage resides at the address defined at 'homepage'
-    $url = __DIR__.'/'.$pageSettings->getSetting('404');
-    foreach($extensions as $extension){
-        if((file_exists($url.'.'.$extension))){
-            header("HTTP/1.0 404 Not Found");
-            require $url.'.'.$extension;
-            die();
-        }
-    }
-}
-else{
-    header("HTTP/1.0 404 Not Found");
-    require '404.html';
-    die();
-}
+//If page was not found, return the generic 404 error
+
+\IOFrame\Util\DefaultErrorTemplatingFunctions::handleGenericHTTPError(
+    $settings,
+    [
+        'error'=>404,
+        'errorInMsg'=>false,
+        'errorHTTPMsg'=>'Not Found',
+        'mainMsg'=>'Page Not Found',
+        'cssColor'=>'54,145,160',
+        'mainFilePath'=>$pageSettings->getSetting('_templates_page_not_found')
+    ]
+);

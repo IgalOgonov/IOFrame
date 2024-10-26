@@ -1,0 +1,17 @@
+{
+	"loadWithKFM1":{
+		"filePath":"cli/config/examples/load-from-file-extra-1"
+	},
+	"loadWithKFM2":{
+		"filePath":"cli/config/examples/load-from-file-extra-2",
+		"key":"loadWithKFMDifferentKey"
+	},
+	"loadWithKFMNested1":{
+		"filePath":"cli/config/examples/load-from-file-extra-2",
+		"key":"nestedObject.loadWithKFMNestedDifferentKey"
+	},
+	"loadWithKFMNested2":{
+		"filePath":"cli/config/examples/load-from-file-extra-2",
+		"key":"nestedObject.loadWithKFMObjetKey"
+	}
+}

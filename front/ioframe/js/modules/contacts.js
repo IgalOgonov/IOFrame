@@ -4,7 +4,7 @@ if(eventHub === undefined)
 var contacts = new Vue({
     el: '#contacts',
     name: 'Contacts',
-    mixins:[sourceURL,eventHubManager,IOFrameCommons],
+    mixins:[sourceURL,eventHubManager,IOFrameCommons,searchListFilterSaver],
     data(){
         return {
             configObject: JSON.parse(JSON.stringify(document.siteConfig)),
@@ -163,7 +163,7 @@ var contacts = new Vue({
                 }
             ],
             //SearchList API (and probably the only relevant API) URL
-            url: document.pathToRoot + 'api/v1/contacts',
+            url: document.ioframe.pathToRoot + 'api/v1/contacts',
             //Current page
             page:0,
             //Go to page
@@ -284,13 +284,10 @@ var contacts = new Vue({
             switch(this.currentMode){
                 case 'search':
                     return 'Contacts';
-                    break;
                 case 'edit':
                     return 'Editing Contact';
-                    break;
                 case 'create':
                     return 'Creating Contact';
-                    break;
                 default:
             }
         },
@@ -309,7 +306,6 @@ var contacts = new Vue({
             switch(this.currentOperation){
                 case 'delete':
                     return 'Delete selected?';
-                    break;
                 default:
                     return '';
             }
@@ -380,7 +376,7 @@ var contacts = new Vue({
                     alertLog('Server error!','error',this.$el);
                     break;
                 case 0:
-                    alertLog('Item deleted!','success',this.$el);
+                    alertLog('Item deleted!','success',this.$el,{autoDismiss:2000});
                     break;
                 default:
                     alertLog('Unknown deletion response '+response,'error',this.$el);
@@ -391,13 +387,14 @@ var contacts = new Vue({
         parseContactTypes: function(response){
             if(this.verbose)
                 console.log('Received contacts response',response);
-
             //Either way, the items should be considered initiated
-            this.contactTypes = [...[null], ...response];
-
+            if(response.length)
+                this.contactTypes = [...[null], ...response];
+            else
+                this.contactTypes = [null];
         },
         goToPage: function(page){
-            if(!this.initiating && page.from == 'search'){
+            if(!this.initiating && (page.from === 'search')){
                 let newPage;
                 page = page.content;
 
@@ -453,7 +450,7 @@ var contacts = new Vue({
             if(newMode === 'edit' && this.selected===-1){
                 alertLog('Please select an item before you view/edit it!','warning',this.$el);
                 return;
-            };
+            }
 
             if(newMode==='edit'){
                 switch (this.currentMode) {
@@ -475,11 +472,11 @@ var contacts = new Vue({
                 console.log('Current Operation ', this.currentOperation ,'Current input ',this.operationInput, 'Current type ',this.currentType);
 
             let data = new FormData();
-            var test = this.test;
-            var verbose = this.verbose;
-            var currentOperation = this.currentOperation;
+            let test = this.test;
+            let verbose = this.verbose;
+            let currentOperation = this.currentOperation;
             let selectedContact = this.items[this.selected];
-            var thisElement = this.$el;
+            let thisElement = this.$el;
 
             if(this.currentMode === 'search'){
                 switch (currentOperation){
@@ -491,7 +488,7 @@ var contacts = new Vue({
                         break;
                     default:
                         break;
-                };
+                }
 
                 if(this.test)
                     data.append('req','test');
@@ -551,7 +548,7 @@ var contacts = new Vue({
             else if(this.currentMode === 'edit'){
                 this.currentMode = 'search';
                 this.selected = -1;
-            };
+            }
             this.operationInput= '';
             this.currentOperation = '';
 

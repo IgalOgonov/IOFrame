@@ -1,0 +1,43 @@
+{
+	"fullInstall": 1,
+	"localSettings":{
+		"pathToRoot":"/IOFrame/",
+		"dieOnPluginMismatch":1,
+		"nodeID":"MainNode",
+		"highScalability":0
+	},
+	"redisSettings":{
+		"redis_addr":"127.0.0.1",
+		"redis_port":"6379",
+		"redis_prefix":"example_",
+		"redis_default_persistent":1
+	},
+	"sqlSettings":{
+		"sql_server_addr":"127.0.0.1",
+		"sql_server_port":"3306",
+		"sql_db_name":"ioframe_example",
+		"sql_table_prefix":"EXAMPLE_"
+	},
+	"siteSettings":{
+		"siteName":"IOFrame Example",
+		"allowTesting":1
+	},
+	"userSettings":{
+		"selfReg":0,
+		"usernameChoice":1
+	},
+	"logSettings":{
+		"logs_sql_db_name":"ioframe_example_logs"
+	},
+	"superAdminCreation":{
+		"u":"TestAdmin",
+		"p":"A2345678",
+		"m":"test@example.com"
+	},
+	"installOptions":{
+		"deleteMetaFiles":0,
+		"deleteTestPlugins":0,
+		"deleteTestFiles":0,
+		"hostUrl":"127.0.0.1"
+	}
+}

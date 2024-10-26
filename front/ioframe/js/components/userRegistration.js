@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 /*Captcha functions, since we must call global ones*/
 if(captchaRegistrationSuccess === undefined)
     var captchaRegistrationSuccess = function(response){
@@ -36,7 +33,7 @@ Vue.component('user-registration', {
             type: String,
             default: null
         },
-        //Whether a captcha is required. Is irrelevant if the site does not have a captcha site key at document.captchaSiteKey.
+        //Whether a captcha is required. Is irrelevant if the site does not have a captcha site key at document.ioframe.captchaSiteKey.
         requireCaptcha:{
             type: Boolean,
             default: true
@@ -46,7 +43,7 @@ Vue.component('user-registration', {
             type: Object,
             default: function(){
                 return {
-                    siteKey: document.captchaSiteKey ? document.captchaSiteKey : false, /*if not provided from anywhere, wont use captcha*/
+                    siteKey: document.ioframe.captchaSiteKey ? document.ioframe.captchaSiteKey : false, /*if not provided from anywhere, wont use captcha*/
                     theme: 'light', /*light or dark*/
                     size: 'normal' /*noraml or compact*/
                 };
@@ -141,7 +138,7 @@ Vue.component('user-registration', {
         //Selected language
         language: {
            type: String,
-            default: document.selectedLanguage ?? ''
+            default: document.ioframe.selectedLanguage ?? ''
         },
         //Identifier
         identifier: {
@@ -185,7 +182,7 @@ Vue.component('user-registration', {
     },
     computed:{
         visibleToken:function(){
-            return this.inviteToken.length < 20 ? this.inviteToken : this.inviteToken.substr(0,8)+' ... '+this.inviteToken.substr(this.inviteToken.length-8,8)
+            return this.inviteToken.length < 20 ? this.inviteToken : this.inviteToken.substring(0,8)+' ... '+this.inviteToken.substr(this.inviteToken.length-8,8)
         }
     },
     created:function(){
@@ -201,18 +198,18 @@ Vue.component('user-registration', {
             if(this.agreements[i].required === undefined)
                 this.agreements[i].required = true;
             if(this.agreements[i].relativeLink)
-                this.agreements[i].link = document.rootURI + this.agreements[i].link;
+                this.agreements[i].link = document.ioframe.rootURI + this.agreements[i].link;
             //Function has to be assigned directly
             if(this.agreements[i].onSend !== undefined && this.agreements[i].onSend.parse !== undefined){
                 this.agreements[i].onSend.parse = this.agreementOptions[i].onSend.parse;
             }
-        };
+        }
     },
     methods:{
         reg: function(){
             let errors = 0;
             let req = this.test? 'test' : 'real';
-            var context = this;
+            let context = this;
             //output user inputs for testing
             if(this.verbose)
             console.log("Username:"+this.u.val+", password:"+ this.p.val+", email:"+this.m.val+", req:"+this.req);
@@ -227,7 +224,7 @@ Vue.component('user-registration', {
                     this.u.class = "success";
 
             }
-            else if(this.requiresUsername && this.u.val.length == 0){
+            else if(this.requiresUsername && (this.u.val.length === 0)){
                 this.u.class = "error";
                 errors++;
             }
@@ -242,7 +239,7 @@ Vue.component('user-registration', {
                 this.p.class = "success";
 
             //validate 2nd pass
-            if(this.p.val!=this.p2.val || this.p2.val==undefined){
+            if(this.p.val!==this.p2.val || this.p2.val===undefined){
                 this.p2.class = "error";
                 errors++;
             }
@@ -250,7 +247,7 @@ Vue.component('user-registration', {
                 this.p2.class = "success";
 
             //validate email
-            if(this.m.val==undefined){
+            if(!this.m.val){
                 this.m.class = "error";
                 errors++;
             }
@@ -276,7 +273,7 @@ Vue.component('user-registration', {
                         eventHub.$emit('registrationEvent',{from:'registration-component',text:agreement.text.required,type:'warning'});
                     errors++;
                 }
-            };
+            }
 
             //if no errors - send data
             if(errors<1){
@@ -301,8 +298,8 @@ Vue.component('user-registration', {
                         let value = (agreement.onSend.parse!==undefined)? agreement.onSend.parse(agreement.agree) : agreement.agree;
                         data.append(agreement.onSend.sendAs, value);
                     }
-                };
-                let url=document.pathToRoot+"api\/v1\/users";
+                }
+                let url=document.ioframe.pathToRoot+"api\/v1\/users";
                 //Request itself
                 fetch(url, {
                     method: 'post',
@@ -415,7 +412,7 @@ Vue.component('user-registration', {
                     eventHub.$emit('registrationResponse',{body:'Failed to reach API, cannot log in. Error text '+error,type:'error'});
                     console.log('Error: ' + error); // An error occurred during the request.
                 });
-            };
+            }
         },
         //Captcha related functions
         captchaSuccess: function(response){

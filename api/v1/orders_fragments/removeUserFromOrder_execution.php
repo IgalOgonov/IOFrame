@@ -1,7 +1,7 @@
 <?php
 
-$result = $PurchaseOrderHandler->removeUserFromOrder(
+$result = $PurchaseOrderHandler->deleteOrderUsers(
     $inputs['orderID'],
-    $inputs['userID'],
+    [$inputs['userID']],
     ['test'=>$test]
 );

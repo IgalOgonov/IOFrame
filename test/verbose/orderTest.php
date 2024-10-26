@@ -1,7 +1,7 @@
 <?php
 
 
-require_once __DIR__.'/../../IOFrame/Handlers/OrderHandler.php';
+require_once __DIR__.'/../../IOFrame/Managers/OrderManager.php';
 $testParams = $defaultSettingsParams;
 $testParams['name'] = 'test';
 $testParams['tableName'] = 'CORE_VALUES';
@@ -9,7 +9,7 @@ $testParams['columnNames'] = ['tableKey','tableValue'];
 $testParams['localURL'] = $settings->getSetting('absPathToRoot').'localFiles/';
 $testParams['separator'] = '@#$%$#@';
 
-$testOrder = new IOFrame\Handlers\OrderHandler(
+$testOrder = new \IOFrame\Managers\OrderManager(
     $settings,
     $testParams
 );

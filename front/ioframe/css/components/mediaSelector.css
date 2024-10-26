@@ -174,10 +174,6 @@ html[dir="rtl"] .media-selector .types{
     max-height: 150px;
     max-width: 150px;
 }
-.media-selector .media-viewer .media-object-container.mediaFolder > .thumbnail-container > img {
-    height: auto;
-    width: auto;
-}
 
 /* Image Caption*/
 .media-selector .media-viewer .media-object-container > figcaption {

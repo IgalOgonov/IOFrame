@@ -4,7 +4,7 @@ if(eventHub === undefined)
 var users = new Vue({
     el: '#users',
     name: 'users',
-    mixins:[sourceURL,eventHubManager,IOFrameCommons],
+    mixins:[sourceURL,eventHubManager,IOFrameCommons,searchListFilterSaver],
     data(){
         return {
             configObject: JSON.parse(JSON.stringify(document.siteConfig)),
@@ -72,7 +72,27 @@ var users = new Vue({
                                 validator: function(value){
                                     return value.match(/^[\w\.\-\_ ]{1,64}$/) !== null;
                                 }
-                            }
+                            },
+                            {
+                                name:'isActive',
+                                title:'Active?',
+                                type:'Select',
+                                list:[
+                                    {
+                                        value:'',
+                                        title:'Any'
+                                    },
+                                    {
+                                        value:1,
+                                        title:'Yes'
+                                    },
+                                    {
+                                        value:0,
+                                        title:'No'
+                                    }
+                                ],
+                                default: ''
+                            },
                         ]
                     },
                     {
@@ -96,6 +116,71 @@ var users = new Vue({
                         type:'Group',
                         group: [
                             {
+                                name:'isBanned',
+                                title:'Banned?',
+                                type:'Select',
+                                list:[
+                                    {
+                                        value:'',
+                                        title:'Any'
+                                    },
+                                    {
+                                        value:1,
+                                        title:'Yes'
+                                    },
+                                    {
+                                        value:0,
+                                        title:'No'
+                                    }
+                                ],
+                                default: ''
+                            },
+                            {
+                                name:'isLocked',
+                                title:'Locked?',
+                                type:'Select',
+                                list:[
+                                    {
+                                        value:'',
+                                        title:'Any'
+                                    },
+                                    {
+                                        value:1,
+                                        title:'Yes'
+                                    },
+                                    {
+                                        value:0,
+                                        title:'No'
+                                    }
+                                ],
+                                default: ''
+                            },
+                            {
+                                name:'isSuspicious',
+                                title:'Suspicious?',
+                                type:'Select',
+                                list:[
+                                    {
+                                        value:'',
+                                        title:'Any'
+                                    },
+                                    {
+                                        value:1,
+                                        title:'Yes'
+                                    },
+                                    {
+                                        value:0,
+                                        title:'No'
+                                    }
+                                ],
+                                default: ''
+                            },
+                        ]
+                    },
+                    {
+                        type:'Group',
+                        group: [
+                            {
                                 name:'orderBy',
                                 title:'Order By Column',
                                 type:'Select',
@@ -105,7 +190,7 @@ var users = new Vue({
                                         title:'User ID'
                                     },
                                     {
-                                        value:'Created_On',
+                                        value:'Created',
                                         title:'Creation Date'
                                     },
                                     {
@@ -158,12 +243,20 @@ var users = new Vue({
                         id:'active',
                         title:'Active?',
                         parser:function(active){
-                            return active? 'Yes' : 'No';
+                            return active? (active > 1 ? active : 'Yes') : 'No';
                         }
                     },
                     {
                         id:'bannedUntil',
                         title:'Banned?',
+                        parser:function(timestamp){
+                            timestamp *= 1000;
+                            return Date.now() >= timestamp? 'No' : 'Yes';
+                        }
+                    },
+                    {
+                        id:'lockedUntil',
+                        title:'Locked?',
                         parser:function(timestamp){
                             timestamp *= 1000;
                             return Date.now() >= timestamp? 'No' : 'Yes';
@@ -184,7 +277,7 @@ var users = new Vue({
                     }
                 ],
                 //SearchList API
-                url: document.pathToRoot+ 'api/v1/users',
+                url: document.ioframe.pathToRoot+ 'api/v1/users',
                 //Current page
                 page:0,
                 //Go to page
@@ -282,7 +375,7 @@ var users = new Vue({
                         title:'Email',
                         parser: function(action){
                             if(action.startsWith('REGISTER_MAIL_'))
-                                return action.substr(14);
+                                return action.substring(14);
                             else
                                 return '-';
                         }
@@ -321,7 +414,7 @@ var users = new Vue({
                     }
                 },
                 //SearchList API (and probably the only relevant API) URL
-                url: document.pathToRoot+ 'api/v1/tokens',
+                url: document.ioframe.pathToRoot+ 'api/v1/tokens',
                 //Current page
                 page:0,
                 //Go to page
@@ -373,10 +466,8 @@ var users = new Vue({
             switch(this.currentMode){
                 case 'search':
                     return 'Browsing Users';
-                    break;
                 case 'edit':
                     return 'Editing User';
-                    break;
                 default:
             }
         },
@@ -489,7 +580,7 @@ var users = new Vue({
                             alertLog('Server error!','error',this.$el);
                             break;
                         case 0:
-                            alertLog('Token deleted!','success',this.$el);
+                            alertLog('Token deleted!','success',this.$el,{autoDismiss:2000});
                             this.tokens.items.splice(this.tokens.selected,1);
                             this.cancelOperation();
                             break;
@@ -508,7 +599,7 @@ var users = new Vue({
                             alertLog('Server error!','error',this.$el);
                             break;
                         case 0:
-                            alertLog('Token uses changed!','success',this.$el);
+                            alertLog('Token uses changed!','success',this.$el,{autoDismiss:2000});
                             this.tokens.items[this.tokens.selected].uses = this.operationInput;
                             this.cancelOperation();
                             break;
@@ -540,7 +631,7 @@ var users = new Vue({
                                 break;
                             default:
                                 if(request.content.match(/^[\w][\w ]{0,255}$/)){
-                                    alertLog('Created new token!','success',this.$el);
+                                    alertLog('Created new token!','success',this.$el,{autoDismiss:2000});
                                     this.cancelOperation();
                                     this.searchAgain();
                                 }
@@ -564,7 +655,7 @@ var users = new Vue({
                                 break;
                             default:
                                 if(request.content.match(/^[\w][\w ]{0,255}$/)){
-                                    alertLog('Created new token!','success',this.$el);
+                                    alertLog('Created new token!','success',this.$el,{autoDismiss:2000});
                                     this.cancelOperation();
                                     this.searchAgain();
                                 }
@@ -573,7 +664,7 @@ var users = new Vue({
                                 break;
                         }
                     break;
-            };
+            }
 
         },
         //Goes to relevant page  TODO Remove if no searchlist
@@ -644,10 +735,7 @@ var users = new Vue({
             }
         },
         shouldDisplayMode: function(index){
-            if(index==='edit' && (this.users.selected === -1) )
-                return false;
-
-            return true;
+            return !(index==='edit' && (this.users.selected === -1) );
         },
         //Switches to requested mode
         switchModeTo: function(newMode){
@@ -668,7 +756,7 @@ var users = new Vue({
             if(newMode === 'edit' && this.users.selected===-1){
                 alertLog('Please select an item before you view/edit it!','warning',this.$el);
                 return;
-            };
+            }
 
             if(newMode==='edit'){
                 switch (this.currentMode) {
@@ -749,14 +837,14 @@ var users = new Vue({
 
                         data.append('tokenTTL',(this.tokenInput.ttlDays*3600*24)+'');
 
-                        if(this.tokenInput.sendMail && document.selectedLanguage)
-                            data.append('language',document.selectedLanguage);
+                        if(this.tokenInput.sendMail && document.ioframe.selectedLanguage)
+                            data.append('language',document.ioframe.selectedLanguage);
 
                         operation = 'createNew';
                         break;
                     default:
                         break;
-                };
+                }
 
                 if(!operation){
                     if(this.verbose)
@@ -870,7 +958,7 @@ var users = new Vue({
                 if(!item)
                     continue;
 
-                const text = location.origin+document.rootURI+'api/v1/users?action=checkInvite&token='+this.tokens.items[i].identifier;
+                const text = location.origin+document.ioframe.rootURI+'api/v1/users?action=checkInvite&token='+this.tokens.items[i].identifier;
                 const segs = qrcodegen.QrSegment.makeSegments(text);
                 const qr = qrcodegen.QrCode.encodeSegments(segs, ecl, minVer, maxVer, mask, boostECC);
                 const code = qr.toSvgString(0);

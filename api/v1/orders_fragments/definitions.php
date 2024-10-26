@@ -20,7 +20,7 @@ CONST VALID_ORDER_ORDER_BY = ['ID','Created','Last_Updated','Order_Status','Orde
 CONST VALID_ORDER_ORDER_TYPE = [0,1];
 
 //Base validation function
-function baseValidation(&$inputs,$filters,&$externalOutput = null,$test=false){
+function baseValidation(&$inputs,$filters,&$externalOutput = null,$test=false): void {
     foreach($filters as $input=>$filterArr){
         $isException = false;
         if(!empty($filterArr['exceptions']))
@@ -28,7 +28,7 @@ function baseValidation(&$inputs,$filters,&$externalOutput = null,$test=false){
                 if(($inputs[$input]??null) === $exception)
                     $isException = true;
 
-        if(!isset($inputs[$input]) || $inputs[$input] === null){
+        if(!isset($inputs[$input])){
             if(empty($filterArr['ignoreNull']))
                 $inputs[$input] = $filterArr['default'] ?? null;
         }
@@ -56,7 +56,7 @@ function baseValidation(&$inputs,$filters,&$externalOutput = null,$test=false){
                 case 'int[]':
                 case 'json':
                     if(!is_array($inputs[$input])){
-                        if(!\IOFrame\Util\is_json($inputs[$input])){
+                        if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs[$input])){
                             if($test)
                                 echo $input.' must be a valid json!'.EOL;
                             exit(INPUT_VALIDATION_FAILURE);
@@ -102,7 +102,7 @@ function baseValidation(&$inputs,$filters,&$externalOutput = null,$test=false){
  * @param array $order
  * @returns array
  */
-function parseOrder($order,$params = []){
+function parseOrder(array $order, $params = []): array {
     $tempRes = [];
 
     $tempRes['type'] = $order['Order_Type'];
@@ -142,7 +142,7 @@ function parseOrder($order,$params = []){
  * @param array $orders
  * @returns array
  */
-function parseOrders($orders,$params = []){
+function parseOrders(array $orders, $params = []): array {
     $res = [];
     foreach ($orders as $id => $order){
         if($id === '@')

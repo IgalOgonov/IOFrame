@@ -1,7 +1,6 @@
 <?php
 
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 
 $requiredAuth = REQUIRED_AUTH_OWNER;
 
@@ -24,7 +23,7 @@ if(!filter_var($inputs['articleId'],FILTER_VALIDATE_INT)){
     exit(INPUT_VALIDATION_FAILURE);
 }
 
-if(!\IOFrame\Util\is_json($inputs['deletionTargets'])){
+if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs['deletionTargets'])){
     if($test)
         echo 'deletionTargets must be a valid JSON array!'.EOL;
     exit(INPUT_VALIDATION_FAILURE);

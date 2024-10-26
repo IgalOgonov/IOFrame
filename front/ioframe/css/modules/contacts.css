@@ -7,7 +7,7 @@
     #contacts .search-list .search-item {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        max-width: calc(100vw - 100px);
+        max-width: calc(100vw - 30px);
     }
     /*contact type*/
     #contacts .search-list .search-item.has-type span:first-child{

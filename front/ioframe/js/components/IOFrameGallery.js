@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('ioframe-gallery', {
     props:{
         //Array of URLs - images to display

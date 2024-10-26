@@ -25,7 +25,7 @@ $purifier = new HTMLPurifier($config);
 
 if ($inputs['inputs'] !== null) {
 
-    if(!\IOFrame\Util\is_json($inputs['inputs'])){
+    if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs['inputs'])){
         if($test)
             echo 'inputs must be a valid json!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);
@@ -64,7 +64,7 @@ if ($inputs['inputs'] !== null) {
             exit(INPUT_VALIDATION_FAILURE);
         }
 
-        if (isset($inputArray['title']) && $inputArray['title'] !== null) {
+        if (isset($inputArray['title'])) {
             $inputArray['title'] = $purifier->purify($inputArray['title']);
             if(gettype($inputArray['title']) !== 'string' || strlen($inputArray['title']) === 0 || strlen($inputArray['title']) > MENU_ITEM_TITLE_MAX_LENGTH){
                 if($test)
@@ -74,7 +74,7 @@ if ($inputs['inputs'] !== null) {
             $inputs['inputs'][$index]['title'] = $inputArray['title'];
         }
         
-        if (isset($inputArray['order']) && $inputArray['order'] !== null) {
+        if (isset($inputArray['order'])) {
             $order = explode(',',$inputArray['order']);
             foreach($order as $identifier)
                 if(!preg_match('/'.MENU_ITEM_IDENTIFIER_REGEX.'/',$identifier)){

@@ -7,4 +7,3 @@ if(file_exists($url.'test.txt')){
         unlink($url.'test.txt');
 }
 throw new \Exception("This exception is always thrown, as well!");
-?>

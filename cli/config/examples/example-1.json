@@ -1,0 +1,15 @@
+{
+	"regString":"String 1",
+	"regInt":1,
+	"regStringArray":["a","b","c"],
+	"regIntArray":[1,2,3],
+	"mixedArray":["ab",1,"cd",2],
+	"dotted.key":"Dotted key value",
+	"object":{
+		"nestedString":"String inside object",
+		"dotted.key":"Nested dotted key",
+		"nested.object":{
+			"desc":"I really hope you don't use dotted keys in any real config files"
+		}
+	}
+}

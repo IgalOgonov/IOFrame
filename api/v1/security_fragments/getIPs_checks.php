@@ -1,6 +1,6 @@
 <?php
 if($inputs['ips'] !== null){
-    if(!\IOFrame\Util\is_json($inputs['ips'])){
+    if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs['ips'])){
         if($test)
             echo 'ips must be a valid JSON!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);

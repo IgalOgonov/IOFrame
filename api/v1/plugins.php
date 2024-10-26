@@ -167,15 +167,14 @@
  *
  */
 
-if(!defined('coreInit'))
-    require __DIR__ . '/../../main/coreInit.php';
+if(!defined('IOFrameMainCoreInit'))
+    require __DIR__ . '/../../main/core_init.php';
 
 require __DIR__ . '/../apiSettingsChecks.php';
 require __DIR__ . '/../defaultInputChecks.php';
 require __DIR__ . '/../defaultInputResults.php';
 require __DIR__ . '/../CSRF.php';
 require 'plugins_fragments/definitions.php';
-require __DIR__ . '/../../IOFrame/Util/validator.php';
 
 if($test){
     echo 'Testing mode!'.EOL;
@@ -184,40 +183,38 @@ if($test){
 }
 
 //Input validation function
-function checkInput($settings,$SQLHandler,$SessionHandler,$logger ,$test = false){
+function checkInput($settings,$SQLManager,$SessionManager,$logger ,$test = false): void {
     //Make sure there is an action
-    if(isset($_REQUEST['action']))
-        $ac = $_REQUEST['action'];
-    else
+    if(!isset($_REQUEST['action']))
         exit('No action specified');
 
     //Make sure the action is valid, and has all relevant parameters set.
     //Also, make sure the user is authorized to perform the action.
-    $AuthHandler = new IOFrame\Handlers\AuthHandler($settings,['SQLHandler'=>$SQLHandler,'logger'=>$logger]);
+    $AuthHandler = new \IOFrame\Handlers\AuthHandler($settings,['SQLManager'=>$SQLManager,'logger'=>$logger]);
     switch($_REQUEST['action']){
         case 'getAvailable':
-            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_GET_AVAILABLE_AUTH))){
+            if(!($AuthHandler->isAuthorized() || $AuthHandler->hasAction(PLUGIN_GET_AVAILABLE_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use getAvailable!'.EOL;
                 exit(AUTHENTICATION_FAILURE);
             }
             break;
         case 'getInfo':
-            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_GET_INFO_AUTH))){
+            if(!($AuthHandler->isAuthorized() || $AuthHandler->hasAction(PLUGIN_GET_INFO_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use getInfo!'.EOL;
                 exit(AUTHENTICATION_FAILURE);
             }
             break;
         case 'getOrder':
-            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_GET_ORDER_AUTH))){
+            if(!($AuthHandler->isAuthorized() || $AuthHandler->hasAction(PLUGIN_GET_ORDER_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use getOrder!'.EOL;
                 exit(AUTHENTICATION_FAILURE);
             }
             break;
         case 'pushToOrder':
-            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_PUSH_TO_ORDER_AUTH))){
+            if(!($AuthHandler->isAuthorized() || $AuthHandler->hasAction(PLUGIN_PUSH_TO_ORDER_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use pushToOrder!'.EOL;
                 exit(AUTHENTICATION_FAILURE);
@@ -227,11 +224,11 @@ function checkInput($settings,$SQLHandler,$SessionHandler,$logger ,$test = false
                     echo 'Name must be specified with pushToOrder!'.EOL;
                 exit(INPUT_VALIDATION_FAILURE);
             }
-            if(!validateThenRefreshCSRFToken($SessionHandler))
+            if(!validateThenRefreshCSRFToken($SessionManager))
                 exit(WRONG_CSRF_TOKEN);
             break;
         case 'removeFromOrder':
-            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_REMOVE_FROM_ORDER_AUTH))){
+            if(!($AuthHandler->isAuthorized() || $AuthHandler->hasAction(PLUGIN_REMOVE_FROM_ORDER_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use removeFromOrder!'.EOL;
                 exit(AUTHENTICATION_FAILURE);
@@ -246,11 +243,11 @@ function checkInput($settings,$SQLHandler,$SessionHandler,$logger ,$test = false
                     echo 'Type must be specified with removeFromOrder!'.EOL;
                 exit(INPUT_VALIDATION_FAILURE);
             }
-            if(!validateThenRefreshCSRFToken($SessionHandler))
+            if(!validateThenRefreshCSRFToken($SessionManager))
                 exit(WRONG_CSRF_TOKEN);
             break;
         case 'moveOrder':
-            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_MOVE_ORDER_AUTH))){
+            if(!($AuthHandler->isAuthorized() || $AuthHandler->hasAction(PLUGIN_MOVE_ORDER_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use moveOrder!'.EOL;
                 exit(AUTHENTICATION_FAILURE);
@@ -265,11 +262,11 @@ function checkInput($settings,$SQLHandler,$SessionHandler,$logger ,$test = false
                     echo 'to must be specified with moveOrder!'.EOL;
                 exit(INPUT_VALIDATION_FAILURE);
             }
-            if(!validateThenRefreshCSRFToken($SessionHandler))
+            if(!validateThenRefreshCSRFToken($SessionManager))
                 exit(WRONG_CSRF_TOKEN);
             break;
         case 'swapOrder':
-            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_SWAP_ORDER_AUTH))){
+            if(!($AuthHandler->isAuthorized() || $AuthHandler->hasAction(PLUGIN_SWAP_ORDER_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use swapOrder!'.EOL;
                 exit(AUTHENTICATION_FAILURE);
@@ -284,12 +281,12 @@ function checkInput($settings,$SQLHandler,$SessionHandler,$logger ,$test = false
                     echo 'p2 must be specified with swapOrder!'.EOL;
                 exit(INPUT_VALIDATION_FAILURE);
             }
-            if(!validateThenRefreshCSRFToken($SessionHandler))
+            if(!validateThenRefreshCSRFToken($SessionManager))
                 exit(WRONG_CSRF_TOKEN);
             break;
         case 'fullInstall':
         case 'install':
-            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_INSTALL_AUTH))){
+            if(!($AuthHandler->isAuthorized() || $AuthHandler->hasAction(PLUGIN_INSTALL_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use install!'.EOL;
                 exit(AUTHENTICATION_FAILURE);
@@ -299,12 +296,12 @@ function checkInput($settings,$SQLHandler,$SessionHandler,$logger ,$test = false
                     echo 'Name must be specified with install!'.EOL;
                 exit(INPUT_VALIDATION_FAILURE);
             }
-            if(!validateThenRefreshCSRFToken($SessionHandler))
+            if(!validateThenRefreshCSRFToken($SessionManager))
                 exit(WRONG_CSRF_TOKEN);
             break;
         case 'fullUninstall':
         case 'uninstall':
-            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_UNINSTALL_AUTH))){
+            if(!($AuthHandler->isAuthorized() || $AuthHandler->hasAction(PLUGIN_UNINSTALL_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use uninstall!'.EOL;
                 exit(AUTHENTICATION_FAILURE);
@@ -314,11 +311,11 @@ function checkInput($settings,$SQLHandler,$SessionHandler,$logger ,$test = false
                     echo 'Name must be specified with uninstall!'.EOL;
                 exit(INPUT_VALIDATION_FAILURE);
             }
-            if(!validateThenRefreshCSRFToken($SessionHandler))
+            if(!validateThenRefreshCSRFToken($SessionManager))
                 exit(WRONG_CSRF_TOKEN);
             break;
         case 'update':
-            if(!($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_UNINSTALL_AUTH))){
+            if(!($AuthHandler->isAuthorized() || $AuthHandler->hasAction(PLUGIN_UNINSTALL_AUTH))){
                 if($test)
                     echo 'Insufficient auth to use update!'.EOL;
                 exit(AUTHENTICATION_FAILURE);
@@ -328,7 +325,7 @@ function checkInput($settings,$SQLHandler,$SessionHandler,$logger ,$test = false
                     echo 'Name must be specified with update!'.EOL;
                 exit(INPUT_VALIDATION_FAILURE);
             }
-            if(!validateThenRefreshCSRFToken($SessionHandler))
+            if(!validateThenRefreshCSRFToken($SessionManager))
                 exit(WRONG_CSRF_TOKEN);
             break;
         default:
@@ -339,7 +336,7 @@ function checkInput($settings,$SQLHandler,$SessionHandler,$logger ,$test = false
 
     //You may only set Validate to false if your authorization is 0
     if(isset($_REQUEST['validate'])){
-        if( !( ($AuthHandler->isAuthorized(0) || $AuthHandler->hasAction(PLUGIN_IGNORE_VALIDATION)) ) && $_REQUEST['validate'] == false ){
+        if( !( ($AuthHandler->isAuthorized() || $AuthHandler->hasAction(PLUGIN_IGNORE_VALIDATION)) ) && !$_REQUEST['validate']){
             if($test)
                 echo 'Insufficient authorization to ignore plugin validation'.EOL;
             exit(AUTHENTICATION_FAILURE);
@@ -348,7 +345,7 @@ function checkInput($settings,$SQLHandler,$SessionHandler,$logger ,$test = false
 
     //Validate name
     if(isset($_REQUEST['name'])){
-        if(!\IOFrame\Util\validator::validateSQLTableName($_REQUEST['name'])){
+        if(!\IOFrame\Util\ValidatorFunctions::validateSQLTableName($_REQUEST['name'])){
             if($test)
                 echo 'Illegal name!!'.EOL;
         }
@@ -463,7 +460,7 @@ function checkInput($settings,$SQLHandler,$SessionHandler,$logger ,$test = false
                 }
                 break;
             case 'name':
-                if(!\IOFrame\Util\validator::validateSQLTableName($_REQUEST['target'])){
+                if(!\IOFrame\Util\ValidatorFunctions::validateSQLTableName($_REQUEST['target'])){
                     if($test)
                         echo 'Illegal target name!!'.EOL;
                 }
@@ -476,7 +473,7 @@ function checkInput($settings,$SQLHandler,$SessionHandler,$logger ,$test = false
     }
     //Validate options for (un)install
     if(isset($_REQUEST['options'])){
-        if(!IOFrame\Util\is_json($_REQUEST['options'])){
+        if(!\IOFrame\Util\PureUtilFunctions::is_json($_REQUEST['options'])){
             if($test)
                 echo 'options must be valid JSON! '.EOL;
             exit(INPUT_VALIDATION_FAILURE);
@@ -485,9 +482,9 @@ function checkInput($settings,$SQLHandler,$SessionHandler,$logger ,$test = false
 }
 
 //Check input
-checkInput($settings,$SQLHandler,$SessionHandler,$logger,$test);
+checkInput($settings,$SQLManager,$SessionManager,new \Monolog\Logger(\IOFrame\Definitions::LOG_PLUGINS_CHANNEL),$test);
 
-if(!checkApiEnabled('plugins',$apiSettings,$_REQUEST['action']))
+if(!checkApiEnabled('plugins',$apiSettings,$SecurityHandler,$_REQUEST['action']))
     exit(API_DISABLED);
 
 //Do what needs to be done
@@ -500,18 +497,14 @@ switch($_REQUEST['action']){
         isset($_REQUEST['name'])?
             $name = $_REQUEST['name'] : $name = '' ;
         $res = $PluginHandler->getAvailable(['name'=>$name]);
-        foreach($res as $pName=>$status){
-            $PluginHandler->ensurePublicImage($pName);
-        }
+        $PluginHandler->ensurePublicImages(array_keys($res));
         echo json_encode($res);
         break;
     case 'getInfo':
         isset($_REQUEST['name'])?
             $name = $_REQUEST['name'] : $name = '' ;
         $res = $PluginHandler->getInfo(['name'=>$name,'test'=>$test]);
-        foreach($res as $pluginInfo){
-            $PluginHandler->ensurePublicImage($pluginInfo['fileName']);
-        }
+        $PluginHandler->ensurePublicImages(array_map(function($pluginInfo){return $pluginInfo['fileName'];},$res));
         echo json_encode($res);
         break;
     case 'getOrder':
@@ -550,7 +543,7 @@ switch($_REQUEST['action']){
             $backUp = $_REQUEST['backUp'] : $backUp = true ;
         $validate = true;
         if(isset($_REQUEST['validate']))
-            if($_REQUEST['validate'] == false)
+            if(!$_REQUEST['validate'])
                 $validate = false;
         echo $PluginHandler->removeFromOrder(
             $target,
@@ -565,7 +558,7 @@ switch($_REQUEST['action']){
             $backUp = $_REQUEST['backUp'] : $backUp = false ;
         $validate = true;
         if(isset($_REQUEST['validate']))
-            if($_REQUEST['validate'] == false)
+            if(!$_REQUEST['validate'])
                 $validate = false;
         echo $PluginHandler->moveOrder(
             $from,
@@ -580,7 +573,7 @@ switch($_REQUEST['action']){
             $backUp = $_REQUEST['backUp'] : $backUp = false ;
         $validate = true;
         if(isset($_REQUEST['validate']))
-            if($_REQUEST['validate'] == false)
+            if(!$_REQUEST['validate'])
                 $validate = false;
         echo $PluginHandler->swapOrder(
             $num1,
@@ -627,5 +620,3 @@ switch($_REQUEST['action']){
 }
 
 
-
-?>

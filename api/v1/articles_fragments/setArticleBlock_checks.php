@@ -1,7 +1,6 @@
 <?php
 
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 require_once $settings->getSetting('absPathToRoot').'vendor/autoload.php';
 $config = HTMLPurifier_Config::createDefault();
 $config->set('HTML.AllowedElements', []);
@@ -38,45 +37,46 @@ $optionalParams = ['orderIndex'];
 switch($inputs['type']){
     case 'markdown':
         if($inputs['create'])
-            array_push($requiredParams,'text');
+            $requiredParams[] = 'text';
         else
-            array_push($optionalParams,'text');
+            $optionalParams[] = 'text';
+        $optionalParams[] = 'highlightCode';
         break;
     case 'image':
     case 'cover':
         if($inputs['create'])
-            array_push($requiredParams,'blockResourceAddress');
+            $requiredParams[] = 'blockResourceAddress';
         else
-            array_push($optionalParams,'blockResourceAddress');
+            $optionalParams[] = 'blockResourceAddress';
         array_push($optionalParams,'alt','caption','name');
         break;
     case 'gallery':
         if($inputs['create'])
-            array_push($requiredParams,'blockCollectionName');
+            $requiredParams[] = 'blockCollectionName';
         else
-            array_push($optionalParams,'blockCollectionName');
+            $optionalParams[] = 'blockCollectionName';
         array_push($optionalParams,'caption','name','autoplay','loop','center','preview','fullScreenOnClick','slider');
         break;
     case 'youtube':
         if($inputs['create'])
-            array_push($requiredParams,'text');
+            $requiredParams[] = 'text';
         else
-            array_push($optionalParams,'text');
+            $optionalParams[] = 'text';
         array_push($optionalParams,'caption','name','height','width','autoplay','mute','loop','embed','controls');
         break;
     case 'video':
         if($inputs['create'])
-            array_push($requiredParams,'blockResourceAddress');
+            $requiredParams[] = 'blockResourceAddress';
         else
-            array_push($optionalParams,'blockResourceAddress');
+            $optionalParams[] = 'blockResourceAddress';
         array_push($optionalParams,'caption','name','height','width','autoplay','mute','loop','controls');
         break;
     case 'article':
         if($inputs['create'])
-            array_push($requiredParams,'otherArticleId');
+            $requiredParams[] = 'otherArticleId';
         else
-            array_push($optionalParams,'otherArticleId');
-        array_push($optionalParams,'caption');
+            $optionalParams[] = 'otherArticleId';
+        $optionalParams[] = 'caption';
         break;
     default:
         if($test)
@@ -93,7 +93,7 @@ if($inputs['create']){
 else{
     $setParams['override'] = true;
     $setParams['update'] = true;
-    array_push($requiredParams,'blockId');
+    $requiredParams[] = 'blockId';
 }
 
 $purifyParams = ['caption','name','alt','text'];
@@ -153,7 +153,7 @@ foreach(array_merge($optionalParams,$requiredParams) as $param){
                 }
                 break;
             case 'blockResourceAddress':
-                $valid = \IOFrame\Util\validator::validateRelativeFilePath($inputs[$param]);
+                $valid = \IOFrame\Util\ValidatorFunctions::validateRelativeFilePath($inputs[$param]);
                 $valid = $valid || filter_var($inputs[$param],FILTER_VALIDATE_URL);
                 if(!$valid){
                     if($test)
@@ -168,6 +168,7 @@ foreach(array_merge($optionalParams,$requiredParams) as $param){
                     exit(INPUT_VALIDATION_FAILURE);
                 }
                 break;
+            case 'highlightCode':
             case 'autoplay':
             case 'controls':
             case 'mute':

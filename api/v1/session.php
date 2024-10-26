@@ -1,8 +1,8 @@
 <?php
 /*Current API used to get some session details, as well as a single related global setting (time after which a session expires)*/
 
-if(!defined('coreInit'))
-    require __DIR__ . '/../../main/coreInit.php';
+if(!defined('IOFrameMainCoreInit'))
+    require __DIR__ . '/../../main/core_init.php';
 
 $resArr = array();
 
@@ -49,4 +49,3 @@ foreach($_REQUEST as $key => $value){
 
 if($resArr!==[])
     echo json_encode($resArr);
-?>

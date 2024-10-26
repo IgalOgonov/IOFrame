@@ -406,7 +406,7 @@ Vue.component('%%COMPONENT_NAME%%', {
                         alertLog('Server error!','error',this.$el);
                         break;
                     case 0:
-                        alertLog('Item updated!','success',this.$el);
+                        alertLog('Item updated!','success',this.$el,{autoDismiss:2000});
                         break;
                     default:
                         alertLog('Unknown '+(this.mode === 'create'? '%%API_CREATE_ACTION%%': '%%API_UPDATE_ACTION%%')+' response '+response,'error',this.$el);
@@ -518,7 +518,7 @@ Vue.component('%%COMPONENT_NAME%%', {
                     v-model:value="item.current"
                     @change="item.current = paramMap[key].parseOnChange($event.target.value);recompute.changed = ! recompute.changed"
                     >
-                       <option v-for="item in paramMap[key].list" :value="item.value" v-text="item.title? item.title: item.value"></option>
+                        <option v-for="(title,value) in paramMap[key].list" :value="value" v-text="title"></option>
                     </select>
 
                </div>

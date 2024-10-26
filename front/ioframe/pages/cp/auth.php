@@ -7,9 +7,16 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_s
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'cp_redirect_to_login.php';
 
-array_push($CSS, 'cp.css', 'components/searchList.css', 'components/auth/actionsEditor.css', 'components/auth/groupsEditor.css', 'components/auth/usersEditor.css', 'components/auth/editor.css', 'modules/auth.css', 'modules/CPMenu.css');
-array_push($JS, 'mixins/sourceUrl.js', 'mixins/eventHubManager.js', 'components/searchList.js', 'components/auth/actionsEditor.js', 'components/auth/groupsEditor.js', 'components/auth/usersEditor.js', 'modules/CPMenu.js', 'modules/auth.js');
-
+array_push($CSS, 'cp.css', 'components/searchList.css', 'modules/CPMenu.css');
+$CSSPackages['CPAuthCSS'] = [
+    'items'=>['components/auth/actionsEditor.css', 'components/auth/groupsEditor.css', 'components/auth/usersEditor.css', 'components/auth/editor.css', 'modules/auth.css'],
+    'order'=>-1
+];
+array_push($JS, 'mixins/sourceUrl.js','mixins/searchListFilterSaver.js', 'components/searchList.js', 'modules/CPMenu.js');
+$JSPackages['CPAuthJS'] = [
+    'items'=>['components/auth/actionsEditor.js', 'components/auth/groupsEditor.js', 'components/auth/usersEditor.js', 'modules/auth.js' ],
+    'order'=>-1
+];
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_get_resources.php';
 
@@ -56,5 +63,3 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'footers_s
 $frontEndResourceTemplateManager->printResources('JS');
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'footers_end.php';
-
-?>

@@ -12,7 +12,7 @@ if(!$test){
         $stage = $_REQUEST['stage'];
     else
         $stage = 0;
-    $SQLHandler = new IOFrame\Handlers\SQLHandler($settings);
+    $SQLManager = new \IOFrame\Managers\SQLManager($settings);
     switch($stage){
         case 0:
             echo '<form method="post" action="">
@@ -26,9 +26,8 @@ if(!$test){
             break;
         case 1:
             $url = $settings->getSetting('absPathToRoot').'plugins/'.$name.'/';   //Plugin folder
-            $LockHandler = new IOFrame\Handlers\LockHandler($url);
-            $FileHandler = new IOFrame\Handlers\FileHandler();
-            $plugList = new IOFrame\Handlers\SettingsHandler($SQLHandler->getSQLPrefix().'localFiles/plugins/');
+            $LockManager = new \IOFrame\Managers\LockManager($url);
+            $plugList = new \IOFrame\Handlers\SettingsHandler($SQLManager->getSQLPrefix().'localFiles/plugins/');
             $plugName = $PluginHandler->getInfo(['name'=>$name])[0];
             //-------Check if the plugin is installed
             if($plugList->getSetting($name) == 'installed' || $plugList->getSetting($name) == 'zombie' || $plugList->getSetting($name) == 'installing'){
@@ -79,16 +78,16 @@ if(!$test){
                 try{
                     $gDefUrl = $settings->getSetting('absPathToRoot').'localFiles/definitions/';
                     //Read definition files - and merge them
-                    $defFile = $FileHandler->readFileWaitMutex($url,'definitions.json',['LockHandler' => $LockHandler]);
+                    $defFile = \IOFrame\Util\FileSystemFunctions::readFileWaitMutex($url,'definitions.json',['LockManager' => $LockManager]);
                     if($defFile != null){       //If the file is empty, don't bother doing work
                         $defArr = json_decode($defFile,true);
-                        $gDefFile = $FileHandler->readFileWaitMutex($gDefUrl,'definitions.json',['LockHandler' => $LockHandler]);
+                        $gDefFile = \IOFrame\Util\FileSystemFunctions::readFileWaitMutex($gDefUrl,'definitions.json',['LockManager' => $LockManager]);
                         $gDefArr = json_decode($gDefFile,true);
                         $newDef = array_merge($defArr,$gDefArr);
                         //Write to global definition file after backing it up
-                        $defLock = new IOFrame\Handlers\LockHandler($gDefUrl);
+                        $defLock = new \IOFrame\Managers\LockManager($gDefUrl);
                         $defLock->makeMutex();
-                        $FileHandler->backupFile($gDefUrl,'definitions.json');
+                        \IOFrame\Util\FileSystemFunctions::backupFile($gDefUrl,'definitions.json');
                         $gDefFile = fopen($gDefUrl.'definitions.json', "w+") or die("Unable to open definitions file!");
                         fwrite($gDefFile,json_encode($newDef));
                         fclose($gDefFile);
@@ -97,14 +96,14 @@ if(!$test){
 
                     }
                 }
-                catch (Exception $e){
+                catch (\Exception $e){
                     echo 'Exception :'.$e.EOL;
                     try{
                         $options = [];
                         require $url.'quickUninstall.php';
                         $plugList->setSetting($name,null,['createNew'=>true]);
                     }
-                    catch (Exception $e){
+                    catch (\Exception $e){
                         echo 'Exception during definition inclusion of plugin '.$name.': '.$e.EOL;
                     }
                     return 5;
@@ -118,14 +117,14 @@ if(!$test){
                 echo $_REQUEST['testOption'].' is illegal!'.EOL;
 
             //Create a PDO connection
-            $sqlSettings = new IOFrame\Handlers\SettingsHandler($settings->getSetting('absPathToRoot').SETTINGS_DIR_FROM_ROOT.'/sqlSettings/');
-            $conn = IOFrame\Util\prepareCon($sqlSettings);
+            $sqlSettings = new \IOFrame\Handlers\SettingsHandler($settings->getSetting('absPathToRoot').\IOFrame\Handlers\SettingsHandler::SETTINGS_DIR_FROM_ROOT.'/sqlSettings/');
+            $conn = \IOFrame\Util\FrameworkUtilFunctions::prepareCon($sqlSettings);
             // set the PDO error mode to exception
             $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
             // INITIALIZE CORE VALUES TABLE
             /* Literally just the pivot time for now. */
-            $makeTB = $conn->prepare("CREATE TABLE ".$SQLHandler->getSQLPrefix()."TEST_TABLE(
+            $makeTB = $conn->prepare("CREATE TABLE ".$SQLManager->getSQLPrefix()."TEST_TABLE(
                                                               tableKey varchar(255) NOT NULL,
                                                               tableValue varchar(255) NOT NULL
                                                               ) ENGINE=InnoDB DEFAULT CHARSET = utf8;");
@@ -133,7 +132,7 @@ if(!$test){
                 $makeTB->execute();
                 echo 'Installed test db table!: '.EOL;
             }
-            catch (Exception $e){
+            catch (\Exception $e){
                 echo 'Failed to install testPlugin db table: '.$e.EOL;
             }
 
@@ -171,6 +170,3 @@ else{
 
 
 
-
-
-?>

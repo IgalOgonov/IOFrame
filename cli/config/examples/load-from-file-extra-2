@@ -1,0 +1,14 @@
+{
+	"loadWithKFMDifferentKey":"KFM Different key Success",
+	"loadWithFKM2":"FKM Success 2",
+	"nestedObject":{
+		"loadWithKFMNestedDifferentKey":"KFM Nested Different key Success",
+		"loadWithKFMObjetKey":{
+			"KFMNestedObj":"Success"
+		},
+		"loadWithFKMNested":"FKM Success Nested 2",
+		"loadWithFKMObjetKey":{
+			"FKMNestedObj":"Success"
+		}
+	}
+}

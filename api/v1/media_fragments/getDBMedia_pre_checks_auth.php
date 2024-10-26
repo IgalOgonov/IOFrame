@@ -1,6 +1,5 @@
 <?php
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 
 //Check to see if the API is even enabled
 if(!$resourceSettings->getSetting('allowDBMediaGet')){

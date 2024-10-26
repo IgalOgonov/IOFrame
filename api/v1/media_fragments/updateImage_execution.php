@@ -1,10 +1,9 @@
 <?php
-if(!defined('FrontEndResourceHandler'))
-    require __DIR__ . '/../../../IOFrame/Handlers/FrontEndResourceHandler.php';
 
-$FrontEndResourceHandler = new IOFrame\Handlers\FrontEndResourceHandler($settings,$defaultSettingsParams);
 
-$result = $FrontEndResourceHandler->setResources(
+$FrontEndResources = new \IOFrame\Handlers\Extenders\FrontEndResources($settings,$defaultSettingsParams);
+
+$result = $FrontEndResources->setResources(
     [
         ['address'=>$inputs['address'],'text'=>$meta]
     ],

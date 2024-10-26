@@ -1,18 +1,16 @@
 <?php
 
-if(!defined('UserHandler'))
-    require __DIR__ . '/../../../IOFrame/Handlers/UserHandler.php';
 
-if(!isset($UserHandler))
-    $UserHandler = new IOFrame\Handlers\UserHandler(
+if(!isset($UsersHandler))
+    $UsersHandler = new \IOFrame\Handlers\UsersHandler(
         $settings,
         $defaultSettingsParams
     );
 
-$template = $UserHandler->userSettings->getSetting('inviteMailTemplate');
+$template = $UsersHandler->userSettings->getSetting('inviteMailTemplate_'.$inputs['language'])??$UsersHandler->userSettings->getSetting('inviteMailTemplate');
 if(!$template)
     die('1');
-$title = $UserHandler->userSettings->getSetting('inviteMailTitle');
+$title = $UsersHandler->userSettings->getSetting('inviteMailTitle');
 if(!$title)
     $title = 'You\'ve been invited to '.$siteSettings->getSetting('siteName');
 
@@ -25,6 +23,4 @@ $params = [
     'extraTemplateArguments'=>$inputs['extraTemplateArguments']
 ];
 
-$result = $UserHandler->sendInviteMail($inputs['mail'],(int)$template,$title,false,$params);
-
-?>
+$result = $UsersHandler->sendInviteMail($inputs['mail'],$template,$title,false,$params);

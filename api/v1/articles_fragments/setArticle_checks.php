@@ -1,6 +1,5 @@
 <?php
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 require_once $settings->getSetting('absPathToRoot').'vendor/autoload.php';
 $config = HTMLPurifier_Config::createDefault();
 $config->set('HTML.AllowedElements', []);
@@ -28,19 +27,22 @@ if($inputs['create']){
     $cleanInputs[$articleSetColumnMap['creatorId']] = $auth->getDetail('ID');
     $setParams['override'] = false;
     $setParams['update'] = false;
-    array_push($requiredParams,'title');
+    $requiredParams[] = 'title';
 }
 else{
     $setParams['override'] = true;
     $setParams['update'] = true;
-    array_push($requiredParams,'articleId');
-    array_push($optionalParams,'title');
+    $requiredParams[] = 'articleId';
+    $optionalParams[] = 'title';
 }
 
 $purifyParams = ['title','subtitle','caption','name','alt'];
 foreach($purifyParams as $param)
-    if($inputs[$param] !== null)
+    if($inputs[$param] !== null){
         $inputs[$param] = $purifier->purify($inputs[$param]);
+        //Even if the HTML Characters are safe, single quotes must always be encoded, as they break the query
+        $inputs[$param] = str_replace("'","&#039;",$inputs[$param]);
+    }
 
 
 foreach($requiredParams as $param){
@@ -136,7 +138,7 @@ foreach($optionalParams as $param){
                 }
                 break;
             case 'thumbnailAddress':
-                $valid = \IOFrame\Util\validator::validateRelativeFilePath($inputs['thumbnailAddress']);
+                $valid = \IOFrame\Util\ValidatorFunctions::validateRelativeFilePath($inputs['thumbnailAddress']);
                 $valid = $valid || filter_var($inputs['thumbnailAddress'],FILTER_VALIDATE_URL);
 
                 if(!$valid){
@@ -172,8 +174,8 @@ foreach($optionalParams as $param){
         $address = explode('-',$address);
         $temp = [];
         foreach($address as $index => $subAddr){
-            if(preg_match('/^[a-zA-Z0-9\_]+$/',$address[$index]))
-                array_push($temp,substr($subAddr,0,24));
+            if(preg_match('/^[a-zA-Z0-9\_]+$/', $subAddr))
+                $temp[] = substr($subAddr, 0, 24);
         }
         $address = $temp;
         $time = date('d-m-Y');

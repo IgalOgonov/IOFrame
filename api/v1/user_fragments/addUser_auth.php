@@ -1,8 +1,8 @@
 <?php
 
 if(!isset($userSettings))
-    $userSettings = new IOFrame\Handlers\SettingsHandler(
-        $settings->getSetting('absPathToRoot').'/'.SETTINGS_DIR_FROM_ROOT.'/userSettings/',
+    $userSettings = new \IOFrame\Handlers\SettingsHandler(
+        $settings->getSetting('absPathToRoot').'/'.\IOFrame\Handlers\SettingsHandler::SETTINGS_DIR_FROM_ROOT.'/userSettings/',
         $defaultSettingsParams
     );
 
@@ -17,9 +17,8 @@ if($userSettings->getSetting('allowRegularReg') != 1){
 if (
 !(
     $userSettings->getSetting('selfReg')!=0 ||
-    $auth->isAuthorized(0) ||
+    $auth->isAuthorized() ||
     $auth->hasAction('REGISTER_USER_AUTH') ||
-    isset($_SESSION['INSTALLING']) ||
     isset($inputs['token'])
 )
 ){

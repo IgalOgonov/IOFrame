@@ -53,7 +53,7 @@ var securityEvents = new Vue({
                 }
             ],
             //SearchList API (and probably the only relevant API) URL TODO Edit
-            url: document.pathToRoot+ 'api/v1/security',
+            url: document.ioframe.pathToRoot+ 'api/v1/security',
             //Current page
             page:0,
             //Go to page
@@ -102,13 +102,10 @@ var securityEvents = new Vue({
             switch(this.currentMode){
                 case 'search':
                     return 'Browsing Events Rulebook';
-                    break;
                 case 'edit':
                     return 'Events Rulebook';
-                    break;
                 case 'create':
                     return '';
-                    break;
                 default:
             }
         },
@@ -134,7 +131,6 @@ var securityEvents = new Vue({
             switch(this.currentOperation){
                 case 'rename':
                     return true;
-                    break;
                 default:
                     return false;
             }
@@ -171,7 +167,7 @@ var securityEvents = new Vue({
                     alertLog('Renaming failed due to server error!','error',this.$el);
                     break;
                 case 0:
-                    alertLog('Event type renamed!','success',this.$el);
+                    alertLog('Event type renamed!','success',this.$el,{autoDismiss:2000});
                     this.items[this.selected].name = this.operationInput;
                     this.cancelOperation();
                     break;
@@ -219,7 +215,7 @@ var securityEvents = new Vue({
         },
         //Goes to relevant page  TODO Remove if no searchlist
         goToPage: function(page){
-            if(!this.initiating && page.from == 'search'){
+            if(!this.initiating && (page.from === 'search')){
                 let newPage;
                 page = page.content;
 
@@ -276,7 +272,7 @@ var securityEvents = new Vue({
             if(newMode === 'edit' && this.selected===-1){
                 alertLog('Please select an item before you view/edit it!','warning',this.$el);
                 return;
-            };
+            }
 
             if(newMode==='edit'){
                 switch (this.currentMode) {
@@ -298,10 +294,10 @@ var securityEvents = new Vue({
                 console.log('Current Operation ', this.currentOperation ,'Current input ',this.operationInput);
 
             let data = new FormData();
-            var test = this.test;
-            var verbose = this.verbose;
-            var currentOperation = this.currentOperation;
-            var thisElement = this.$el;
+            let test = this.test;
+            let verbose = this.verbose;
+            let currentOperation = this.currentOperation;
+            let thisElement = this.$el;
             let eventName = '';
 
             if(this.currentMode === 'search'){
@@ -319,7 +315,7 @@ var securityEvents = new Vue({
                         break;
                     default:
                         break;
-                };
+                }
 
                 if(this.test)
                     data.append('req','test');
@@ -381,7 +377,7 @@ var securityEvents = new Vue({
             else if(this.currentMode === 'edit'){
                 this.currentMode = 'search';
                 this.selected = -1;
-            };
+            }
             this.operationInput= '';
             this.currentOperation = '';
 

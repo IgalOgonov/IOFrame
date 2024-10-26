@@ -7,14 +7,22 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_s
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'cp_redirect_to_login.php';
 
-array_push($CSS, 'ext/highlight.js/ioframe-highlight.css','cp.css', 'components/searchList.css','components/media/mediaViewer.css',
-    'components/mediaSelector.css','components/articles/defaultHeadlineRenderer.css','components/IOFrameGalleryDefault.css',
-    'components/articles/articleBlockEditor.css','components/articles/articlesEditor.css', 'modules/articles.css',
-    'modules/CPMenu.css');
-array_push($JS, 'ext/marked/marked.min.js', 'ext/highlight.js/highlight.pack.js', 'mixins/sourceUrl.js','mixins/componentSize.js', 'mixins/eventHubManager.js',
-    'components/IOFrameGallery.js','components/media/mediaViewer.js','components/searchList.js','components/mediaSelector.js','components/articles/defaultHeadlineRenderer.js',
-    'components/articles/articleBlockEditor.js', 'components/articles/articlesEditor.js', 'modules/CPMenu.js', 'modules/articles.js');
-
+array_push($CSS,'cp.css', 'components/searchList.css','components/media/mediaViewer.css',
+    'components/mediaSelector.css', 'modules/CPMenu.css');
+$CSSPackages['CPArticlesCSS'] = [
+    'items'=>['ext/highlight.js/ioframe-highlight.css','components/articles/defaultHeadlineRenderer.css','components/IOFrameGalleryDefault.css',
+        'components/articles/articleBlockEditor.css','components/articles/articlesEditor.css', 'modules/articles.css'],
+    'order'=>-1
+];
+array_push($JS, 'mixins/indexedDBInterface.js','mixins/cacheableObjectGetter.js','mixins/searchListFilterSaver.js',
+    'mixins/sourceUrl.js','mixins/componentSize.js','mixins/objectEditor.js','components/IOFrameGallery.js','components/media/mediaViewer.js',
+    'components/searchList.js','components/mediaSelector.js', 'modules/CPMenu.js');
+$JSPackages['CPArticlesJS'] = [
+    'items'=>['ext/marked/marked.min.js','ext/purifyHTML/purify.min.js', 'ext/highlight.js/highlight.pack.js', 'components/articles/defaultHeadlineRenderer.js',
+        'components/articles/articleBlockEditor.js', 'components/articles/articlesEditor.js', 'modules/articles.js' ],
+    'order'=>-1
+];
+$minifyOptions = [];
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_get_resources.php';
 
@@ -61,5 +69,3 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'footers_s
 $frontEndResourceTemplateManager->printResources('JS');
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'footers_end.php';
-
-?>

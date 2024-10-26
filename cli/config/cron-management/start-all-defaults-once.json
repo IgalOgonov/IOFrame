@@ -1,0 +1,19 @@
+{
+	"dynamicJobProperties":{
+		"commons_clean_expired_ip_events":{
+			"active":1
+		},
+		"commons_clean_expired_ips":{
+			"active":1
+		},
+		"commons_clean_expired_tokens":{
+			"active":1
+		},
+		"commons_clean_expired_user_events":{
+			"active":1
+		},
+		"commons_archive_old_logins":{
+			"active":1
+		}
+	}
+}

@@ -48,7 +48,7 @@ var settings = new Vue({
                 }
             ],
             //SearchList API (and probably the only relevant API) URL
-            url:document.rootURI+'api/v1/settings',
+            url:document.ioframe.rootURI+'api/v1/settings',
             //Main items
             items: [],
             selected:-1,
@@ -83,10 +83,8 @@ var settings = new Vue({
             switch(this.currentMode){
                 case 'search':
                     return 'Available Setting Collections';
-                    break;
                 case 'edit':
                     return 'Editing Settings Collection';
-                    break;
                 default:
             }
         },
@@ -139,10 +137,7 @@ var settings = new Vue({
             }
         },
         shouldDisplayMode: function(index){
-            if(index==='edit' && (this.selected === -1) )
-                return false;
-
-            return true;
+            return !(index==='edit' && (this.selected === -1) );
         },
         selectElement: function(request){
 
@@ -170,7 +165,7 @@ var settings = new Vue({
             if(newMode === 'edit' && this.selected===-1){
                 alertLog('Please select an item before you view/edit it!','warning',this.$el);
                 return;
-            };
+            }
 
             if(newMode==='edit'){
                 switch (this.currentMode) {
@@ -192,16 +187,16 @@ var settings = new Vue({
                 console.log('Current Operation ', this.currentOperation ,'Current input ',this.operationInput);
 
             let data = new FormData();
-            var test = this.test;
-            var verbose = this.verbose;
-            var currentOperation = this.currentOperation;
-            var thisElement = this.$el;
+            let test = this.test;
+            let verbose = this.verbose;
+            let currentOperation = this.currentOperation;
+            let thisElement = this.$el;
 
             if(this.currentMode === 'search'){
                 switch (currentOperation){
                     default:
                         break;
-                };
+                }
 
                 if(this.test)
                     data.append('req','test');
@@ -259,10 +254,86 @@ var settings = new Vue({
             else if(this.currentMode === 'edit'){
                 this.currentMode = 'search';
                 this.selected = -1;
-            };
+            }
             this.operationInput= '';
             this.currentOperation = '';
 
         }
     },
+    template:`
+    <div id="settings" class="main-app">
+        <div class="loading-cover" v-if="!initiated && currentMode==='search'">
+        </div>
+    
+        <h4 v-if="currentMode==='search'" class="message message-error-2">
+            The settings found here affect the <u>whole system</u>.<br>
+            It is possible to cause temporary, and sometimes <u>irreversible system damage</u> with even a simple typo.<br>
+            Please <u>do not use this module</u> unless are you <u>absolutely familiar</u> with how the specific settings you are editing work.<br>
+        </h4>
+    
+        <h1 v-if="title!==''" v-text="title"></h1>
+    
+        <div class="modes">
+            <button
+                v-for="(item,index) in modes"
+                v-if="shouldDisplayMode(index)"
+                v-text="item.title"
+                @click="switchModeTo(index)"
+                :class="{selected:(currentMode===index)}"
+                class="positive-3"
+            >
+            </button>
+        </div>
+    
+        <div class="operations-container" v-if="currentModeHasOperations">
+            <div class="operations-title" v-text="'Actions'"></div>
+            <div class="operations" v-if="currentOperation===''">
+                <button
+                    v-if="shouldDisplayOperation(index)"
+                    v-for="(item,index) in modes[currentMode].operations"
+                    @click="operation(index)"
+                    :class="[index,{selected:(currentOperation===index)},(item.button? item.button : 'positive-3')]"
+                >
+                    <div v-text="item.title"></div>
+                </button>
+            </div>
+        </div>
+    
+        <div class="operations" v-if="currentModeHasOperations && currentOperation !==''">
+            <button
+                :class="(currentOperation === 'delete' ? 'negative-1' : 'positive-1')"
+                @click="confirmOperation">
+                <div v-text="'Confirm'"></div>
+            </button>
+            <button class="cancel-1" @click="cancelOperation">
+                <div v-text="'Cancel'"></div>
+            </button>
+        </div>
+    
+        <div is="search-list"
+             v-if="currentMode==='search'"
+             :api-url="url"
+             api-action="getSettingsMeta"
+             :extra-classes="extraClasses"
+             :items="items"
+             :initiate="!initiated"
+             :show-result-num="false"
+             :columns="columns"
+             :filters="filters"
+             :selected="selected"
+             :test="test"
+             :verbose="verbose"
+             identifier="search"
+        ></div>
+    
+        <div is="settings-editor"
+             v-if="currentMode==='edit'"
+             identifier="editor"
+             :item="items[selected]"
+             :id="selectedId"
+             :test="test"
+             :verbose="verbose"
+            ></div>
+    </div>
+    `
 });

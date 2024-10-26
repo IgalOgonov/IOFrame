@@ -1,40 +1,37 @@
 <?php
 namespace IOFrame\Handlers{
-    use IOFrame;
-    define('PurchaseOrderHandler',true);
-    if(!defined('abstractObjectsHandler'))
-        require 'abstractObjectsHandler.php';
+    define('IOFrameHandlersPurchaseOrderHandler',true);
 
-    /* This class handles orders - as in, purchase orders.
+    /* TODO In highScalability, don't join users table and get groupUsers programmatically
+     * This class handles orders - as in, purchase orders.
      * It isn't meant to be used by itself, as each system has different items that can be purchased, different procedures
      * for how to handle the order process, and so on.
      * This class is meant to be extended by different order handlers for different systems - you may even have multiple
      * types of different purchase orders in the same system.
      *
      * @author Igal Ogonov <igal1333@hotmail.com>
-     * @license LGPL
      * @license https://opensource.org/licenses/LGPL-3.0 GNU Lesser General Public License version 3
      * */
 
-    class PurchaseOrderHandler extends IOFrame\abstractObjectsHandler
+    class PurchaseOrderHandler extends \IOFrame\Generic\ObjectsHandler
     {
 
         /**
-         * @var string The name of the archive table (for when we archive orders)
+         * @var ?string The name of the archive table (for when we archive orders)
          */
-        protected $archiveTable = null;
+        protected ?string $archiveTable = null;
 
         /** Standard constructor
          *
          * Constructs an instance of the class, getting the main settings file and an existing DB connection, or generating
          * such a connection itself.
          *
-         * @param object $settings The standard settings object
+         * @param SettingsHandler $settings The standard settings object
          * @param array $params - All parameters share the name/type of the class variables
-         * */
-        function __construct(SettingsHandler $settings, array $params = []){
+         */
+        function __construct(\IOFrame\Handlers\SettingsHandler $settings, array $params = []){
 
-            $prefix = $params['SQLHandler']->getSQLPrefix();
+            $prefix = $params['SQLManager']->getSQLPrefix();
 
             if(isset($params['archiveTable']))
                 $this->archiveTable = $params['archiveTable'];
@@ -45,6 +42,7 @@ namespace IOFrame\Handlers{
                 'default-orders' => [
                     'tableName' => 'DEFAULT_ORDERS',
                     'cacheName'=> 'default_order_',
+                    '_uniqueLogger'=>\IOFrame\Definitions::LOG_ORDERS_CHANNEL,
                     'keyColumns' => ['ID'],
                     'columnsToGet' => [
                         [
@@ -79,7 +77,7 @@ namespace IOFrame\Handlers{
                                     if(isset($context['inputArray'][$possibleInput]))
                                         $changes[$possibleInput] = $context['inputArray'][$possibleInput];
                                 }
-                                array_push($currentHistory,$changes);
+                                $currentHistory[] = $changes;
                                 return json_encode($currentHistory);
                             }
                         ],
@@ -127,11 +125,11 @@ namespace IOFrame\Handlers{
                                 if(!$itemIn)
                                     return false;
                                 $relationsIn = $context['params']['userRelationsIn'] ?? null;
-                                $prefix = $context['SQLHandler']->getSQLPrefix();
+                                $prefix = $context['SQLManager']->getSQLPrefix();
                                 $baseTableName = $prefix.'DEFAULT_ORDERS';
                                 $tableName = $prefix.'DEFAULT_USERS_ORDERS';
                                 $itemsArray = $itemIn;
-                                array_push($itemsArray,'CSV');
+                                $itemsArray[] = 'CSV';
                                 $foreignCond = [
                                     ['User_ID'],
                                     $itemsArray,
@@ -140,7 +138,7 @@ namespace IOFrame\Handlers{
                                 if($relationsIn){
                                     foreach ($relationsIn as $index=>$item)
                                         $relationsIn[$index] = [$item,'STRING'];
-                                    array_push($relationsIn,'CSV');
+                                    $relationsIn[] = 'CSV';
                                     $foreignCond = [
                                         $foreignCond,
                                         [
@@ -152,7 +150,7 @@ namespace IOFrame\Handlers{
                                     ];
                                 }
 
-                                $cond = $context['SQLHandler']->selectFromTable(
+                                $cond = $context['SQLManager']->selectFromTable(
                                     $tableName,
                                     $foreignCond,
                                     [$tableName.'.Order_ID'],
@@ -173,14 +171,14 @@ namespace IOFrame\Handlers{
                                 $itemIn = $context['params']['userRelationsIn'] ?? null;
                                 if(!$itemIn)
                                     return false;
-                                $prefix = $context['SQLHandler']->getSQLPrefix();
+                                $prefix = $context['SQLManager']->getSQLPrefix();
                                 $baseTableName = $prefix.'DEFAULT_ORDERS';
                                 $tableName = $prefix.'DEFAULT_USERS_ORDERS';
                                 $itemsArray = $itemIn;
                                 foreach ($itemsArray as $index=>$item)
                                     $itemsArray[$index] = [$item,'STRING'];
-                                array_push($itemsArray,'CSV');
-                                $cond = $context['SQLHandler']->selectFromTable(
+                                $itemsArray[] = 'CSV';
+                                $cond = $context['SQLManager']->selectFromTable(
                                     $tableName,
                                     [
                                         ['Relation_Type'],
@@ -202,14 +200,14 @@ namespace IOFrame\Handlers{
                                 $itemIn = $context['params']['noUserRelationsIn'] ?? null;
                                 if(!$itemIn)
                                     return false;
-                                $prefix = $context['SQLHandler']->getSQLPrefix();
+                                $prefix = $context['SQLManager']->getSQLPrefix();
                                 $baseTableName = $prefix.'DEFAULT_ORDERS';
                                 $tableName = $prefix.'DEFAULT_USERS_ORDERS';
                                 $itemsArray = $itemIn;
                                 foreach ($itemsArray as $index=>$item)
                                     $itemsArray[$index] = [$item,'STRING'];
-                                array_push($itemsArray,'CSV');
-                                $cond = $context['SQLHandler']->selectFromTable(
+                                $itemsArray[] = 'CSV';
+                                $cond = $context['SQLManager']->selectFromTable(
                                     $tableName,
                                     [
                                         ['Relation_Type'],
@@ -239,6 +237,7 @@ namespace IOFrame\Handlers{
                 'default-orders-users'=>[
                     'tableName' => 'DEFAULT_USERS_ORDERS',
                     'cacheName'=> 'default_users_orders_',
+                    '_uniqueLogger'=>\IOFrame\Definitions::LOG_ORDERS_CHANNEL,
                     'extendTTL'=> false,
                     'fatherDetails'=>[
                         [
@@ -300,9 +299,12 @@ namespace IOFrame\Handlers{
          *              -1 - failed to reach the db
          *               1 - order does not exist
          *          array: JSON encoded DB array of the order
-         * */
-        function getOrder(int $orderID,$params = []){
-            $getUsers = isset($params['getUsers'])? $params['getUsers'] : true;
+         *
+         * @throws \Exception
+         * @throws \Exception
+         */
+        function getOrder(int $orderID, array $params = []): array|int {
+            $getUsers = !isset($params['getUsers']) || $params['getUsers'];
 
             $res = $this->getOrders([$orderID],$params)[$orderID];
 
@@ -318,23 +320,23 @@ namespace IOFrame\Handlers{
 
         /** Gets multiple orders by IDs, or just all the orders.
          * */
-        function getOrders(array $orderIDs = [],$params = []){
+        function getOrders(array $orderIDs = [],$params = []): array {
             return $this->getItems($orderIDs,'default-orders',$params);
         }
 
         /** Creates or updates a single Order
          *
-         * @param mixed $id ID of the Order
          * @param array $inputs each object of the form:
          *                      'id' => int, default null, required when not creating new orders.
          *                      'orderInfo' => string, default null - a JSON encoded object to be set. Will be merged with
-         *                                     the existing value (if it exists) using array_merge_recursive_distinct, with
+         *                                     the existing value (if it exists) using PureUtilFunctions::array_merge_recursive_distinct, with
          *                                     'deleteOnNull' being true.
          *                      'orderType' => string, default null - Potential identifier of the order type.
          *                      'orderStatus' => string, default null - Potential identifier of the order status.
          * @param array $params same as setItems
          *
-         * @returns  array|int as in setItems
+         * @return array|int|mixed
+         * @throws \Exception
          */
         function setOrder(array $inputs, array $params = []){
             $tempInputs = [
@@ -352,13 +354,14 @@ namespace IOFrame\Handlers{
          *              [<id>,<$inputs from setOrder>, <another id>,<$inputs from setOrder>, ...]
          * @param array $params same as setItems
          * @return array|int as in setItems
+         * @throws \Exception
+         * @throws \Exception
          */
-         function setOrders(array $inputs, $params = []){
+         function setOrders(array $inputs, array $params = []): int|array {
              return $this->setItems($inputs,'default-orders',$params);
         }
 
-        /** Moves orders to archive, by IDs.
-         * @param int[] $orderIDs Orders IDs - defaults to [], which means all the orders (subject to constraints).
+        /** @param int[] $orderIDs Orders IDs - defaults to [], which means all the orders (subject to constraints).
          *                                   The general usage of this function should be to archive orders too old to be
          *                                   relevant, not delete/archive specific orders, so unless you know what you're
          *                                   doing this should stay [].
@@ -397,8 +400,12 @@ namespace IOFrame\Handlers{
          *                                  OR the code from backupTable()/getOrders() if we stopped cause that function threw the error code.
          *          ]
          *
+         * @throws \Exception
+         * @throws \Exception
+         * @todo Add alternative SQL Handler to archive to a different DB, but probably just move to a cron job
+         * Moves orders to archive, by IDs.
          */
-         function archiveOrders(array $orderIDs = [], $params = []){
+         function archiveOrders(array $orderIDs = [], array $params = []): array {
              $typeArray = $this->objectsDetails['default-orders'];
              if(!$this->archiveTable){
                  return [
@@ -409,21 +416,21 @@ namespace IOFrame\Handlers{
 
              $test = $params['test']?? false;
              $verbose = $params['verbose'] ?? $test;
-             $deleteArchived = isset($params['deleteArchived'])? $params['deleteArchived'] : true;
-             $repeatToLimit = isset($params['repeatToLimit'])? $params['repeatToLimit'] : true;
-             $timeout = isset($params['timeout'])? $params['timeout'] : 20;
-             $iteration = isset($params['iteration'])? $params['iteration'] : 1;
-             $lastArchivedID = isset($params['lastArchivedID'])? $params['lastArchivedID'] : -1;
-             $limit =  isset($params['limit'])? $params['limit'] : 1000;
-             $typeIn = isset($params['typeIn'])? $params['typeIn'] : [];
-             $statusIn = isset($params['statusIn'])? $params['statusIn'] : [];
-             $createdBefore = isset($params['createdBefore'])? $params['createdBefore'] : null;
-             $createdAfter = isset($params['createdAfter'])? $params['createdAfter'] : null;
-             $updatedBefore = isset($params['updatedBefore'])? $params['updatedBefore'] : null;
-             $updatedAfter = isset($params['updatedAfter'])? $params['updatedAfter'] : null;
-             $IDFrom = isset($params['IDFrom'])? $params['IDFrom'] : null;
+             $deleteArchived = !isset($params['deleteArchived']) || $params['deleteArchived'];
+             $repeatToLimit = !isset($params['repeatToLimit']) || $params['repeatToLimit'];
+             $timeout = $params['timeout'] ?? 20;
+             $iteration = $params['iteration'] ?? 1;
+             $lastArchivedID = $params['lastArchivedID'] ?? -1;
+             $limit = $params['limit'] ?? 1000;
+             $typeIn = $params['typeIn'] ?? [];
+             $statusIn = $params['statusIn'] ?? [];
+             $createdBefore = $params['createdBefore'] ?? null;
+             $createdAfter = $params['createdAfter'] ?? null;
+             $updatedBefore = $params['updatedBefore'] ?? null;
+             $updatedAfter = $params['updatedAfter'] ?? null;
+             $IDFrom = $params['IDFrom'] ?? null;
              $startTime = time();
-             $useCache = isset($typeArray['useCache']) ? $typeArray['useCache'] : !empty($typeArray['cacheName']);
+             $useCache = $typeArray['useCache'] ?? !empty($typeArray['cacheName']);
              $results = [
                  'lastArchivedID'=> $lastArchivedID,
                  'codeOrigin'=> '',
@@ -445,47 +452,47 @@ namespace IOFrame\Handlers{
 
              $filters = [];
              if(!empty($typeIn))
-                 array_push($filters,[
+                 $filters[] = [
                      'Order_Type',
-                     array_merge($typeIn,'CSV'),
+                     array_merge($typeIn, ['CSV']),
                      'IN'
-                 ]);
+                 ];
              if(!empty($statusIn))
-                 array_push($filters,[
+                 $filters[] = [
                      'Order_Status',
-                     array_merge($statusIn,'CSV'),
+                     array_merge($statusIn, ['CSV']),
                      'IN'
-                 ]);
+                 ];
              if($createdBefore)
-                 array_push($filters,[
+                 $filters[] = [
                      'Created',
                      $createdBefore,
                      '<'
-                 ]);
+                 ];
              if($createdAfter)
-                 array_push($filters,[
+                 $filters[] = [
                      'Created',
                      $createdBefore,
                      '>'
-                 ]);
+                 ];
              if($updatedBefore)
-                 array_push($filters,[
+                 $filters[] = [
                      'Last_Updated',
                      $updatedBefore,
                      '<'
-                 ]);
+                 ];
              if($updatedAfter)
-                 array_push($filters,[
+                 $filters[] = [
                      'Last_Updated',
                      $updatedBefore,
                      '>'
-                 ]);
+                 ];
              if($IDFrom)
-                 array_push($filters,[
+                 $filters[] = [
                      'ID',
                      $updatedBefore,
                      '>'
-                 ]);
+                 ];
 
              //Check whether any orders are left
              $existing = $this->getOrders($orderIDs, array_merge($params,['limit'=>1,'offset'=>$offset],$filters));
@@ -517,22 +524,22 @@ namespace IOFrame\Handlers{
 
              //Add order IDs to filters
              if(count($orderIDs))
-                 array_push($filters,[
+                 $filters[] = [
                      'ID',
-                     array_merge($orderIDs,'CSV'),
+                     array_merge($orderIDs, ['CSV']),
                      'IN'
-                 ]);
+                 ];
 
-             $query = 'INSERT IGNORE INTO '.$this->SQLHandler->getSQLPrefix().$this->archiveTable.' '.
-                 $this->SQLHandler->selectFromTable(
-                     $this->SQLHandler->getSQLPrefix().$typeArray['tableName'],
+             $query = 'INSERT IGNORE INTO '.$this->SQLManager->getSQLPrefix().$this->archiveTable.' '.
+                 $this->SQLManager->selectFromTable(
+                     $this->SQLManager->getSQLPrefix().$typeArray['tableName'],
                      $filters,
                      [],
                      ['justTheQuery'=>true,'limit'=>$limit,'offset'=>$offset,'orderBy'=>'ID','orderType'=>0]
                  );
              if($verbose)
                  echo 'Query to send: '.$query.EOL;
-             $backUp = $test ? true : $this->SQLHandler->exeQueryBindParam($query);
+             $backUp = $test ? true : $this->SQLManager->exeQueryBindParam($query);
 
              if($backUp!== true){
                  $results['codeOrigin'] = 'backupTable';
@@ -541,8 +548,8 @@ namespace IOFrame\Handlers{
              }
              else{
                  $results['code'] = 0;
-                 $results['lastArchivedID'] = (int)($this->SQLHandler->selectFromTable(
-                     $this->SQLHandler->getSQLPrefix().$this->archiveTable,
+                 $results['lastArchivedID'] = (int)($this->SQLManager->selectFromTable(
+                     $this->SQLManager->getSQLPrefix().$this->archiveTable,
                      $filters,
                      [],
                      ['verbose'=>$verbose,'limit'=>1,'offset'=>0,'orderBy'=>'ID','orderType'=>1]
@@ -553,8 +560,8 @@ namespace IOFrame\Handlers{
              //Delete archived orders if needed TODO
              if($deleteArchived){
                  //Get IDs of relevant orders
-                 $IDs = $this->SQLHandler->selectFromTable(
-                     $this->SQLHandler->getSQLPrefix().$this->archiveTable,
+                 $IDs = $this->SQLManager->selectFromTable(
+                     $this->SQLManager->getSQLPrefix().$this->archiveTable,
                      $filters,
                      ['ID'],
                      ['verbose'=>$verbose,'limit'=>$limit,'offset'=>0,'orderBy'=>'ID','orderType'=>1]
@@ -562,11 +569,11 @@ namespace IOFrame\Handlers{
                  if(is_array($IDs)){
                      $temp = [];
                      foreach ($IDs as $ID)
-                         array_push($temp,$ID['ID']);
-                     array_push($temp,'CSV');
+                         $temp[] = $ID['ID'];
+                     $temp[] = 'CSV';
                      //Try to delete
-                     $deleted = $this->SQLHandler->deleteFromTable(
-                         $this->SQLHandler->getSQLPrefix().$typeArray['tableName'],
+                     $deleted = $this->SQLManager->deleteFromTable(
+                         $this->SQLManager->getSQLPrefix().$typeArray['tableName'],
                          [
                              'ID',
                              $temp,
@@ -593,7 +600,7 @@ namespace IOFrame\Handlers{
                              echo 'Deleting orders '.json_encode($temp).' from cache!'.EOL;
 
                          if(!$test){
-                             $this->RedisHandler->call('del',[$temp]);
+                             $this->RedisManager->call('del',[$temp]);
                          }
                      }
                  }
@@ -615,17 +622,17 @@ namespace IOFrame\Handlers{
          }
 
         /** Binds users to an order
-         * @param mixed $id ID of the Order
+         * @param int $order
          * @param array $inputs each object of the form:
          *                      'user' => int, user ID
-         *                      'order' => int, order ID
          *                      'relation' => string, default null - relation between user and order.
          *                      'meta' => string, default null - meta information
          * @param array $params same as setItems
          *
-         * @returns  array|int as in setItems
+         * @return array|int
+         * @throws \Exception
          */
-        function setOrderUsers(int $order, array $inputs, array $params = []){
+        function setOrderUsers(int $order, array $inputs, array $params = []): array|int {
             $tempInputs = [];
             $conversion = [
                 'user'=>[
@@ -640,14 +647,14 @@ namespace IOFrame\Handlers{
                     'default'=>null
                 ]
             ];
-            foreach ($inputs as $index => $arr){
+            foreach ($inputs as $arr){
                 $temp = [
                     'Order_ID'=>$order
                 ];
                 foreach ($conversion as $input=>$inputArr){
                     $temp[$inputArr['col']] = $arr[$input] ?? $inputArr['default'];
                 }
-                array_push($tempInputs,$temp);
+                $tempInputs[] = $temp;
             }
             return $this->setOrdersUsers($tempInputs,$params);
         }
@@ -657,24 +664,28 @@ namespace IOFrame\Handlers{
          *              [<id>,<$inputs from setOrder>, <another id>,<$inputs from setOrder>, ...]
          * @param array $params same as setItems
          * @return array|int as in setItems
-         * */
-        function setOrdersUsers(array $inputs = [],array $params = []){
+         *
+         * @throws \Exception
+         * @throws \Exception
+         */
+        function setOrdersUsers(array $inputs = [],array $params = []): int|array {
             return $this->setItems($inputs,'default-orders-users',$params);
         }
 
         /** Deletes users of an order.
-         * @param array $inputs Inputs of the form:
-         *              [<id>,<$inputs from setOrder>, <another id>,<$inputs from setOrder>, ...]
+         * @param int $order
+         * @param array $userIDs
          * @param array $params same as setItems
          * @return array|int as in setItems
-         * */
-        function deleteOrderUsers(int $order, array $userIDs = [],array $params = []){
+         * @throws \Exception
+         */
+        function deleteOrderUsers(int $order, array $userIDs = [],array $params = []): int|array {
             $tempInputs = [];
             foreach ($userIDs as $id){
-                array_push($tempInputs,[
-                    'Order_ID'=>$order,
-                    'User_ID'=>$id,
-                ]);
+                $tempInputs[] = [
+                    'Order_ID' => $order,
+                    'User_ID' => $id,
+                ];
             }
             return $this->deleteOrdersUsers($tempInputs,$params);
         }
@@ -683,9 +694,12 @@ namespace IOFrame\Handlers{
          * @param array $inputs Inputs of the form:
          *              [<id>,<$inputs from setOrder>, <another id>,<$inputs from setOrder>, ...]
          * @param array $params same as setItems
-         * @return array|int as in setItems
-         * */
-        function deleteOrdersUsers(array $inputs,array $params = []){
+         * @return int as in setItems
+         *
+         * @throws \Exception
+         * @throws \Exception
+         */
+        function deleteOrdersUsers(array $inputs,array $params = []): int|array {
             return $this->deleteItems($inputs,'default-orders-users',$params);
         }
 

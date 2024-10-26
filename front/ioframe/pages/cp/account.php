@@ -2,17 +2,26 @@
 <?php
 require $settings->getSetting('absPathToRoot').'front/ioframe/templates/definitions.php';
 
+$isLoginPage = true;
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_start.php';
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'cp_redirect_to_login.php';
 
-array_push($CSS, 'cp.css', 'components/searchList.css', 'components/account/resetMail.css', 'components/account/resetPassword.css',
-    'components/account/managePhone.css','components/account/add2fa.css','components/account/toggle2faApp.css','components/account/activateAccount.css',
-    'components/account/changePassword.css','components/account/changeMail.css','modules/account.css', 'modules/CPMenu.css');
-array_push($JS, 'ext/QRCodeGenerator/qrcodegen.js','mixins/sourceUrl.js','mixins/parseLimit.js', 'mixins/eventHubManager.js', 'components/searchList.js',
-    'components/account/resetMail.js', 'components/account/resetPassword.js','components/account/managePhone.js','components/account/add2fa.js',
-    'components/account/toggle2faApp.js', 'components/account/activateAccount.js','components/account/changePassword.js','components/account/changeMail.js',
-    'modules/CPMenu.js', 'modules/account.js');
+array_push($CSS, 'cp.css', 'components/searchList.css', 'modules/CPMenu.css');
+$CSSPackages['CPAccountJS'] = [
+    'items'=>['components/account/resetMail.css', 'components/account/resetPassword.css',
+        'components/account/managePhone.css','components/account/add2fa.css','components/account/toggle2faApp.css','components/account/activateAccount.css',
+        'components/account/changePassword.css','components/account/changeMail.css','modules/account.css'],
+    'order'=>-1
+];
+array_push($JS, 'mixins/sourceUrl.js','mixins/parseLimit.js',
+    'modules/CPMenu.js');
+$JSPackages['CPAccountJS'] = [
+    'items'=>[ 'ext/QRCodeGenerator/qrcodegen.js','components/searchList.js', 'components/account/resetMail.js', 'components/account/resetPassword.js',
+        'components/account/managePhone.js','components/account/add2fa.js','components/account/toggle2faApp.js', 'components/account/activateAccount.js',
+        'components/account/changePassword.js','components/account/changeMail.js', 'modules/account.js'],
+    'order'=>-1
+];
 
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_get_resources.php';
@@ -49,9 +58,9 @@ $siteConfig = array_merge($siteConfig,
             'twoFactor'=>$twoFactor
         ]
     ]);
-$userSettings = new IOFrame\Handlers\SettingsHandler($rootFolder.SETTINGS_DIR_FROM_ROOT.'/userSettings/');
+$userSettings = new \IOFrame\Handlers\SettingsHandler($rootFolder.\IOFrame\Handlers\SettingsHandler::SETTINGS_DIR_FROM_ROOT.'/userSettings/');
 $siteConfig['login'] = [
-    'hasRememberMe'=>$userSettings->getSetting('rememberMe')? true: false,
+    'hasRememberMe'=> (bool)$userSettings->getSetting('rememberMe'),
 ];
 ?>
 
@@ -66,7 +75,8 @@ $siteConfig['login'] = [
 <body>
 
 <div class="wrapper">
-<?php require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot.'modules/CPMenu.php';?>
+<?php if($auth->isLoggedIn() && empty($banned)) require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot.'modules/CPMenu.php';?>
+<?php if($banned) require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'user_banned.php'; ?>
 <?php require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot.'modules/account.php';?>
 
  </div>
@@ -82,5 +92,3 @@ $frontEndResourceTemplateManager->printResources('JS');
 
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'footers_end.php';
-
-?>

@@ -1,7 +1,10 @@
+if(eventHub === undefined)
+    var eventHub = new Vue();
+
 var CPMenu = new Vue({
     el: '#menu',
     name:'Side Menu',
-    mixins:[sourceURL],
+    mixins:[multipleLanguages,sourceURL],
     data: {
         configObject: JSON.parse(JSON.stringify(document.siteConfig)),
         selected: '',
@@ -15,7 +18,7 @@ var CPMenu = new Vue({
             title:''
         },
         update:{
-            available:(document['_ioframe']? (document['_ioframe'].currentVersion !== document['_ioframe'].availableVersion) :false),
+            available:document['ioframe'].currentVersion !== document['ioframe'].availableVersion,
             title:''
         },
         menu:[
@@ -31,11 +34,13 @@ var CPMenu = new Vue({
                 }
              */
         ],
-        open:false
+        open:false,
+        test:false,
+        verbose:false
     },
     methods: {
-        extractImageAddress: function(item, ioframe = false){
-            return ioframe ? (this.sourceURL() + 'img/' + item.icon): (document.rootURI + document.imagePathLocal+item.icon);
+        CPMenuImageAddress: function(item, ioframe = false){
+            return ioframe ? (this.sourceURL() + 'img/' + item.icon): (document.ioframe.rootURI + document.ioframe.imagePathLocal+item.icon);
         },
     },
     created:function(){
@@ -70,9 +75,9 @@ var CPMenu = new Vue({
         if(this.configObject.cp.logo === undefined)
             this.configObject.cp.logo = {};
         if(this.configObject.cp.logo.imgURL === undefined)
-            this.configObject.cp.logo.icon = 'icons/logo.png';
+            this.configObject.cp.logo.icon = 'icons/logo-small.svg';
         if(this.configObject.cp.logo.url === undefined)
-            this.configObject.cp.logo.url = document.rootURI;
+            this.configObject.cp.logo.url = document.ioframe.rootURI;
         this.logo = this.configObject.cp.logo;
 
         //Update Title
@@ -117,74 +122,88 @@ var CPMenu = new Vue({
                 position: 4,
             },
             {
+                id: 'tags',
+                title: 'Tags',
+                url: 'tags',
+                icon: 'icons/CPMenu/tags.svg',
+                position: 5,
+            },
+            {
+                id: 'language-objects',
+                title: 'Language Obj',
+                url: 'language-objects',
+                icon: 'icons/CPMenu/language-objects.svg',
+                position: 6,
+            },
+            {
                 id: 'articles',
                 title: 'Articles',
                 url: 'articles',
                 icon: 'icons/CPMenu/articles.svg',
-                position: 5,
+                position: 7
             },
             {
                 id: 'menus',
                 title: 'Menus',
                 url: 'menus',
                 icon: 'icons/CPMenu/menus.svg',
-                position: 6,
+                position: 8,
             },
             {
                 id: 'media',
                 title: 'Media',
                 url: 'media',
                 icon: 'icons/CPMenu/media.svg',
-                position: 7,
+                position: 9,
             },
             {
                 id: 'galleries',
                 title: 'Galleries',
                 url: 'galleries',
                 icon: 'icons/CPMenu/galleries.svg',
-                position: 8,
+                position: 10,
             },
             {
                 id: 'mails',
                 title: 'Mails',
                 url: 'mails',
                 icon: 'icons/CPMenu/mails.svg',
-                position: 9,
+                position: 11,
             },
             {
                 id: 'tokens',
                 title: 'Tokens',
                 url: 'tokens',
                 icon: 'icons/CPMenu/tokens.svg',
-                position: 10,
+                position: 12,
+            },
+            {
+                id: 'logs',
+                title: 'Logs',
+                url: 'logs',
+                icon: 'icons/CPMenu/logs.svg',
+                position: 12,
             },
             {
                 id: 'auth',
                 title: 'Permissions',
                 url: 'auth',
                 icon: 'icons/CPMenu/permissions.svg',
-                position: 11,
+                position: 13,
             },
             {
                 id: 'securityEvents',
                 title: 'Events',
                 url: 'securityEvents',
                 icon: 'icons/CPMenu/security.svg',
-                position: 12,
+                position: 14,
             },
             {
                 id: 'securityIP',
                 title: 'IP',
                 url: 'securityIP',
                 icon: 'icons/CPMenu/security.svg',
-                position: 13,
-            },
-            {
-                id: 'objects',
-                title: 'Objects',
-                url: 'objects',
-                icon: 'icons/CPMenu/objects.svg',
-                position: 14,
+                position: 15,
             },
             {
                 id: 'login',
@@ -246,29 +265,37 @@ var CPMenu = new Vue({
         </div>
         <a :href="logo.url" class="logo">
             <picture>
-                <source :srcset="extractImageAddress(logo,true)">
-                <source :srcset="extractImageAddress(logo)">
-                <img :src="extractImageAddress(logo,true)">
+                <source :srcset="CPMenuImageAddress(logo,true)">
+                <source :srcset="CPMenuImageAddress(logo)">
+                <img :src="CPMenuImageAddress(logo,true)">
             </picture>
         </a>
+        <div is="language-selector"
+        v-if="languages.length"
+        :show-flag="true"
+        :outside-flag="false"
+        :reload-on-change="true"
+        :test="test"
+        :verbose="verbose"
+        ></div>
         <a v-if="update.available && !configObject.cp.hideAdmin" class="update" href="update">
             <span  v-text="update.title"></span>
         </a>
     
         <a  v-for="item in menu" :href="item.disabled ? '#':item.url" :class="{selected:item.id === selected,disabled:item.disabled}">
             <picture v-if="item.icon">
-                <source :srcset="extractImageAddress(item,true)">
-                <source :srcset="extractImageAddress(item)">
-                <img :src="extractImageAddress(item,true)">
+                <source :srcset="CPMenuImageAddress(item,true)">
+                <source :srcset="CPMenuImageAddress(item)">
+                <img :src="CPMenuImageAddress(item,true)">
             </picture>
             <span  v-text="item.title"></span>
         </a>
     
         <a v-if="otherCP.url" :href="otherCP.url" class="other-cp">
             <picture v-if="item.icon">
-                <source :srcset="extractImageAddress(otherCP,true)">
-                <source :srcset="extractImageAddress(otherCP)">
-                <img :src="extractImageAddress(otherCP,true)">
+                <source :srcset="CPMenuImageAddress(otherCP,true)">
+                <source :srcset="CPMenuImageAddress(otherCP)">
+                <img :src="CPMenuImageAddress(otherCP,true)">
             </picture>
             <span v-else="" v-text="otherCP.title"></span>
         </a>

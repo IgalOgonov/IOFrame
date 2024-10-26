@@ -5,7 +5,7 @@ $deleteParams = [
 
 if ($inputs['menus'] !== null) {
 
-    if(!\IOFrame\Util\is_json($inputs['menus'])){
+    if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs['menus'])){
         if($test)
             echo 'menus must be a valid json!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);

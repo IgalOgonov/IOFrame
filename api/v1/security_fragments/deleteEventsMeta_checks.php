@@ -1,6 +1,6 @@
 <?php
 //inputs
-if(!isset($inputs['inputs']) || !\IOFrame\Util\is_json($inputs['inputs'])){
+if(!isset($inputs['inputs']) || !\IOFrame\Util\PureUtilFunctions::is_json($inputs['inputs'])){
     if($test)
         echo 'Inputs must be set and a valid JSON'.EOL;
     exit(INPUT_VALIDATION_FAILURE);

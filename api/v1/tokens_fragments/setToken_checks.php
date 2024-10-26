@@ -7,7 +7,7 @@ if($inputs['token'] === null){
 }
 
 if($inputs['tags'] !== null){
-    if(!\IOFrame\Util\is_json($inputs['tags'])){
+    if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs['tags'])){
         if($test)
             echo 'tags must be a JSON array!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);

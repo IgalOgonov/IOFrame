@@ -1,5 +1,4 @@
 {
   "testOption":{"name":"Test Option","type":"text"},
-  "insertRandomValues":{"name":"Insert 100 Random Value Rows to test table? ","type":"radio","list":{"Yes":1,"No":0},"desc":"Inserts 100 random values into the test table, for testing purposes."},
-  "initializeTestValues":{"name":"[SANDBOX ONLY] Initialize test mode? ","type":"checkbox","list":{"":"initialize"},"desc":"ONLY CHECK THIS IF YOURE A DEVELOPER. Inserts some initial test values into most tables, creates some test files (like test images) in the frontend folders. There is no undoing this!"}
+  "insertRandomValues":{"name":"Insert 100 Random Value Rows to test table? ","optional":true,"type":"radio","list":{"Yes":1,"No":0},"desc":"Inserts 100 random values into the test table, for testing purposes."}
 }

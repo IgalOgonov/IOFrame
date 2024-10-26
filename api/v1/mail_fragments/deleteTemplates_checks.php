@@ -6,9 +6,9 @@ if($inputs['ids'] === null)
 else{
     $inputs['ids'] = json_decode($inputs['ids'],true);
     foreach($inputs['ids'] as $id){
-        if(!filter_var($id,FILTER_VALIDATE_INT)){
+        if(!preg_match('/'.TEMPLATE_ID_REGEX.'/',$id)){
             if($test)
-                echo 'each ID must be an integer!'.EOL;
+                echo 'each ID must be an valid!'.EOL;
             exit(INPUT_VALIDATION_FAILURE);
         }
     }

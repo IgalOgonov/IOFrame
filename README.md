@@ -1,1 +1,1 @@
-A detailed description will be available later at www.ioframe.io
+A detailed description will be available later at www.ioframe.io/docs

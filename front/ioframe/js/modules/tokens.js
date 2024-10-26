@@ -4,7 +4,7 @@ if(eventHub === undefined)
 var tokens = new Vue({
     el: '#tokens',
     name: 'tokens',
-    mixins:[sourceURL,eventHubManager,IOFrameCommons],
+    mixins:[sourceURL,eventHubManager,IOFrameCommons,searchListFilterSaver],
     data(){
         return {
             configObject: JSON.parse(JSON.stringify(document.siteConfig)), 
@@ -159,7 +159,7 @@ var tokens = new Vue({
                 }
             ],
             //SearchList API (and probably the only relevant API) URL
-            url: document.pathToRoot+ 'api/v1/tokens',
+            url: document.ioframe.pathToRoot+ 'api/v1/tokens',
             //Current page
             page:0,
             //Go to page
@@ -194,6 +194,7 @@ var tokens = new Vue({
         this.registerEvent('searchAgain', this.searchAgain);
         this.registerEvent('returnToMainApp', this.returnToMainApp);
         this.registerEvent('deleteItem', this.handleDeleteRequest);
+        this._registerSearchListFilters('search',{}, {startListening:true,registerDefaultEvents:true});
     },
     computed:{
         //Main title TODO
@@ -201,13 +202,10 @@ var tokens = new Vue({
             switch(this.currentMode){
                 case 'search':
                     return 'Browsing Tokens';
-                    break;
                 case 'edit':
-                    return 'Editing User';
-                    break;
+                    return 'Editing Token';
                 case 'create':
                     return '';
-                    break;
                 default:
             }
         },
@@ -228,7 +226,6 @@ var tokens = new Vue({
             switch(this.currentOperation){
                 case 'delete':
                     return 'Delete selected?';
-                    break;
                 default:
                     return '';
             }
@@ -288,7 +285,7 @@ var tokens = new Vue({
         },
         //Goes to relevant page  TODO Remove if no searchlist
         goToPage: function(page){
-            if(!this.initiating && page.from == 'search'){
+            if(!this.initiating && (page.from === 'search')){
                 let newPage;
                 page = page.content;
 
@@ -326,7 +323,7 @@ var tokens = new Vue({
              alertLog('Server error!','error',this.$el);
              break;
              case 0:
-             alertLog('Item deleted!','success',this.$el);
+             alertLog('Item deleted!','success',this.$el,{autoDismiss:2000});
                  this.items.splice(this.selected,1);
              break;
              default:
@@ -369,7 +366,7 @@ var tokens = new Vue({
             if(newMode === 'edit' && this.selected===-1){
                 alertLog('Please select an item before you view/edit it!','warning',this.$el);
                 return;
-            };
+            }
 
             if(newMode==='edit'){
                 switch (this.currentMode) {
@@ -391,10 +388,10 @@ var tokens = new Vue({
                 console.log('Current Operation ', this.currentOperation ,'Current input ',this.operationInput);
 
             let data = new FormData();
-            var test = this.test;
-            var verbose = this.verbose;
-            var currentOperation = this.currentOperation;
-            var thisElement = this.$el;
+            let test = this.test;
+            let verbose = this.verbose;
+            let currentOperation = this.currentOperation;
+            let thisElement = this.$el;
             let operation = '';
 
             if(this.currentMode === 'search'){
@@ -406,7 +403,7 @@ var tokens = new Vue({
                         break;
                     default:
                         break;
-                };
+                }
 
                 if(!operation){
                     if(this.verbose)
@@ -471,10 +468,100 @@ var tokens = new Vue({
             else if(this.currentMode === 'edit'){
                 this.currentMode = 'search';
                 this.selected = -1;
-            };
+            }
             this.operationInput= '';
             this.currentOperation = '';
 
         }
     },
+    template: `
+    <div id="tokens" class="main-app">
+        <div class="loading-cover" v-if="!initiated && currentMode==='search'">
+        </div>
+    
+        <h1 v-if="title!==''" v-text="title"></h1>
+        
+    
+        <div class="modes">
+            <button
+                v-for="(item,index) in modes"
+                v-if="shouldDisplayMode(index)"
+                v-text="item.title"
+                @click="switchModeTo(index)"
+                :class="[{selected:(currentMode===index)},(item.button? item.button : ' positive-3')]"
+            >
+            </button>
+        </div>
+    
+        <div class="operations-container" v-if="currentModeHasOperations">
+            <div class="operations-title" v-text="'Actions'"></div>
+            <div class="operations" v-if="currentOperation===''">
+                <button
+                    v-if="shouldDisplayOperation(index)"
+                    v-for="(item,index) in modes[currentMode].operations"
+                    @click="operation(index)"
+                    :class="[index,{selected:(currentOperation===index)},(item.button? item.button : 'positive-3')]"
+                >
+                    <div v-text="item.title"></div>
+                </button>
+            </div>
+        </div>
+    
+        <div class="operations" v-if="currentModeHasOperations && currentOperation !==''">
+            <label :for="currentOperation" v-text="currentOperationText" v-if="currentOperationText"></label>
+            <input
+                v-if="currentOperationHasInput"
+                :name="currentOperation"
+                :placeholder="currentOperationPlaceholder"
+                v-model:value="operationInput"
+                type="text"
+            >
+            <button
+                :class="(currentOperation === 'delete' ? 'negative-1' : 'positive-1')"
+                @click="confirmOperation">
+                <div v-text="'Confirm'"></div>
+            </button>
+            <button class="cancel-1" @click="cancelOperation">
+                <div v-text="'Cancel'"></div>
+            </button>
+        </div>
+    
+        <div is="search-list"
+             v-if="currentMode==='search'"
+             :api-url="url"
+             api-action="getTokens"
+             :extra-params="extraParams"
+             :current-filters="searchListFilters['search']"
+             :page="page"
+             :limit="limit"
+             :total="total"
+             :items="items"
+             :initiate="!initiated"
+             :columns="columns"
+             :filters="filters"
+             :selected="selected"
+             :test="test"
+             :verbose="verbose"
+             identifier="search"
+        ></div>
+    
+        <div is="tokens-editor"
+             v-if="currentMode==='edit'"
+             mode="update"
+             identifier="editor"
+             
+             :item="items[selected]"
+             :test="test"
+             :verbose="verbose"
+            ></div>
+    
+        <div is="tokens-editor"
+             v-if="currentMode==='create'"
+             mode="create"
+             identifier="creator"
+             :test="test"
+             :verbose="verbose"
+            ></div>
+    </div>
+    `
 });

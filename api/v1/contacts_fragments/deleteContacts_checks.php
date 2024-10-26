@@ -1,5 +1,5 @@
 <?php
-if(!$inputs['identifiers'] || !\IOFrame\Util\is_json($inputs['identifiers'])){
+if(!$inputs['identifiers'] || !\IOFrame\Util\PureUtilFunctions::is_json($inputs['identifiers'])){
     if($test)
         echo 'identifiers must be set, and be a valid JSON!';
     exit(INPUT_VALIDATION_FAILURE);

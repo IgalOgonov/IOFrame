@@ -1,0 +1,10 @@
+{
+	"loadedFromFile1":"File Success 1",
+	"loadedFromFile2":"File Success 2",
+	"loadedFromFileArr":["file-success", 3],
+	"loadWithKFM1":"KFM Success 1",
+	"loadWithFKM1":"FKM Success 1",
+	"wontBeLoadedWithFileBecauseNotPredefined":{
+		"loadWithFKMNested1":"FKM Success Nested 1"
+	}
+}

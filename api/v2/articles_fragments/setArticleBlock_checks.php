@@ -6,7 +6,7 @@ $purifier = new HTMLPurifier($config);
 
 $requiredAuth = REQUIRED_AUTH_OWNER;
 
-if($inputs['safe']){
+if($inputs['safe'] ?? false){
     $requiredAuth = REQUIRED_AUTH_ADMIN;
     $config->set('HTML.AllowedElements', null);
 }
@@ -17,12 +17,7 @@ $setParams = [];
 $setParams['test'] = $test;
 
 if(!$auth->isLoggedIn()){
-    if($test)
-        echo 'Must be logged in to set article blocks!'.EOL;
-    die(json_encode([
-        'error'=>'AuthenticationLoggedIn',
-        'message'=>'Not logged in!'
-    ]));
+    \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON(['error'=>AUTHENTICATION_FAILURE,'message'=>'Must be logged in to set article blocks!'],!$test);
 }
 
 $inputs['type'] = $inputs['create']? substr($APIAction,strlen('post/articles/{id}/block/')) : substr($APIAction,strlen('put/articles/{id}/block/{blockId}/'));
@@ -31,7 +26,7 @@ $params = ['id','orderIndex'];
 
 switch($inputs['type']){
     case 'markdown':
-        array_push($params,'text');
+        array_push($params,'text','highlightCode');
         break;
     case 'image':
     case 'cover':
@@ -60,18 +55,27 @@ if($inputs['create']){
 else{
     $setParams['override'] = true;
     $setParams['update'] = true;
-    array_push($params,'blockId');
+    $params[] = 'blockId';
 }
 
-$purifyParams = ['caption','name','alt','text'];
-$metaParams = $metaMap['blockMeta'];
-foreach($purifyParams as $param)
+$uriEncodedParams = ['text'];
+foreach($uriEncodedParams as $param)
     if(isset($inputs[$param]))
-        $inputs[$param] = $purifier->purify($inputs[$param]);
+        $inputs[$param] = urldecode($inputs[$param]);
+
+if($inputs['safe'] ?? false){
+    $purifyParams = ['caption','name','alt','text'];
+    foreach($purifyParams as $param)
+        if(isset($inputs[$param]))
+            $inputs[$param] = $purifier->purify($inputs[$param]);
+}
+
+$metaParams = $metaMap['blockMeta'];
 
 foreach($params as $param){
     if(isset($inputs[$param])){
         switch($param){
+            case 'highlightCode':
             case 'autoplay':
             case 'controls':
             case 'mute':
@@ -108,3 +112,4 @@ foreach($params as $param){
 
 if(isset($cleanInputs['Meta']))
     $cleanInputs['Meta'] = json_encode($cleanInputs['Meta']);
+

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>%%ERROR_CODE%% %%ERROR_MSG_MAIN%%</title>
+    <style>
+        body{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+        body > .notice{
+            display: flex;
+            flex-direction: column;
+            margin: 10px;
+            max-width: 600px;
+            border: 1px solid rgba(%%CSS_BASE_RGB%%,0.3);
+            border-radius: 10px;
+        }
+        body > .notice > *:first-child {
+            border-radius: 10px 10px 0px 0px;
+        }
+        body > .notice > *:last-child {
+            border-radius: 0px 0px 10px 10px;
+        }
+        body > .notice > * {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        body > .notice > .header > .separator {
+            margin: 0px 3px;
+        }
+        body > .notice > h1{
+            background: rgba(%%CSS_BASE_RGB%%,0.2);
+            padding: 5px 10px;
+            margin: 0;
+        }
+        body > .notice > p{
+            background: rgba(%%CSS_BASE_RGB%%,0.1);
+            padding: 10px 5px;
+            margin: 0;
+        }
+        body > .notice > p.time{
+            display: flex;
+            justify-content: space-between;
+        }
+        body > .notice > p.time > .title{
+            font-weight: 800;
+        }
+    </style>
+</head>
+<body>
+<div class="notice">
+    <h1 class="header">%%IF(ERROR_IN_MSG)<span class="error">Error %%ERROR_CODE%%</span> <span class="separator">-</span>%% <span class="msg-main">%%ERROR_MSG_MAIN%%</span></h1>
+    %%IF(ERROR_MSG_SUB_EXISTS)
+    <p class="msg-sub">%%ERROR_MSG_SUB%%</p>
+    %%
+    %%IF(START_EXP_EXISTS)
+    <p class="msg-sub time start"><span class="title">Start:</span> <span class="time">%%START_EXP%%</span></p>
+    %%
+    %%IF(ETA_EXP_EXISTS)
+    <p class="msg-sub time eta"><span class="title">ETA:</span> <span class="time">%%ETA_EXP%%</span></p>
+    %%
+</div>
+</body>
+</html>

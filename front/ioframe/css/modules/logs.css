@@ -1,0 +1,57 @@
+/* Log View */
+#logs .log-view {
+    position: fixed;
+    z-index: 1;
+    bottom: 10px;
+    width: calc(100% - 20px);
+    max-width: 400px;
+    padding: 10px;
+    background: var(--main-color-3);
+    border: var(--main-color-8) 1px solid;
+}
+#logs .log-view > div {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--main-color-8);
+}
+#logs .log-view > div:last-child{
+    border-bottom: none;
+}
+
+/* Logs Chart */
+#logs .logs-chart .intervals {
+    display: flex;
+    justify-content: start;
+    align-items: center;
+}
+#logs .logs-chart .intervals > select {
+    margin: 0px 3px;
+    text-align: center;
+}
+#logs .logs-chart canvas {
+    max-width: 1200px;
+    max-height: 600px;
+}
+
+@media (max-width: 800px) {
+    
+    /*All search lists*/
+    #logs .search-list .search-titles {
+        display: none;
+    }
+    #logs .search-list .search-item {
+        flex-direction: column;
+        max-width: calc(100vw - 30px);
+    }
+    #logs .search-list .search-item .search-item-title {
+        display: inherit !important;
+        padding: 0px 3px;
+        background: var(--shadow-dark-1);
+    }
+    /* Log View */
+    #logs .log-view {
+        left: 10px;
+        width: calc(100vw - 40px);
+        max-width: initial;
+    }
+}

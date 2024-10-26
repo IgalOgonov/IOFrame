@@ -1,0 +1,84 @@
+#language-objects[dir="rtl"]{
+    text-align: right;
+}
+/* Inputs */
+#language-objects .operations .input-container{
+    width: 100%;
+    display: grid;
+    align-items: center;
+    grid-auto-columns: 170px 1fr auto;
+    justify-items: baseline;
+}
+#language-objects .operations .input-container > label {
+    grid-column: 1;
+    font-size: 1.5em;
+    font-weight: 800;
+}
+#language-objects .operations .input-container > * {
+    grid-column: 2;
+}
+#language-objects .operations .input-container.required label::after {
+    content: '*';
+    display: inline-block;
+    color: var(--button-negative-color-1);
+}
+#language-objects .operations input,
+#language-objects .operations select{
+    margin: 10px;
+    font-size: 1.5em;
+}
+
+/*Attribute List*/
+#language-objects .operations .language-objects-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+#language-objects .operations .language-objects-list > div {
+    display: inline-flex;
+    flex-wrap: wrap;
+    margin: 10px 0px;
+    font-size: 1.25em;
+}
+#language-objects .operations .language-objects-list > div > span{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0px 5px;
+}
+#language-objects .operations .language-objects-list > div > span > span {
+    margin: 0px 5px;
+}
+#language-objects .operations .language-objects-list > div > span > h5 {
+    background: rgba(0,0,0,0.1);
+    padding: 0px 3px;
+}
+#language-objects .operations .language-objects-list button {
+    margin: 0px 5px;
+    padding: 5px 10px;
+    font-weight: 800;
+}
+
+/* Search List */
+#language-objects .search-list .search-results > * > :first-child {
+    flex: 5;
+    font-weight: 800;
+}
+#language-objects .search-list .search-results > * > * {
+    min-width: 150px;
+}
+#language-objects .search-list .search-item {
+    transition: 0.5s;
+}
+#language-objects .search-list .search-item:hover,
+#language-objects .search-list .search-item.selected {
+    background: var(--main-color-3);
+}
+#language-objects .search-list .search-results > .search-titles {
+    font-size: 1.125em;
+    background: none;
+}
+#language-objects .search-list .search-item .search-item-property.created,
+#language-objects .search-list .search-item .search-item-property.updated{
+    direction: ltr;
+}

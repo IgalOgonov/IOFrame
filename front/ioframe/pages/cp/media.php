@@ -7,10 +7,16 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot.'headers_sta
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'cp_redirect_to_login.php';
 
-array_push($JS,'mixins/sourceUrl.js','mixins/eventHubManager.js','components/media/editImage.js','components/media/uploadImage.js',
-    'components/media/mediaViewer.js','components/searchList.js','modules/CPMenu.js','modules/media.js');
-
-array_push($CSS,'animations.css','cp.css','components/searchList.css','components/media/mediaViewer.css','modules/CPMenu.css','modules/media.css');
+array_push($CSS,'animations.css','cp.css','components/searchList.css','modules/CPMenu.css','modules/media.css');
+array_push($JS,'mixins/sourceUrl.js','mixins/searchListFilterSaver.js','components/searchList.js','modules/CPMenu.js');
+$CSSPackages['CPMediaCSS'] = [
+    'items'=>[ 'components/media/mediaViewer.css','modules/media.css'],
+    'order'=>-1
+];
+$JSPackages['CPMediaJS'] = [
+    'items'=>[ 'components/media/editImage.js','components/media/uploadImage.js', 'components/media/mediaViewer.js','modules/media.js'],
+    'order'=>-1
+];
 
 require $settings->getSetting('absPathToRoot') . $IOFrameTemplateRoot. 'headers_get_resources.php';
 
@@ -27,7 +33,7 @@ $siteConfig = array_merge($siteConfig,
             'title' => 'Media'
         ],
         'media'=> [
-            'local' => (!isset($_REQUEST['local']) || $_REQUEST['local'])? true : false
+            'local' => !isset($_REQUEST['local']) || $_REQUEST['local']
         ]
     ]);
 ?>
@@ -57,5 +63,3 @@ require $settings->getSetting('absPathToRoot') . $IOFrameTemplateRoot. 'footers_
 $frontEndResourceTemplateManager->printResources('JS');
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot. 'footers_end.php';
-
-?>

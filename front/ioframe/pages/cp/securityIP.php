@@ -7,10 +7,16 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_s
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'cp_redirect_to_login.php';
 
-array_push($CSS, 'cp.css', 'components/searchList.css', 'components/security/securityIPsEditor.css',
-    'components/security/securityIPRangesEditor.css','modules/securityIP.css', 'modules/CPMenu.css');
-array_push($JS, 'mixins/sourceUrl.js', 'mixins/eventHubManager.js', 'components/searchList.js','components/security/securityIPsEditor.js',
-    'components/security/securityIPRangesEditor.js','modules/CPMenu.js', 'modules/securityIP.js');
+array_push($CSS, 'cp.css', 'components/searchList.css', 'modules/CPMenu.css');
+array_push($JS, 'mixins/sourceUrl.js', 'mixins/searchListFilterSaver.js', 'components/searchList.js','modules/CPMenu.js');
+$CSSPackages['CPSecurityIPCSS'] = [
+    'items'=>[ 'components/security/securityIPsEditor.css', 'components/security/securityIPRangesEditor.css','modules/securityIP.css'],
+    'order'=>-1
+];
+$JSPackages['CPSecurityIPJS'] = [
+    'items'=>[ 'components/security/securityIPsEditor.js','components/security/securityIPRangesEditor.js','modules/securityIP.js'],
+    'order'=>-1
+];
 
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_get_resources.php';
@@ -59,5 +65,3 @@ $frontEndResourceTemplateManager->printResources('JS');
 
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'footers_end.php';
-
-?>

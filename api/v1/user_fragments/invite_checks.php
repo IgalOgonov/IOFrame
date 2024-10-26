@@ -38,7 +38,7 @@ if($inputs['tokenTTL']!== null && !filter_var($inputs['tokenTTL'],FILTER_VALIDAT
 
 //extraTemplateArguments
 if($inputs['extraTemplateArguments']!== null){
-    if(!\IOFrame\Util\is_json($inputs['extraTemplateArguments'])){
+    if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs['extraTemplateArguments'])){
         if($test)
             echo 'extraTemplateArguments must be a valid JSON!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);

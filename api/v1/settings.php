@@ -5,8 +5,8 @@
  *
  * Parameters:
  * "target"     - Identifier  of the setting file/table
- * "action"     - Requested action - described bellow
- * "params"     - Parameters, depending on action - described bellow
+ * "action"     - Requested action - described below
+ * "params"     - Parameters, depending on action - described below
  *_________________________________________________
  * getSettingsMeta
  *      Gets all available setting collections. Note that this only includes those which were registered -
@@ -68,8 +68,8 @@
  *          target=siteSettings&action=unsetSetting&params={"settingName":"maxInacTime"}
  * */
 
-if(!defined('coreInit'))
-    require __DIR__ . '/../../main/coreInit.php';
+if(!defined('IOFrameMainCoreInit'))
+    require __DIR__ . '/../../main/core_init.php';
 
 require __DIR__ . '/../apiSettingsChecks.php';
 require __DIR__ . '/../defaultInputChecks.php';
@@ -85,13 +85,11 @@ if(!isset($_REQUEST["target"]) && $_REQUEST["action"] !== 'getSettingsMeta')
 if($test)
     echo 'Testing mode!'.EOL;
 
-$target = isset($_REQUEST["target"])? $_REQUEST["target"] : '';
+$target = $_REQUEST["target"] ?? '';
 
-if(!isset($_REQUEST["action"]))
-    exit('Action not specified!');
 $action = $_REQUEST["action"];
 
-if(!checkApiEnabled('settings',$apiSettings,$_REQUEST['action']))
+if(!checkApiEnabled('settings',$apiSettings,$SecurityHandler,$_REQUEST['action']))
     exit(API_DISABLED);
 
 if(isset($_REQUEST['params']))
@@ -120,7 +118,7 @@ switch($action){
         break;
 
     case 'setSetting':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
         require 'settings_fragments/set_auth.php';
         require 'settings_fragments/set_checks.php';
@@ -130,7 +128,7 @@ switch($action){
         break;
 
     case 'unsetSetting':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
         require 'settings_fragments/unset_auth.php';
         require 'settings_fragments/unset_checks.php';
@@ -142,6 +140,3 @@ switch($action){
     default:
         exit('Specified action is not recognized');
 }
-
-
-?>

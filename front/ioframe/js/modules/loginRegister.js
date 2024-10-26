@@ -8,7 +8,7 @@ var loginRegister = new Vue({
     data(){
         return {
             configObject: JSON.parse(JSON.stringify(document.siteConfig)),
-            loggedIn: document.loggedIn,
+            loggedIn: document.ioframe.loggedIn,
             //Modes, and array of available operations in each mode
             modes: {
                 login:{
@@ -110,6 +110,9 @@ var loginRegister = new Vue({
                 case '8':
                     responseBody = 'System does not support chosen 2FA method!';
                     break;
+                case '9':
+                    responseBody = 'User is both suspicious and banned, so 2FA is not allowed. If this persists, change your password.';
+                    break;
                 default:
             }
             alertLog(responseBody, responseType);
@@ -117,6 +120,7 @@ var loginRegister = new Vue({
         parseRegistrationResponse: function(response){
             let responseBody = response.body;
             let responseType = response.type;
+            let alertOptions = {};
             /*This will display messages that the API could return
              **/
             switch(responseBody){
@@ -131,6 +135,7 @@ var loginRegister = new Vue({
                     break;
                 case '0':
                     responseBody = 'User created successfully!';
+                    alertOptions = {autoDismiss:2000};
                     break;
                 case '1':
                     responseBody = 'User creation failed - username already in use!';
@@ -143,7 +148,7 @@ var loginRegister = new Vue({
                     break;
                 default:
             }
-            alertLog(responseBody, responseType);
+            alertLog(responseBody, responseType, document.body, alertOptions);
         }
     },
     template:`

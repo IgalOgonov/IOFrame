@@ -7,11 +7,19 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_s
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'cp_redirect_to_login.php';
 
-array_push($CSS, 'cp.css', 'components/searchList.css', 'components/menus/menusEditor.css', 'modules/menus.css', 'modules/CPMenu.css');
-array_push($JS, 'mixins/sourceUrl.js', 'mixins/eventHubManager.js', 'components/searchList.js', 'components/menus/menusEditor.js', 'modules/CPMenu.js', 'modules/menus.js');
-
+array_push($CSS, 'cp.css', 'components/searchList.css', 'modules/CPMenu.css');
+array_push($JS, 'mixins/sourceUrl.js', 'components/searchList.js', 'modules/CPMenu.js' );
+$CSSPackages['CPMenusCSS'] = [
+    'items'=>[ 'components/menus/menusEditor.css', 'modules/menus.css'],
+    'order'=>-1
+];
+$JSPackages['CPMenusJS'] = [
+    'items'=>[ 'components/menus/menusEditor.js', 'modules/menus.js'],
+    'order'=>-1
+];
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_get_resources.php';
+require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_load_languages.php';
 
 echo '<title>Menus</title>';
 
@@ -55,5 +63,3 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'footers_s
 $frontEndResourceTemplateManager->printResources('JS');
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'footers_end.php';
-
-?>

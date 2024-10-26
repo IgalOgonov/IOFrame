@@ -339,7 +339,7 @@ var CryptoJS = CryptoJS || (function (Math, undefined) {
             // Convert
             var words = [];
             for (var i = 0; i < hexStrLength; i += 2) {
-                words[i >>> 3] |= parseInt(hexStr.substr(i, 2), 16) << (24 - (i % 8) * 4);
+                words[i >>> 3] |= parseInt(hexStr.substring(i, 2), 16) << (24 - (i % 8) * 4);
             }
 
             return new WordArray.init(words, hexStrLength / 2);
@@ -651,9 +651,7 @@ var CryptoJS = CryptoJS || (function (Math, undefined) {
             }
 
             // Perform concrete-hasher logic
-            var hash = this._doFinalize();
-
-            return hash;
+            return this._doFinalize();
         },
 
         blockSize: 512/32,

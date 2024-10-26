@@ -5,23 +5,21 @@ $purifier = new HTMLPurifier($config);
 
 $requiredAuth = REQUIRED_AUTH_OWNER;
 
-if($inputs['safe']){
+if($inputs['safe']??false){
     $requiredAuth = REQUIRED_AUTH_ADMIN;
     $config->set('HTML.AllowedElements', null);
 }
-var_dump($requiredAuth);
+
 $cleanInputs = [];
 
 $setParams['test'] = $test;
 
 if(!$auth->isLoggedIn()){
-    if($test)
-        echo 'Must be logged in to set articles!'.EOL;
-    exit(AUTHENTICATION_FAILURE);
+    \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON(['error'=>AUTHENTICATION_FAILURE,'message'=>'Must be logged in to set articles!'],!$test);
 }
 
 $requiredParams = [];
-$optionalParams = ['auth','address','subtitle','caption','alt','name','resourceAddressLocal','resourceAddressDB','resourceAddressURI','blockOrder','weight','language','title'];
+$optionalParams = ['articleAuth','address','subtitle','caption','alt','name','resourceAddressLocal','resourceAddressDB','resourceAddressURI','blockOrder','weight','language','title'];
 $metaParams = ['subtitle','caption','alt','name'];
 $canBeNullParams = array_merge($metaParams,['language']);
 
@@ -39,23 +37,28 @@ else{
 
 $purifyParams = ['title','subtitle','caption','name','alt'];
 foreach($purifyParams as $param)
-    if(isset($inputs[$param]))
+    if(isset($inputs[$param])){
         $inputs[$param] = $purifier->purify($inputs[$param]);
+        //Even if the HTML Characters are safe, single quotes must always be encoded, as they break the query
+        $inputs[$param] = str_replace("'","&#039;",$inputs[$param]);
+    }
 
 
 foreach($optionalParams as $param){
 
     if(isset($inputs[$param]) && !(in_array($param,$canBeNullParams) && ($inputs[$param] === '@')) ){
         switch($param){
-            case 'auth':
+            case 'articleAuth':
             case 'weight':
-                if( ($param === 'auth' && $param > 2) || ($param === 'weight' && $param > 0)){
+                if( ($param === 'articleAuth' && $param > 2) || ($param === 'weight' && $param > 0)){
                     $requiredAuth = REQUIRED_AUTH_ADMIN;
                 }
                 break;
+            case 'blockOrder':
+                $inputs[$param] = implode(',',$inputs[$param]);
         }
         if(!in_array($param,$metaParams)){
-            $targetParam = in_array($param,['resourceAddressLocal','resourceAddressDB','resourceAddressURI'])? 'thumbnailAddress' : $articleSetColumnMap[$param] ;
+            $targetParam = in_array($param,['resourceAddressLocal','resourceAddressDB','resourceAddressURI'])? 'Thumbnail_Address' : $articleSetColumnMap[$param] ;
             $cleanInputs[$targetParam] = $inputs[$param];
         }
         else{
@@ -71,8 +74,8 @@ foreach($optionalParams as $param){
         $address = explode('-',$address);
         $temp = [];
         foreach($address as $index => $subAddr){
-            if(preg_match('/^[a-zA-Z0-9\_]+$/',$address[$index]))
-                array_push($temp,substr($subAddr,0,24));
+            if(preg_match('/^[a-zA-Z0-9\_]+$/', $subAddr))
+                $temp[] = substr($subAddr, 0, 24);
         }
         $address = $temp;
         $time = date('d-m-Y');

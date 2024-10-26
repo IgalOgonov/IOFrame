@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('security-ips-editor', {
     mixins: [sourceURL,eventHubManager,IOFrameCommons],
     props: {
@@ -111,16 +108,13 @@ Vue.component('security-ips-editor', {
                     onUpdate:{
                         setName:'ip',
                         validate: function(value){
-                            if(this.mode === 'update')
-                                return true;
-                            else
-                                return value.match(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/);
+                            return value.match(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/);
                         },
                         parse: function(ip){
                             ip = ip.split('.');
                             for(let i in ip){
                                 while(ip[i] !== '0' && ip[i][0] === '0'){
-                                    ip[i] = ip[i].substr(1);
+                                    ip[i] = ip[i].substring(1);
                                 }
                             }
                             return ip.join('.');
@@ -403,7 +397,7 @@ Vue.component('security-ips-editor', {
                     alertLog('IP was not '+(this.mode === 'create'? 'created - server error, or already exists!' : 'updated - server error, or no longer exists!'),'error',this.$el);
                     break;
                 case 1:
-                    alertLog('IP '+(this.mode === 'create'? 'created' : 'updated')+'!','success',this.$el);
+                    alertLog('IP '+(this.mode === 'create'? 'created' : 'updated')+'!','success',this.$el,{autoDismiss:2000});
                     if(this.mode === 'update')
                         this.setInputsAsCurrent();
                     eventHub.$emit('searchAgain');

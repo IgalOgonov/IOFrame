@@ -1,12 +1,7 @@
 <?php
-if(!defined('UploadHandler'))
-    require __DIR__ . '/../../../IOFrame/Handlers/UploadHandler.php';
-if(!defined('FrontEndResourceHandler'))
-    require __DIR__ . '/../../../IOFrame/Handlers/FrontEndResourceHandler.php';
 
 //Handlers
-$UploadHandler = new \IOFrame\Handlers\UploadHandler($settings,$defaultSettingsParams);
-$FrontEndResourceHandler = new IOFrame\Handlers\FrontEndResourceHandler($settings,$defaultSettingsParams);
+$FrontEndResources = new \IOFrame\Handlers\Extenders\FrontEndResources($settings,$defaultSettingsParams);
 
 $uploadNames = [];
 foreach($inputs['items'] as $uploadName => $item){
@@ -14,22 +9,23 @@ foreach($inputs['items'] as $uploadName => $item){
         $result[$uploadName] = $item['filename'];
     }
     elseif(isset($item['filename']))
-        array_push($uploadNames,['uploadName'=>$uploadName,'requestedName'=>$item['filename']]);
+        $uploadNames[] = ['uploadName' => $uploadName, 'requestedName' => $item['filename']];
     else
-        array_push($uploadNames,['uploadName'=>$uploadName]);
+        $uploadNames[] = ['uploadName' => $uploadName];
 }
 
 if($inputs['type'] !== 'link')
-    $result = $UploadHandler->handleUploadedFile(
+    $result = \IOFrame\Util\UploadFunctions::handleUploadedFile(
         $uploadNames,
         [
+            'absPathToRoot'=> $settings->getSetting('absPathToRoot'),
+            'maxFileSize' => $siteSettings->getSetting('maxUploadSize'),
             'resourceOpMode'=> ($inputs['type'] === 'local' ? 'local' : 'data'),
             'test'=>$test,
             'verbose'=>$test,
             'overwrite'=>$inputs['overwrite'] && !$test,
             'imageQualityPercentage'=>$inputs['imageQualityPercentage'],
             'resourceTargetPath'=>$resourceSettings->getSetting(($inputs['category'] === 'img' ? 'imagePathLocal' : 'videoPathLocal')).$inputs['address'],
-            'maxFileSize' => $siteSettings->getSetting('maxUploadSize'),
         ]);
 
 $mediaToUpdate = [];
@@ -79,12 +75,12 @@ foreach($result as $uploadName => $res){
         //Meta information
         $expected = ['name','caption','size'];
         if($inputs['category'] === 'img')
-            array_push($expected,'alt');
+            $expected[] = 'alt';
         else
             array_push($expected,'autoplay','loop','mute','controls','poster','preload');
         foreach($languages as $lang){
-            array_push($expected,$lang.'_name');
-            array_push($expected,$lang.'_caption');
+            $expected[] = $lang . '_name';
+            $expected[] = $lang . '_caption';
         }
         $anythingNotNull = false;
         foreach($expected as $attr){
@@ -103,17 +99,14 @@ foreach($result as $uploadName => $res){
         else
             $meta = null;
         //Add resources to be updated
-        array_push(
-            $mediaToUpdate,
-            [
-                'address'=>$DBName,
-                'local'=>$inputs['type'] === 'local',
-                'minified'=>false,
-                'text'=>$meta,
-                'blob'=>($inputs['type'] === 'db'? $res['data'] : null),
-                'dataType'=>($inputs['type'] === 'db'? $res['type'] : null),
-            ]
-        );
+        $mediaToUpdate[] = [
+            'address' => $DBName,
+            'local' => $inputs['type'] === 'local',
+            'minified' => false,
+            'text' => $meta,
+            'blob' => ($inputs['type'] === 'db' ? $res['data'] : null),
+            'dataType' => ($inputs['type'] === 'db' ? $res['type'] : null),
+        ];
     }
 
 }
@@ -121,7 +114,7 @@ foreach($result as $uploadName => $res){
 //Update the resources
 $updateDB = [];
 if($mediaToUpdate != [])
-    $updateDB =  $FrontEndResourceHandler->setResources(
+    $updateDB =  $FrontEndResources->setResources(
         $mediaToUpdate,
         $inputs['category'],
         ['test'=>$test]
@@ -138,10 +131,7 @@ foreach($updateDB as $DBName => $resultCode){
             unset($deleteLocalFiles[$dbToUploadMap[$DBName]]);
         //Add each image to gallery, if requested
         if($inputs['gallery'] !== null){
-            array_push(
-                $mediaToAddToGallery,
-                $DBName
-            );
+            $mediaToAddToGallery[] = $DBName;
         }
         //If we were uploading to the db, change the horrible result array into a simple code
         if($inputs['type'] === 'db')
@@ -160,13 +150,13 @@ foreach($updateDB as $DBName => $resultCode){
 if($mediaToAddToGallery != []){
     $updateDB = (
     $inputs['category'] === 'img'?
-        $FrontEndResourceHandler->addImagesToGallery(
+        $FrontEndResources->addImagesToGallery(
         $mediaToAddToGallery,
         $inputs['gallery'],
         ['test'=>$test,]
         )
         :
-        $FrontEndResourceHandler->addVideosToVideoGallery(
+        $FrontEndResources->addVideosToVideoGallery(
             $mediaToAddToGallery,
             $inputs['gallery'],
             ['test'=>$test,]

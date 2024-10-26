@@ -1,7 +1,5 @@
 <?php
-if(!defined('MenuHandler'))
-    require __DIR__ . '/../../../IOFrame/Handlers/MenuHandler.php';
-$MenuHandler = new IOFrame\Handlers\MenuHandler($settings,$defaultSettingsParams);
+$MenuHandler = new \IOFrame\Handlers\MenuHandler($settings,$defaultSettingsParams);
 
 $result = $MenuHandler->getItems(
     [],
@@ -44,14 +42,14 @@ if(is_array($result))
                                 $resValue = (double)$resValue;
                                 break;
                             case 'json':
-                                if(!\IOFrame\Util\is_json($resValue))
+                                if(!\IOFrame\Util\PureUtilFunctions::is_json($resValue))
                                     break;
                                 else
                                     $resValue = json_decode($resValue,true);
                                 if(!empty($resultsColumnMap[$resKey]['validChildren'])){
                                     $tempRes = [];
                                     foreach($resultsColumnMap[$resKey]['validChildren'] as $validChild){
-                                        $tempRes[$validChild] = isset($resValue[$validChild])? $resValue[$validChild] : null;
+                                        $tempRes[$validChild] = $resValue[$validChild] ?? null;
                                     }
                                     $resValue = $tempRes;
                                 }

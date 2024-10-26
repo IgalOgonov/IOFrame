@@ -1,6 +1,6 @@
 <?php
 if($inputs['tokens'] !== null){
-    if(!\IOFrame\Util\is_json($inputs['tokens'])){
+    if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs['tokens'])){
         if($test)
             echo 'tokens must be a valid JSON!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);
@@ -47,7 +47,7 @@ else
     $inputs['limit'] = max(min($inputs['limit'],500),1);
 
 if($inputs['containsTags'] !== null){
-    if(!\IOFrame\Util\is_json($inputs['containsTags'])){
+    if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs['containsTags'])){
         if($test)
             echo 'containsTags must be a JSON array!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);

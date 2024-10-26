@@ -5,7 +5,7 @@ $retrieveParams = [
 
 //specific IDs
 if($inputs['ids'] !== null){
-    if(!\IOFrame\Util\is_json($inputs['ids'])){
+    if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs['ids'])){
         if($test)
             echo 'ids must be a valid JSON array!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);

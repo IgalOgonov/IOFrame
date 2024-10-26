@@ -1,6 +1,5 @@
 <?php
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 require_once $settings->getSetting('absPathToRoot').'vendor/autoload.php';
 
 $config = HTMLPurifier_Config::createDefault();
@@ -30,7 +29,7 @@ else
 
 //Items
 if($inputs['items'] !== null){
-    if(!\IOFrame\Util\is_json($inputs['items'])){
+    if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs['items'])){
         if($test)
             echo 'items must be a json array, or unset!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);
@@ -47,10 +46,10 @@ foreach($inputs['items'] as $uploadName => $itemArray){
     $captionArr = ['caption'];
 
     foreach($languages as $lang){
-        array_push($nameArr,$lang.'_name');
-        array_push($captionArr,$lang.'_caption');
-        array_push($purifyArr,$lang.'_name');
-        array_push($purifyArr,$lang.'_caption');
+        $nameArr[] = $lang . '_name';
+        $captionArr[] = $lang . '_caption';
+        $purifyArr[] = $lang . '_name';
+        $purifyArr[] = $lang . '_caption';
     }
 
     foreach($purifyArr as $param){
@@ -81,7 +80,7 @@ foreach($inputs['items'] as $uploadName => $itemArray){
             }
         }
 
-        if( !( $auth->hasAction(IMAGE_FILENAME_AUTH) || $auth->isAuthorized(0) ) ){
+        if( !( $auth->hasAction(IMAGE_FILENAME_AUTH) || $auth->isAuthorized() ) ){
             if($test)
                 echo 'Cannot upload media with specific filename!'.EOL;
             exit(AUTHENTICATION_FAILURE);
@@ -102,7 +101,7 @@ foreach($inputs['items'] as $uploadName => $itemArray){
                 exit(INPUT_VALIDATION_FAILURE);
             }
 
-            if( !( $auth->hasAction(IMAGE_NAME_AUTH) || $auth->hasAction(IMAGE_UPDATE_AUTH) || $auth->isAuthorized(0) ) ){
+            if( !( $auth->hasAction(IMAGE_NAME_AUTH) || $auth->hasAction(IMAGE_UPDATE_AUTH) || $auth->isAuthorized() ) ){
                 if($test)
                     echo 'Cannot upload media with specific name!'.EOL;
                 exit(AUTHENTICATION_FAILURE);
@@ -120,7 +119,7 @@ foreach($inputs['items'] as $uploadName => $itemArray){
                 exit(INPUT_VALIDATION_FAILURE);
             }
 
-            if( !( $auth->hasAction(IMAGE_CAPTION_AUTH) || $auth->hasAction(IMAGE_UPDATE_AUTH) || $auth->isAuthorized(0) ) ){
+            if( !( $auth->hasAction(IMAGE_CAPTION_AUTH) || $auth->hasAction(IMAGE_UPDATE_AUTH) || $auth->isAuthorized() ) ){
                 if($test)
                     echo 'Cannot upload media with specific captions!'.EOL;
                 exit(AUTHENTICATION_FAILURE);
@@ -138,7 +137,7 @@ foreach($inputs['items'] as $uploadName => $itemArray){
                 exit(INPUT_VALIDATION_FAILURE);
             }
 
-            if( !( $auth->hasAction(IMAGE_ALT_AUTH) || $auth->hasAction(IMAGE_UPDATE_AUTH) || $auth->isAuthorized(0) ) ){
+            if( !( $auth->hasAction(IMAGE_ALT_AUTH) || $auth->hasAction(IMAGE_UPDATE_AUTH) || $auth->isAuthorized() ) ){
                 if($test)
                     echo 'Cannot upload media with specific alt tags!'.EOL;
                 exit(AUTHENTICATION_FAILURE);
@@ -180,7 +179,7 @@ if($inputs['type'] !== 'link'){
     if($inputs['address'] === null)
         $inputs['address'] = '';
 
-    if(!\IOFrame\Util\validator::validateRelativeDirectoryPath($inputs['address'])){
+    if(!\IOFrame\Util\ValidatorFunctions::validateRelativeDirectoryPath($inputs['address'])){
         if($test)
             echo 'Invalid address name for media upload!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);
@@ -203,7 +202,7 @@ if($inputs['type'] !== 'link'){
 if($inputs['overwrite'] === null)
     $inputs['overwrite'] = false;
 else{
-    if( !( $auth->hasAction(IMAGE_OVERWRITE_AUTH) || $auth->hasAction(IMAGE_UPDATE_AUTH) || $auth->isAuthorized(0) ) ){
+    if( !( $auth->hasAction(IMAGE_OVERWRITE_AUTH) || $auth->hasAction(IMAGE_UPDATE_AUTH) || $auth->isAuthorized() ) ){
         if($test)
             echo 'Cannot overwrite media!'.EOL;
         exit(AUTHENTICATION_FAILURE);
@@ -225,7 +224,8 @@ if($inputs['gallery'] !== null){
 //Files
 if($inputs['type'] !== 'link' && is_array($_FILES))
     foreach($_FILES as $name=>$fileArray){
-        $extension = @array_pop(explode('.',$fileArray['name'])); //Yes I know only variables should be passed by reference stfu
+        $array = explode('.', $fileArray['name']);
+        $extension = @array_pop($array); //Yes I know only variables should be passed by reference stfu
         if(
             ($inputs['category'] === 'img' && !in_array($extension,ALLOWED_EXTENSIONS_IMAGES)) ||
             ($inputs['category'] === 'vid' && !in_array($extension,ALLOWED_EXTENSIONS_VIDEO))

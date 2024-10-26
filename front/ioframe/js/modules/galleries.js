@@ -7,7 +7,7 @@ if(eventHub === undefined)
 var galleries = new Vue({
     el: '#galleries',
     name: 'Galleries',
-    mixins:[sourceURL],
+    mixins:[eventHubManager,IOFrameCommons,eventHubManager,sourceURL,searchListFilterSaver],
     data: {
         configObject: JSON.parse(JSON.stringify(document.siteConfig)),
         //Modes, and array of available operations in each mode
@@ -124,8 +124,8 @@ var galleries = new Vue({
                 title:'Gallery Name',
                 custom:true,
                 parser:function(item){
-                    if(document.selectedLanguage && (item[document.selectedLanguage+'_name'] !== undefined) )
-                        return item[document.selectedLanguage+'_name'];
+                    if(document.ioframe.selectedLanguage && (item[document.ioframe.selectedLanguage+'_name'] !== undefined) )
+                        return item[document.ioframe.selectedLanguage+'_name'];
                     return item.identifier;
                 }
             },
@@ -134,7 +134,7 @@ var galleries = new Vue({
                 title:'Other Names?',
                 custom:true,
                 parser:function(item){
-                    let possibleNames = JSON.parse(JSON.stringify(document.languages));
+                    let possibleNames = JSON.parse(JSON.stringify(document.ioframe.languages));
                     possibleNames =possibleNames.map(function(x) {
                         return x+'_name';
                     });
@@ -244,7 +244,7 @@ var galleries = new Vue({
                     custom:true,
                     title:'Image',
                     parser:function(item){
-                        let src = item.dataType? (document.rootURI+'api/media?action=getDBMedia&address='+item.identifier+'&lastChanged='+item.lastChanged) : item.identifier;
+                        let src = item.dataType? (document.ioframe.rootURI+'api/media?action=getDBMedia&address='+item.identifier+'&lastChanged='+item.lastChanged) : item.identifier;
                         return '<img src="'+src+'">';
                     }
                 },
@@ -294,7 +294,7 @@ var galleries = new Vue({
                     }
                 }
             },
-            url: document.rootURI + 'api/media'
+            url: document.ioframe.rootURI + 'api/media'
         },
         //Members of currently selected gallery
         galleryMembers: [],
@@ -328,18 +328,21 @@ var galleries = new Vue({
         test:false
     },
     created:function(){
-        eventHub.$on('searchResults',this.parseSearchResults);
-        eventHub.$on('parseGallery',this.parseGalleryResponse);
-        eventHub.$on('requestSelection',this.selectElement);
-        eventHub.$on('requestSelectionGallery',this.selectGalleryElement);
-        eventHub.$on('goToPage',this.goToPage);
-        eventHub.$on('viewElementsUpdated', this.updateSecondView);
-        eventHub.$on('changeURLRequest', this.changeViewURL);
-        eventHub.$on('resetEditorView', this.resetEditorView);
-        eventHub.$on('select', this.selectElement);
-        eventHub.$on('drop', this.moveGalleryElement);
-        eventHub.$on('resizeImages',this.resizeImages);
-        eventHub.$on('searchAgain', this.searchAgain);
+        this.registerHub(eventHub);
+
+        this.registerEvent('searchResults',this.parseSearchResults);
+        this.registerEvent('parseGallery',this.parseGalleryResponse);
+        this.registerEvent('requestSelection',this.selectElement);
+        this.registerEvent('requestSelectionGallery',this.selectGalleryElement);
+        this.registerEvent('goToPage',this.goToPage);
+        this.registerEvent('viewElementsUpdated', this.updateSecondView);
+        this.registerEvent('changeURLRequest', this.changeViewURL);
+        this.registerEvent('resetEditorView', this.resetEditorView);
+        this.registerEvent('select', this.selectElement);
+        this.registerEvent('drop', this.moveGalleryElement);
+        this.registerEvent('resizeImages',this.resizeImages);
+        this.registerEvent('searchAgain', this.searchAgain);
+        this._registerSearchListFilters('search',{}, {startListening:true,registerDefaultEvents:true});
     },
     computed:{
         //Gets the selected gallery
@@ -354,13 +357,10 @@ var galleries = new Vue({
             switch(this.currentMode){
                 case 'search':
                     return 'Galleries';
-                    break;
                 case 'edit':
                     return 'Viewing Gallery';
-                    break;
                 case 'create':
                     return 'Creating Gallery';
-                    break;
                 default:
             }
         },
@@ -369,7 +369,6 @@ var galleries = new Vue({
             switch(this.currentOperation){
                 case 'add':
                     return 'Choose an image to add to the gallery';
-                    break;
                 default:
                     return '';
             }
@@ -379,16 +378,12 @@ var galleries = new Vue({
             switch(this.currentOperation){
                 case 'delete':
                     return 'Delete selected?';
-                    break;
                 case 'remove':
                     return 'Remove selected images from gallery?';
-                    break;
                 case 'create':
                     return 'New gallery name:';
-                    break;
                 case 'add':
                     return 'Add selected images to gallery?:';
-                    break;
                 default:
                     return '';
             }
@@ -398,7 +393,6 @@ var galleries = new Vue({
             switch(this.currentOperation){
                 case 'create':
                     return true;
-                    break;
                 default:
                     return false;
             }
@@ -411,7 +405,7 @@ var galleries = new Vue({
             return this.editorView.target!== '' && (this.editorView.target.indexOf('.') === -1);
         },
         mediaURL: function(){
-            return document.pathToRoot + 'api/media';
+            return document.ioframe.pathToRoot + 'api/media';
         },
         mediaAction: function(){
             return this.currentType === 'img' ? 'getGalleries' : 'getVideoGalleries'
@@ -544,7 +538,7 @@ var galleries = new Vue({
             if(newMode === 'edit' && this.selected===-1){
                 alertLog('Please select an image before you view/edit it!','warning',document.querySelector('#galleries'));
                 return;
-            };
+            }
             this.currentMode = newMode;
             this.currentOperation = '';
         },
@@ -574,11 +568,11 @@ var galleries = new Vue({
             if(this.test)
                 console.log('Current Operation ', this.currentOperation ,'Current input ',this.operationInput);
             let data = new FormData();
-            var apiURL = document.pathToRoot+"api/v1/media";
-            var test = this.test;
-            var verbose = this.verbose;
-            var currentOperation = this.currentOperation;
-            var thisElement = this.$el;
+            let apiURL = document.ioframe.pathToRoot+"api/v1/media";
+            let test = this.test;
+            let verbose = this.verbose;
+            let currentOperation = this.currentOperation;
+            let thisElement = this.$el;
             if(this.currentMode === 'search'){
                 switch (currentOperation){
                     case 'delete':
@@ -598,7 +592,7 @@ var galleries = new Vue({
                         data.append('gallery',this.operationInput);
                         break;
                     default:
-                };
+                }
             }
             else if(this.currentMode === 'edit'){
                 switch (currentOperation){
@@ -642,14 +636,14 @@ var galleries = new Vue({
                         }
                         break;
                     default:
-                };
+                }
             }
             //Handle the rest of the request if it should be sent
             if(data.get('action')){
                 this.isLoading = true;
                 if(this.test){
                     data.append('req','test');
-                };
+                }
                 updateCSRFToken().then(
                     function(token){
                         data.append('CSRF_token', token);
@@ -691,7 +685,7 @@ var galleries = new Vue({
             else if(this.currentMode === 'edit'){
                 this.selectedGalleryMembers = [];
                 this.resetEditorView();
-            };
+            }
             this.operationInput = '';
             this.currentOperation = '';
         },
@@ -807,7 +801,7 @@ var galleries = new Vue({
                                 alertLog('Database connection failed!','warning',this.$el);
                                 break;
                             case 0:
-                                alertLog('Gallery deleted!','success',this.$el);
+                                alertLog('Gallery deleted!','success',this.$el,{autoDismiss:2000});
                                 this.galleriesInitiated = false;
                                 eventHub.$emit('refreshSearchResults');
                                 break;
@@ -825,7 +819,7 @@ var galleries = new Vue({
                                 alertLog('Gallery name already exists!','info',this.$el);
                                 break;
                             case 0:
-                                alertLog('Gallery created!','success',this.$el);
+                                alertLog('Gallery created!','success',this.$el,{autoDismiss:2000});
                                 this.galleriesInitiated = false;
                                 eventHub.$emit('refreshSearchResults');
                                 break;
@@ -843,7 +837,7 @@ var galleries = new Vue({
                                 alertLog('Database connection failed!','warning',this.$el);
                                 break;
                             case 0:
-                                alertLog('Media removed from gallery!','success',this.$el);
+                                alertLog('Media removed from gallery!','success',this.$el,{autoDismiss:2000});
                                 break;
                             default :
                                 alertLog('Operation failed with response: '+response,'error',this.$el);
@@ -864,6 +858,7 @@ var galleries = new Vue({
 
                         let responseBody = '';
                         let responseType = 'success';
+                        let alertOptions = {autoDismiss:2000};
                         let allAdded = true;
                         let serverError = false;
                         let failedItems = {};
@@ -900,9 +895,11 @@ var galleries = new Vue({
                         else if(serverError){
                             responseBody += 'A server error occurred! Items were not added.';
                             responseType = 'error';
+                            alertOptions = {};
                         }
                         else{
                             responseType = 'info';
+                            alertOptions = {};
                             responseBody += '<div>Some resources were not added, for the following reasons:</div>';
                             for(let resourceName in failedItems){
                                 responseBody += '<div>';
@@ -911,7 +908,7 @@ var galleries = new Vue({
                             }
                         }
 
-                        alertLog(responseBody,responseType,this.$el);
+                        alertLog(responseBody,responseType,this.$el,alertOptions);
                         this.resetEditor();
                         break;
 
@@ -921,7 +918,7 @@ var galleries = new Vue({
                                 alertLog('Database connection failed!','warning',this.$el);
                                 break;
                             case 0:
-                                alertLog('Media moved!','success',this.$el);
+                                alertLog('Media moved!','success',this.$el,{autoDismiss:2000});
                                 //In this specific case, we only re-render the front end, not refresh the gallery.
                                 let from = this.moveTargets[0];
                                 let to = this.moveTargets[1];
@@ -929,10 +926,10 @@ var galleries = new Vue({
                                 this.galleryMembers.splice(to,0,elementToMove);
                                 break;
                             case 1:
-                                alertLog('One of the media items no longer exists in the gallery!','success',this.$el);
+                                alertLog('One of the media items no longer exists in the gallery!','success',this.$el,{autoDismiss:2000});
                                 break;
-                            case2:
-                                alertLog('Gallery no longer exists!','success',this.$el);
+                            case 2:
+                                alertLog('Gallery no longer exists!','error',this.$el);
                                 break;
                             default :
                                 alertLog('Operation failed with response: '+response,'error',this.$el);
@@ -1020,7 +1017,7 @@ var galleries = new Vue({
                 };
                 if(image.complete)
                     image.onload();
-            };
+            }
         },
         //Resets selected images in editor
         resetEditorView: function(){
@@ -1037,5 +1034,109 @@ var galleries = new Vue({
         }
     },
     mounted: function(){
-    }
+    },
+    template: `
+    <div id="galleries" class="main-app">
+        <div class="loading-cover" v-if="isLoading">
+        </div>
+    
+        <h1 v-if="title!==''" v-text="title"></h1>
+    
+        <div class="modes">
+            <button
+                v-for="(item,index) in modes"
+                v-if="shouldDisplayMode(index)"
+                @click="switchModeTo(index)"
+                v-text="item.title"
+                :class="{selected:(currentMode===index)}"
+                class="positive-3"
+                >
+            </button>
+        </div>
+    
+        <div class="operations-container"  v-if="currentModeHasOperations">
+            <div class="operations-title">Actions</div>
+            <div class="operations" v-if="currentOperation===''">
+                <button
+                    v-if="shouldDisplayOperation(index)"
+                    v-for="(item,index) in modes[currentMode].operations"
+                    @click="operation(index)"
+                    :class="[index,{selected:(currentOperation===index)},(item.button? item.button : 'positive-3')]"
+                    >
+                    <div v-text="item.title"></div>
+                </button>
+            </div>
+        </div>
+    
+        <div class="operations" v-if="currentModeHasOperations && currentOperation !== ''">
+            <div class="input-container">
+                <label :for="currentOperation" v-text="currentOperationText"></label>
+                <input
+                    v-if="currentOperationHasInput"
+                    :name="currentOperation"
+                    v-model:value="operationInput"
+                    type="text"
+                    >
+            </div>
+            <button
+                :class="(currentOperation === 'remove' ? 'negative-1' : 'positive-1')"
+                @click="confirmOperation" >
+                <div v-text="'Confirm'"></div>
+                <img :src="sourceURL() + '/img/icons/confirm-icon.svg'">
+            </button>
+            <button class="cancel-1" @click="cancelOperation" >
+                <div v-text="'Cancel'"></div>
+                <img :src="sourceURL() + '/img/icons/cancel-icon.svg'">
+            </button>
+        </div>
+    
+        <div class="types">
+            <span class="title">Media Type: </span>
+            <select class="types" v-model:value="currentType" :disabled="currentMode!=='search'">
+                <option
+                    v-for="(item,index) in mediaTypes"
+                    :value="index"
+                    :class="{selected:currentType === index}"
+                    v-text="item? item : ' - '"
+                    >
+                </option>
+            </select>
+        </div>
+    
+        <div  v-if="currentMode==='search'"
+              is="search-list"
+              :api-url="mediaURL"
+              :api-action="mediaAction"
+              :current-filters="searchListFilters['search']"
+              :page="page"
+              :limit="limit"
+              :total="total"
+              :items="galleries"
+              :initiate="!galleriesInitiated"
+              :columns="columns"
+              :filters="filters"
+              :selected="selected"
+              :test="test"
+              :verbose="verbose"
+              identifier="search"
+            >
+        </div>
+    
+        <div  v-if="currentMode==='edit'"
+              is="gallery-editor"
+              :gallery-type="currentType"
+              :gallery="getSelectedGallery"
+              :current-operation="currentOperation"
+              :selected="selectedGalleryMembers"
+              :gallery-members="galleryMembers"
+              :initiated="galleryInitiated"
+              :view="editorView"
+              :search-list="editorSearchList"
+              :test="test"
+              :verbose="verbose"
+              identifier="editor"
+            >
+        </div>
+    </div>
+    `
 });

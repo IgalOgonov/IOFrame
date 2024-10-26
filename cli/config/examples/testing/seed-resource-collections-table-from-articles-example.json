@@ -1,0 +1,39 @@
+{
+	"dbData":[
+		{
+			"type": "header",
+			"version": "5.2.0",
+			"comment": "Export to JSON plugin for PHPMyAdmin"
+		},
+		{
+			"type": "database",
+			"name": "ioframe_test"
+		},
+		{
+			"type": "table",
+			"name": "resource_collections",
+			"database": "ioframe_test",
+			"data": [
+				{
+					"Resource_Type": "js",
+					"Collection_Name": "IOFrameCoreJS",
+					"Collection_Order": "sec/aes.js,sec/mode-ecb.js,sec/mode-ctr.js,sec/pad-zeropadding.js,utils.js,initPage.js,objects.js,fp.js,ezAlert.js",
+					"Created": "1678946510",
+					"Last_Updated": "1678946510",
+					"Meta": null
+				},
+				{
+					"Resource_Type": "vid",
+					"Collection_Name": "Test Video Gallery",
+					"Collection_Order": null,
+					"Created": "1679314382",
+					"Last_Updated": "1679314382",
+					"Meta": null
+				}
+			]
+		}
+	],
+	"dbOptions":{
+		"targetPrefix":"EXAMPLE_"
+	}
+}

@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__.'/../../IOFrame/Handlers/TokenHandler.php';
-$TokenHandler = new IOFrame\Handlers\TokenHandler($settings,$defaultSettingsParams);
+$TokenHandler = new \IOFrame\Handlers\TokenHandler($settings,$defaultSettingsParams);
 echo 'Setting tokens test1, test2 and test3:'.EOL;
 var_dump($TokenHandler->setTokens(
     [

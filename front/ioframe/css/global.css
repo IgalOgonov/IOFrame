@@ -8,7 +8,7 @@
     outline: none;
 }
 
-:not(ol):not(ul):not(ul):not(li):not(blockquote){
+:not(ol):not(ul):not(ul):not(li):not(blockquote):not(input):not(select){
     padding: 0;
     margin: 0;
 }
@@ -40,10 +40,10 @@ html[dir="rtl"] button {
 
 a {
     text-decoration: none;
-    color: var(--secondary-color-5) !important;
+    color: var(--main-color-7) !important;
 }
 a:visited{
-    color: var(--secondary-color-3) !important;
+    color: var(--main-color-9) !important;
 }
 
 b {

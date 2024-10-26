@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('toggle-2fa', {
     mixins: [sourceURL,eventHubManager,IOFrameCommons],
     props: {
@@ -142,6 +139,7 @@ Vue.component('toggle-2fa', {
 
             let message;
             let messageType = 'error';
+            let extraParams = {};
 
             switch (response){
                 case 'AUTHENTICATION_FAILURE':
@@ -151,6 +149,7 @@ Vue.component('toggle-2fa', {
                     break;
                 case '0':
                     messageType = 'success';
+                    extraParams = {autoDismiss:2000};
                     this.success = true;
                     break;
                 case '1':
@@ -165,7 +164,7 @@ Vue.component('toggle-2fa', {
             }
             message = this.text.responses[response]? this.text.responses[response] : this.text.messageFailed;
             if(this.alertOptions.use)
-                alertLog(message,messageType,this.alertOptions.target,this.alertOptions.params);
+                alertLog(message,messageType,this.alertOptions.target,{...this.alertOptions.params,extraParams});
             eventHub.$emit('toggle2FAResult',{
                 response:response,
                 message:message,

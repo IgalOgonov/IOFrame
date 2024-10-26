@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('contacts-editor', {
     mixins: [sourceURL,eventHubManager,IOFrameCommons],
     props: {
@@ -183,7 +180,7 @@ Vue.component('contacts-editor', {
             if(this.recompute.changed)
                 ;//Do nothing
             for(let i in this.mainItem){
-                if(this.mainItem[i].original !== undefined && this.mainItem[i].original != this.mainItem[i].current)
+                if( (this.mainItem[i].original !== undefined) && (this.mainItem[i].original != this.mainItem[i].current) )
                     return true;
             }
             return false;
@@ -316,7 +313,7 @@ Vue.component('contacts-editor', {
                     alertLog('Server error!','error',this.$el);
                     break;
                  case 0:
-                     alertLog('Item set!','success',this.$el);
+                     alertLog('Item set!','success',this.$el,{autoDismiss:2000});
                      if(this.mode === 'update')
                         this.setInputsAsCurrent();
                      else

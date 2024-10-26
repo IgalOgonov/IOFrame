@@ -1,0 +1,1053 @@
+{
+	"dbData":{
+	"resources": [
+		{
+			"Resource_Type": "css",
+			"Address": "animations.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/account/activateAccount.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/account/add2fa.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/account/changeMail.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/account/changePassword.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/account/managePhone.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/account/resetMail.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/account/resetPassword.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/account/toggle2faApp.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/articles/articleBlockEditor.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/articles/articlesEditor.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/articles/defaultHeadlineRenderer.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/auth/actionsEditor.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/auth/editor.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/auth/groupsEditor.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/auth/usersEditor.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/contacts/contactsEditor.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/galleries/galleryEditor.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/IOFrameGalleryDefault.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/languageObjects/languageObjectsEditor.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/media/mediaViewer.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/mediaSelector.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/menus/menusEditor.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/searchList.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/security/securityEventsEditor.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/security/securityIPRangesEditor.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/security/securityIPsEditor.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/settings/settingsEditor.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/tags/tagsEditor.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/tokens/tokensEditor.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "components/users/usersEditor.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "cp.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "ext/highlight.js/ioframe-highlight.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "ezAlert.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "fonts.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "global.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/account.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/articles.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/auth.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/contacts.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/CPMenu.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/galleries.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/languageObjects.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/loginRegister.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/mails.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/media.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/menus.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/objects.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/plugins.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/securityEvents.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/securityIP.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/settings.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/tags.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/tokens.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/update.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "modules/users.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "popUpTooltip.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "standard.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "css",
+			"Address": "welcome.css",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "a6df6d848bb1d40754cf45b4e4b7f47f.png",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "general",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "general/missing.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "general/upload-image.png",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/article",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/article/facebook.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/article/mail.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/article/twitter.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/cancel-icon.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/close-red.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/confirm-icon.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/CPMenu",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/folder.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/home-icon.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/image-generic.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/image-missing.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/logo-small.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/logo-full.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/move.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/refresh-icon.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/search-folder-icon.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/search-icon.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/up-arrow-icon.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/upload.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "icons/upload-image.svg",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "pluginImages",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "pluginImages/BAP",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "pluginImages/BAP/icon.png",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "pluginImages/def_icon.png",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "pluginImages/def_thumbnail.png",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "pluginImages/testPlugin",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "pluginImages/testPlugin2",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "test 3",
+			"Resource_Local": 0,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "img",
+			"Address": "test 4",
+			"Resource_Local": 0,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/account/activateAccount.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/account/add2fa.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/account/changeMail.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/account/changePassword.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/account/managePhone.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/account/resetMail.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/account/resetPassword.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/account/toggle2faApp.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/articles/articleBlockEditor.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/articles/articlesEditor.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/articles/defaultHeadlineRenderer.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/auth/actionsEditor.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/auth/groupsEditor.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/auth/usersEditor.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/contacts/contactsEditor.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/galleries/galleryEditor.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/IOFrameGallery.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/languageObjects/languageObjectsEditor.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/media/editImage.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/media/mediaViewer.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/media/uploadImage.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/mediaSelector.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/menus/menusEditor.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/searchList.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/security/securityEventsEditor.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/security/securityIPRangesEditor.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/security/securityIPsEditor.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/settings/settingsEditor.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/tags/tagsEditor.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/tokens/tokensEditor.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/userLogin.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/userLogout.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/userRegistration.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "components/users/usersEditor.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "ext/highlight.js/highlight.pack.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "ext/marked/marked.min.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "ext/purifyHTML/purify.min.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "ext/QRCodeGenerator/qrcodegen.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "ezAlert.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "ezPopup.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "fp.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "initPage.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "mixins/cacheableObjectGetter.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "mixins/commons.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "mixins/componentHookFunctions.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "mixins/componentSize.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "mixins/eventHubManager.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "mixins/indexedDBInterface.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "mixins/multipleLanguages.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "mixins/parseLimit.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "mixins/sourceUrl.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/account.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/articles.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/auth.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/contacts.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/CPMenu.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/galleries.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/languageObjects.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/loginRegister.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/mails.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/media.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/menus.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/objects.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/pluginList.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/plugins.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/securityEvents.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/securityIP.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/settings.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/tags.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/tokens.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/update.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "modules/users.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "objects.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "sec/aes.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "sec/mode-ctr.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "sec/mode-ecb.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "sec/pad-ansix923-min.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "sec/pad-zeropadding.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		},
+		{
+			"Resource_Type": "js",
+			"Address": "utils.js",
+			"Resource_Local": 1,
+			"Minified_Version": 0
+		}
+	]
+},
+	"dbOptions":{
+		"targetPrefix":"EXAMPLE_"
+	}
+}

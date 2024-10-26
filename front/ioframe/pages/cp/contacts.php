@@ -7,8 +7,16 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_s
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'cp_redirect_to_login.php';
 
-array_push($CSS, 'cp.css', 'components/searchList.css', 'components/contacts/contactsEditor.css', 'modules/contacts.css', 'modules/CPMenu.css', 'modules/contacts.css');
-array_push($JS, 'mixins/sourceUrl.js', 'mixins/eventHubManager.js', 'components/searchList.js', 'components/contacts/contactsEditor.js', 'modules/CPMenu.js', 'modules/contacts.js');
+array_push($CSS, 'cp.css', 'components/searchList.css', 'modules/CPMenu.css');
+$CSSPackages['CPContactsCSS'] = [
+    'items'=>[ 'components/contacts/contactsEditor.css', 'modules/contacts.css'],
+    'order'=>-1
+];
+array_push($JS,'mixins/searchListFilterSaver.js', 'mixins/sourceUrl.js', 'components/searchList.js',  'modules/CPMenu.js');
+$JSPackages['CPContactsJS'] = [
+    'items'=>['components/contacts/contactsEditor.js', 'modules/contacts.js' ],
+    'order'=>-1
+];
 
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_get_resources.php';
@@ -56,5 +64,3 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'footers_s
 $frontEndResourceTemplateManager->printResources('JS');
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'footers_end.php';
-
-?>

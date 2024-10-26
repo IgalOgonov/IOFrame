@@ -1,6 +1,6 @@
 /*-------------------Function to be called on top of each page
 
-* pathToRoot is the same as "document.PathToRoot" in the default headers.
+* pathToRoot is the same as "document.ioframe.pathToRoot" in the default headers.
 *
 * Callbacks is an object of functions, where each key represents where the callback is invoked:
 * 'notLoggedIn' - Called if you are not logged in.
@@ -20,7 +20,7 @@ function initPage(pathToRoot, callbacks = {}){
         };
 
     //Get current time in seconds
-    var timenow = new Date().getTime();
+    let timenow = new Date().getTime();
     timenow = Math.floor(timenow/1000);
     /*LOCAL STORAGE RELATED*/
     if (typeof(Storage) === "undefined") {
@@ -41,7 +41,7 @@ function initPage(pathToRoot, callbacks = {}){
         else{
             //In case of improper closure, we check to see if we are still logged in
             console.log('Possible crash, trying to recover...');
-            checkLoggedIn(document.pathToRoot, false).then(function(res){
+            checkLoggedIn(document.ioframe.pathToRoot, false).then(function(res){
                     //If we are not logged in, log in. Else, carry on
                     if(!res){
                         if(callbacks['notLoggedIn']!==undefined)
@@ -77,12 +77,12 @@ function initPage(pathToRoot, callbacks = {}){
 
 
         //Check to see if our session timed out since the last time
-        if( localStorage.getItem('lastActionTime')==null || localStorage.getItem('lastActionTime')==undefined ||
-            localStorage.getItem('maxInacTime')==null ||localStorage.getItem('maxInacTime')==undefined
+        if( (localStorage.getItem('lastActionTime')===null) || (localStorage.getItem('lastActionTime')===undefined) ||
+            (localStorage.getItem('maxInacTime')===null) || (localStorage.getItem('maxInacTime')===undefined)
             ||
             (timenow > parseInt(localStorage.getItem('lastActionTime')) + parseInt(localStorage.getItem('maxInacTime')) )
             ||
-            (document.loggedIn === false)
+            (document.ioframe.loggedIn === false)
         ){
             //If we did time out, let the client know
             localStorage.setItem("sesInfo","[]");
@@ -138,15 +138,15 @@ function updateSesInfo(pathToRoot, callbacks = {}){
         // url
         let url=pathToRoot+"api\/v1\/session";
         //Request itself
-        var xhr = new XMLHttpRequest();
+        let xhr = new XMLHttpRequest();
         xhr.open('GET', url+'?'+action);
         xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8;');
         //console.log('To url',url,' , send: ',action);
         //-return;
         xhr.send(null);
         xhr.onreadystatechange = function () {
-            var DONE = 4; // readyState 4 means the request is done.
-            var OK = 200; // status 200 is a successful return.
+            let DONE = 4; // readyState 4 means the request is done.
+            let OK = 200; // status 200 is a successful return.
             if (xhr.readyState === DONE) {
                 if (xhr.status === OK){
                     let response = xhr.responseText;
@@ -155,8 +155,8 @@ function updateSesInfo(pathToRoot, callbacks = {}){
                     //Update local storage
                     localStorage.setItem('sesInfo',response);
                     //Now, we need to do some work with the response, unless it's []
-                    if(response!="[]"){
-                        var sesInfo=JSON.parse(response);
+                    if(response!=="[]"){
+                        let sesInfo=JSON.parse(response);
                         localStorage.setItem('maxInacTime',sesInfo['maxInacTime']);
                         localStorage.setItem('CSRF_token',sesInfo['CSRF_token']);
                         if(sesInfo['Email'] != undefined)
@@ -178,7 +178,7 @@ function updateSesInfo(pathToRoot, callbacks = {}){
 
 //-------------------Updates client with time of last action taken, in seconds since 01.01.1970
 function updateLastActionTime(){
-    var timenow = new Date().getTime();
+    let timenow = new Date().getTime();
     timenow = Math.floor(timenow/1000);
     localStorage.setItem('lastActionTime',timenow);
 }
@@ -191,7 +191,7 @@ function autoLogin(pathToRoot, timeout = 0, callbacks = {}, test = false){
 
     return new Promise(function(resolve, reject) {
 
-        if(document.loggedIn){
+        if(document.ioframe.loggedIn){
             console.log('Tried to relog despite being logged in!');
             sessionStorage.setItem('debug_'+Date.now(),'Tried to relog despite being logged in!');
             resolve(true);
@@ -204,7 +204,7 @@ function autoLogin(pathToRoot, timeout = 0, callbacks = {}, test = false){
         if(callbacks['beforeRelog']!==undefined)
             callbacks['beforeRelog']();
 
-        var req;
+        let req;
         if(test)
             req = 'test';
         else
@@ -218,7 +218,7 @@ function autoLogin(pathToRoot, timeout = 0, callbacks = {}, test = false){
         dataToSend+='&userID='+localStorage.getItem('deviceID');
 
         //Get the kew to use from localstorage
-        keyToUse = stringScrumble(localStorage.getItem('sesID'),localStorage.getItem('sesIV'));
+        let keyToUse = stringScrumble(localStorage.getItem('sesID'),localStorage.getItem('sesIV'));
 
         //This is the encrypted key we need to send to the servervar encrypted = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(data),
         const tokenToSend = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(localStorage.getItem('deviceID')),
@@ -239,9 +239,9 @@ function autoLogin(pathToRoot, timeout = 0, callbacks = {}, test = false){
                 xhr.setRequestHeader('Content-Type', header);
                 xhr.send(null);
                 xhr.onreadystatechange = function () {
-                    var DONE = 4; // readyState 4 means the request is done.
-                    var OK = 200; // status 200 is a successful return.
-                    d = new Date();
+                    let DONE = 4; // readyState 4 means the request is done.
+                    let OK = 200; // status 200 is a successful return.
+                    let d = new Date();
                     if (xhr.readyState === DONE) {
                         if (xhr.status === OK){
                             let response = xhr.responseText;
@@ -278,7 +278,7 @@ function autoLogin(pathToRoot, timeout = 0, callbacks = {}, test = false){
                                     localStorage.removeItem("sesIV");
                                     break;
                                 default:
-                                    if( (response.length == 128 ) &&
+                                    if( (response.length === 128 ) &&
                                         (response.match(/(\W)/g)==null) ){
                                         //We got a new sesID
                                         if(validateServer(response,keyToUse)){
@@ -340,17 +340,17 @@ function autoLogin(pathToRoot, timeout = 0, callbacks = {}, test = false){
  * Validates whether the server sent you the correct sesID that you have, and if so, updates to the next sesID that was sent.
  * */
 function validateServer(serRes,keyToUse){
-    var params = {
+    let params = {
         ciphertext: CryptoJS.enc.Hex.parse(serRes),
         salt: ""
     };
-    var decrypted = CryptoJS.AES.decrypt(params,
+    let decrypted = CryptoJS.AES.decrypt(params,
         CryptoJS.enc.Hex.parse(keyToUse),
         {mode:CryptoJS.mode.ECB, padding:CryptoJS.pad.ZeroPadding});
-    var sesID1 = stringDecrumble(decrypted.toString(CryptoJS.enc.Utf8),1);
-    var sesID2 = stringDecrumble(decrypted.toString(CryptoJS.enc.Utf8),2);
+    let sesID1 = stringDecrumble(decrypted.toString(CryptoJS.enc.Utf8),1);
+    let sesID2 = stringDecrumble(decrypted.toString(CryptoJS.enc.Utf8),2);
 
-    if(sesID1 == localStorage.getItem('sesID')){
+    if(sesID1 === localStorage.getItem('sesID')){
         localStorage.setItem('sesID',sesID2);
         return true;
     }

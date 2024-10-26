@@ -1,6 +1,5 @@
 <?php
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 
 //User ID
 if($inputs['userID'] === null){
@@ -32,7 +31,7 @@ else{
 
 //relationType
 if($inputs['relationType'] !== null) {
-    if (!\IOFrame\Util\validator::validateSQLKey($inputs['relationType'])) {
+    if (!\IOFrame\Util\ValidatorFunctions::validateSQLKey($inputs['relationType'])) {
         if ($test)
             echo 'Invalid type!' . EOL;
         exit(INPUT_VALIDATION_FAILURE);
@@ -42,7 +41,7 @@ if($inputs['relationType'] !== null) {
 
 //meta
 if($inputs['meta'] !== null) {
-    if (!\IOFrame\Util\is_json($inputs['meta'])){
+    if (!\IOFrame\Util\PureUtilFunctions::is_json($inputs['meta'])){
         if ($test)
             echo 'meta must be a json object!' . EOL;
         exit(INPUT_VALIDATION_FAILURE);

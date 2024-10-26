@@ -22,8 +22,5 @@ else
 if($authCheck === false || (gettype($authCheck) === 'array' && !empty($authCheck))){
     if($test)
         echo 'Authentication failed!'.EOL;
-    die(json_encode([
-        'error'=>'Authentication',
-        'message'=>'Authentication failed for article!'
-    ]));
+    \IOFrame\Managers\v1APIManager::exitWithResponseAsJSON(['error'=>AUTHENTICATION_FAILURE,'message'=>'Authentication failed'],!$test);
 }

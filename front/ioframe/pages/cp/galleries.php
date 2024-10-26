@@ -7,11 +7,17 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot.'headers_sta
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'cp_redirect_to_login.php';
 
-array_push($JS,'mixins/sourceUrl.js','mixins/eventHubManager.js','components/searchList.js','components/media/mediaViewer.js',
-    'components/gallery/galleryEditor.js','modules/CPMenu.js','modules/galleries.js');
+array_push($JS,'mixins/sourceUrl.js','mixins/searchListFilterSaver.js','components/searchList.js','components/media/mediaViewer.js','modules/CPMenu.js');
+$CSSPackages['CPGalleriesCSS'] = [
+    'items'=>[ 'components/galleries/galleryEditor.css', 'modules/galleries.css'],
+    'order'=>-1
+];
 
-array_push($CSS,'animations.css','cp.css','components/searchList.css','components/media/mediaViewer.css',
-    'components/galleries/galleryEditor.css','modules/CPMenu.css','modules/galleries.css');
+array_push($CSS,'animations.css','cp.css','components/searchList.css','components/media/mediaViewer.css','modules/CPMenu.css');
+$JSPackages['CPGalleriesJS'] = [
+    'items'=>['components/galleries/galleryEditor.js', 'modules/galleries.js' ],
+    'order'=>-1
+];
 
 require $settings->getSetting('absPathToRoot') . $IOFrameTemplateRoot.'headers_get_resources.php';
 
@@ -55,5 +61,3 @@ require $settings->getSetting('absPathToRoot') . $IOFrameTemplateRoot.'footers_s
 $frontEndResourceTemplateManager->printResources('JS');
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot.'footers_end.php';
-
-?>

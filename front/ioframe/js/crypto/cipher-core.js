@@ -145,9 +145,7 @@ CryptoJS.lib.Cipher || (function (undefined) {
             }
 
             // Perform concrete-cipher logic
-            var finalProcessedData = this._doFinalize();
-
-            return finalProcessedData;
+            return this._doFinalize();
         },
 
         keySize: 128/32,
@@ -202,9 +200,7 @@ CryptoJS.lib.Cipher || (function (undefined) {
     var StreamCipher = C_lib.StreamCipher = Cipher.extend({
         _doFinalize: function () {
             // Process partial blocks
-            var finalProcessedBlocks = this._process(!!'flush');
-
-            return finalProcessedBlocks;
+            return this._process(!!'flush');
         },
 
         blockSize: 1
@@ -695,9 +691,7 @@ CryptoJS.lib.Cipher || (function (undefined) {
             ciphertext = this._parse(ciphertext, cfg.format);
 
             // Decrypt
-            var plaintext = cipher.createDecryptor(key, cfg).finalize(ciphertext.ciphertext);
-
-            return plaintext;
+            return cipher.createDecryptor(key, cfg).finalize(ciphertext.ciphertext);
         },
 
         /**
@@ -849,9 +843,7 @@ CryptoJS.lib.Cipher || (function (undefined) {
             cfg.iv = derivedParams.iv;
 
             // Decrypt
-            var plaintext = SerializableCipher.decrypt.call(this, cipher, ciphertext, derivedParams.key, cfg);
-
-            return plaintext;
+            return SerializableCipher.decrypt.call(this, cipher, ciphertext, derivedParams.key, cfg);
         }
     });
 }());

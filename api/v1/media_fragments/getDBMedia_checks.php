@@ -1,9 +1,8 @@
 <?php
-if(!defined('validator'))
-    require __DIR__ . '/../../../IOFrame/Util/validator.php';
+
 
 if($inputs['address'] !== null){
-    if(!\IOFrame\Util\validator::validateRelativeDirectoryPath($inputs['address'])){
+    if(!\IOFrame\Util\ValidatorFunctions::validateRelativeDirectoryPath($inputs['address'])){
         header("HTTP/1.1 400 Invalid address");
         die();
     }

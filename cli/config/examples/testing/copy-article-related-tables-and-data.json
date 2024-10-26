@@ -1,0 +1,25 @@
+{
+	"duplicateTables": {
+		"ARTICLES": "ARTICLES",
+		"ARTICLE_BLOCKS": "ARTICLE_BLOCKS",
+		"ARTICLE_TAGS": "ARTICLE_TAGS",
+		"TAGS": "TAGS",
+		"RESOURCES": "RESOURCES",
+		"RESOURCE_COLLECTIONS": "RESOURCE_COLLECTIONS",
+		"CONTACTS": "CONTACTS",
+		"USERS": "USERS",
+		"USERS_EXTRA": "USERS_EXTRA"
+	},
+	"duplicationOptions":{
+		"targetPrefix":"EXAMPLE_",
+		"includeData":true,
+		"includeDataWhere":{
+			"ARTICLES": "Article_ID = 4",
+			"ARTICLE_BLOCKS": "Article_ID = 4",
+			"ARTICLE_TAGS": "Article_ID = 4",
+			"TAGS": "Tag_Type = 'default-article-tags'",
+			"RESOURCES": "Resource_Type IN ('img','vid')",
+			"RESOURCE_COLLECTIONS": "Resource_Type IN ('img','vid')"
+		}
+	}
+}

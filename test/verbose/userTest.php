@@ -1,10 +1,10 @@
 <?php
 
-require_once __DIR__.'/../../IOFrame/Handlers/UserHandler.php';
-$UserHandler = new \IOFrame\Handlers\UserHandler($settings,['SQLHandler'=>$SQLHandler]);
+require_once __DIR__.'/../../IOFrame/Handlers/UsersHandler.php';
+$UsersHandler = new \IOFrame\Handlers\UsersHandler($settings,['SQLManager'=>$SQLManager]);
 
 echo EOL.'Getting all users with many parameters'.EOL;
-var_dump($UserHandler->getUsers([
+var_dump($UsersHandler->getUsers([
     'idAtLeast' =>1,
     'idAtMost' => 3,
     'rankAtLeast' => 0,
@@ -24,7 +24,7 @@ var_dump($UserHandler->getUsers([
 ]));
 
 echo EOL.'Updating user 1 with all possible parameters'.EOL;
-var_dump($UserHandler->updateUser(
+var_dump($UsersHandler->updateUser(
     1,
     [
         'username' =>'Test Username',
@@ -37,7 +37,7 @@ var_dump($UserHandler->updateUser(
     ['test'=>true]
 ));
 echo EOL.'Updating user 1 with 1 parameter'.EOL;
-var_dump($UserHandler->updateUser(
+var_dump($UsersHandler->updateUser(
     1,
     [
         'username' =>'Test Username'
@@ -47,49 +47,49 @@ var_dump($UserHandler->updateUser(
 ));
 
 echo EOL.'Changing password of user 1 to R43W32E43Q65:'.EOL;
-var_dump($UserHandler->changePassword(1,'R43W32E43Q65',['test'=>true]));
+var_dump($UsersHandler->changePassword(1,'R43W32E43Q65',['test'=>true]));
 
 echo EOL.'Changing email of user 1 to test@test.com:'.EOL;
-var_dump($UserHandler->changeMail(1,'test@test.com',['test'=>true]));
+var_dump($UsersHandler->changeMail(1,'test@test.com',['test'=>true]));
 echo EOL;
 
 echo EOL.'Checks whether user 1 can be logged into:'.EOL;
-var_dump($UserHandler->checkUserLogin(1,['test'=>true]));
+var_dump($UsersHandler->checkUserLogin(1,['test'=>true]));
 echo EOL;
 
 echo EOL.'Checks whether unexisting user can be logged into:'.EOL;
-var_dump($UserHandler->checkUserLogin('fake@mail.com',['test'=>true]));
+var_dump($UsersHandler->checkUserLogin('fake@mail.com',['test'=>true]));
 echo EOL;
 
 echo EOL.'Checks whether user one can log in - checks a fake code an a fake IP:'.EOL;
-echo $UserHandler->checkUserLogin(1,['allowCode'=>'code','allowWhitelistedIP'=>'0.1.2.3','test'=>true]).EOL;
+echo $UsersHandler->checkUserLogin(1,['allowCode'=>'code','allowWhitelistedIP'=>'0.1.2.3','test'=>true]).EOL;
 
 echo EOL.'Creating invite token:'.EOL;
-echo $UserHandler->createInviteToken([],['test'=>true]).EOL;
+echo $UsersHandler->createInviteToken([],['test'=>true]).EOL;
 
 echo EOL.'Creating 2 invite tokens:'.EOL;
-var_dump($UserHandler->createInviteTokens([['token'=>'test_1','action'=>'REGISTER_MAIL','mail'=>'test@test.com'],['token'=>'test_2','action'=>'REGISTER_ANY']],['verbose'=>true]));
+var_dump($UsersHandler->createInviteTokens([['token'=>'test_1','action'=>'REGISTER_MAIL','mail'=>'test@test.com'],['token'=>'test_2','action'=>'REGISTER_ANY']],['verbose'=>true]));
 
 echo EOL.'Sending invite mail:'.EOL;
-echo $UserHandler->sendInviteMail('igal@iosoft.io',1,'Test Invite',false,['test'=>true]).EOL;
+echo $UsersHandler->sendInviteMail('igal@iosoft.io',1,'Test Invite',false,['test'=>true]).EOL;
 
 echo EOL.'Confirming invite token test_1 - without mail'.EOL;
-var_dump($UserHandler->confirmInviteToken('test_1',['test'=>true,'consume'=>false]));
+var_dump($UsersHandler->confirmInviteToken('test_1',['test'=>true,'consume'=>false]));
 
 echo EOL.'Confirming invite token test_1 - with mail'.EOL;
-var_dump($UserHandler->confirmInviteToken('test_1',['test'=>true,'mail'=>'test@test.com','consume'=>false]));
+var_dump($UsersHandler->confirmInviteToken('test_1',['test'=>true,'mail'=>'test@test.com','consume'=>false]));
 
 echo EOL.'Confirming invite token test_2'.EOL;
-var_dump($UserHandler->confirmInviteToken('test_2',['test'=>true,'consume'=>false]));
+var_dump($UsersHandler->confirmInviteToken('test_2',['test'=>true,'consume'=>false]));
 
 echo EOL.'Consuming invite token test_2'.EOL;
-var_dump($UserHandler->confirmInviteToken('test_2',['test'=>true]));
+var_dump($UsersHandler->confirmInviteToken('test_2',['test'=>true]));
 
 echo EOL.'Consuming invite token test_1'.EOL;
-var_dump($UserHandler->confirmInviteToken('test_1',['test'=>true]));
+var_dump($UsersHandler->confirmInviteToken('test_1',['test'=>true]));
 
 echo EOL.'Create a new activated user using token test_2'.EOL;
-var_dump($UserHandler->regUser(
+var_dump($UsersHandler->regUser(
     [
         'u'=>'TestUser',
         'm'=>'test@test.com',

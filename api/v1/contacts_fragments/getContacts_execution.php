@@ -38,8 +38,8 @@ if($result){
         }
         $tempRes[$identifier] = [];
         foreach($translationTable as $dbName => $resArr){
-            $tempRes[$identifier][$resArr['newName']] = isset($contactArr[$dbName])? $contactArr[$dbName] : null;
-            if(isset($resArr['newName']['isJson']) && $resArr['newName']['isJson'] && \IOFrame\Util\is_json($tempRes[$identifier][$resArr['newName']]))
+            $tempRes[$identifier][$resArr['newName']] = $contactArr[$dbName] ?? null;
+            if(isset($resArr['newName']['isJson']) && $resArr['newName']['isJson'] && \IOFrame\Util\PureUtilFunctions::is_json($tempRes[$identifier][$resArr['newName']]))
                 $tempRes[$identifier][$resArr['newName']] = json_decode($tempRes[$identifier][$resArr['newName']],true);
         }
     }

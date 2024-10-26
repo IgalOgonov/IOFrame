@@ -60,7 +60,7 @@ var menus = new Vue({
                 }
             ],
             //SearchList API (and probably the only relevant API) URL
-            url: document.pathToRoot+ 'api/v1/menu',
+            url: document.ioframe.pathToRoot+ 'api/v1/menu',
             //Current page
             page:0,
             //Go to page
@@ -100,13 +100,10 @@ var menus = new Vue({
             switch(this.currentMode){
                 case 'search':
                     return 'Browsing Menus';
-                    break;
                 case 'edit':
                     return 'Editing Menus';
-                    break;
                 case 'create':
                     return '';
-                    break;
                 default:
             }
         },
@@ -127,7 +124,6 @@ var menus = new Vue({
             switch(this.currentOperation){
                 case 'delete':
                     return 'Delete selected?';
-                    break;
                 default:
                     return '';
             }
@@ -221,7 +217,7 @@ var menus = new Vue({
                             alertLog('Deletion failed due to server error!','error',this.$el);
                             break;
                         case 0:
-                            alertLog('Deletion successful!','success',this.$el);
+                            alertLog('Deletion successful!','success',this.$el,{autoDismiss:2000});
                             this.items.splice(this.selected,1);
                             this.selected = -1;
                             break;
@@ -235,7 +231,7 @@ var menus = new Vue({
         },
         //Goes to relevant page
         goToPage: function(page){
-            if(!this.initiating && page.from == 'search'){
+            if(!this.initiating && (page.from === 'search') ){
                 let newPage;
                 page = page.content;
 
@@ -292,7 +288,7 @@ var menus = new Vue({
             if(newMode === 'edit' && this.selected===-1){
                 alertLog('Please select an item before you view/edit it!','warning',this.$el);
                 return;
-            };
+            }
 
             if(newMode==='edit'){
                 switch (this.currentMode) {
@@ -314,10 +310,10 @@ var menus = new Vue({
                 console.log('Current Operation ', this.currentOperation ,'Current input ',this.operationInput);
 
             let data = new FormData();
-            var test = this.test;
-            var verbose = this.verbose;
-            var currentOperation = this.currentOperation;
-            var thisElement = this.$el;
+            let test = this.test;
+            let verbose = this.verbose;
+            let currentOperation = this.currentOperation;
+            let thisElement = this.$el;
             let operation = '';
 
             if(this.currentMode === 'search'){
@@ -329,7 +325,7 @@ var menus = new Vue({
                         break;
                     default:
                         break;
-                };
+                }
 
                 if(!operation){
                     if(this.verbose)
@@ -395,7 +391,7 @@ var menus = new Vue({
             else if(this.currentMode === 'edit'){
                 this.currentMode = 'search';
                 this.selected = -1;
-            };
+            }
             this.operationInput= '';
             this.currentOperation = '';
 

@@ -1,0 +1,10 @@
+{
+	"minificationType":"css",
+	"minificationTargets":["test.scss","test/test.scss"],
+	"minificationProperties":{
+		"minifyToFolder":"test",
+		"minifyName":"transpiledAndPackedScss"
+	},
+	"minificationIncludeOptions":{
+	}
+}

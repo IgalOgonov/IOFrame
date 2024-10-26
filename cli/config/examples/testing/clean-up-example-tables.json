@@ -1,0 +1,34 @@
+{
+	"dbData": {
+		"ARTICLES": {
+			"drop": true
+		},
+		"ARTICLE_BLOCKS": {
+			"drop": true
+		},
+		"ARTICLE_TAGS": {
+			"drop": true
+		},
+		"TAGS": {
+			"drop": true
+		},
+		"RESOURCES": {
+			"drop": true
+		},
+		"RESOURCE_COLLECTIONS": {
+			"drop": true
+		},
+		"CONTACTS": {
+			"drop": true
+		},
+		"USERS": {
+			"drop": true
+		},
+		"USERS_EXTRA": {
+			"drop": true
+		}
+	},
+	"dbOptions": {
+		"targetPrefix": "EXAMPLE_"
+	}
+}

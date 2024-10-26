@@ -7,4 +7,3 @@ if(!file_exists($url.'test.txt')){
         touch($url.'test.txt');
 }
 throw new \Exception("This exception is always thrown!");
-?>

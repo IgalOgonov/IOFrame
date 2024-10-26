@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('menus-editor', {
     mixins: [sourceURL,eventHubManager,IOFrameCommons],
     props: {
@@ -154,7 +151,7 @@ Vue.component('menus-editor', {
                 }
             },
             //Whether the item is up to date
-            upToDate: this.mode == 'create',
+            upToDate: this.mode === 'create',
            //Whether we are currently initiating the item
            initiating: false,
            //Whether we are currently updating the item
@@ -186,9 +183,8 @@ Vue.component('menus-editor', {
                 if(this.mainItem[i].original !== undefined && (this.mainItem[i].original != this.mainItem[i].current || this.paramMap[i].considerChanged))
                     return true;
             }
-            if(this.metaChanged)
-                return true;
-            return false;
+
+            return this.metaChanged;
         },
         metaChanged: function(){
             if(this.recompute.metaChanged)
@@ -202,7 +198,7 @@ Vue.component('menus-editor', {
         menuChanged: function(){
             if(this.recompute.menuChanged)
                 ;//Do nothing
-            var checkChanges = function(menu){
+            let checkChanges = function(menu){
                 if(menu['@'] && (menu['@'].add || menu['@'].changed || menu['@'].remove) )
                     return true;
                 else if(menu.children !== undefined){
@@ -223,7 +219,7 @@ Vue.component('menus-editor', {
             let titles = this.menu.preview.titles;
             let context = this;
 
-            var renderChildren = function(address, children){
+            let renderChildren = function(address, children){
                 if(children === undefined || typeof children !== 'object' || children.length === undefined)
                     return '';
                 let childrenDivs = '';
@@ -265,7 +261,7 @@ Vue.component('menus-editor', {
                         childClass += (context.menu.preview.subChild?' child-after sub':' child-before');
                     else if(
                         selectedFather &&
-                        (i == children.length -1)&&
+                        (i === children.length -1)&&
                         (context.menu.preview.newChildIndex >= children.length || context.menu.preview.newChildIndex < 0)
                     )
                         childClass += ' child-after';
@@ -285,8 +281,8 @@ Vue.component('menus-editor', {
                     childrenDiv +=`>`;
 
                     let title;
-                    if(document.selectedLanguage && children[i][document.selectedLanguage+'_title'] && titles)
-                        title = children[i][document.selectedLanguage+'_title'];
+                    if(document.ioframe.selectedLanguage && children[i][document.ioframe.selectedLanguage+'_title'] && titles)
+                        title = children[i][document.ioframe.selectedLanguage+'_title'];
                     else if(children[i].title && titles)
                         title =  children[i].title
                     else
@@ -307,12 +303,11 @@ Vue.component('menus-editor', {
                 return childrenDivs;
             };
 
-            let html = `<div class="menu-child preview">
+            return  `<div class="menu-child preview">
                             <div class="title">`+(this.mainItem.title.current?this.mainItem.title.current: 'Menu')+`</div>
                             `+renderChildren([],menu.children)+`
                             `+((context.menu.preview.popUp || context.menuChanged)? `` : `<div>*Drag & Drop Branches To Move Them</div>`)+`
                         </div>`;
-            return html;
         },
         focusedMenu: function(){
             if(this.mode === 'create')
@@ -456,7 +451,7 @@ Vue.component('menus-editor', {
         //Sets original menu as current
         setMenuAsCurrent: function(){
             let original = JSON.parse(JSON.stringify(this.menu.current));
-            var cleanCurrentMenu = function(menu){
+            let cleanCurrentMenu = function(menu){
                 delete menu['@'];
                 if(menu.children !== undefined){
                     for(let i in menu.children)
@@ -477,10 +472,10 @@ Vue.component('menus-editor', {
             if(this.mode === 'create')
                 return;
             this.menu.original = JSON.parse(JSON.stringify(item));
-            var prepareOriginalMenu = function(menu){
-                for(let i in document.languages){
-                    if(menu[document.languages[i]+'_title'] === undefined)
-                        menu[document.languages[i]+'_title'] = null;
+            let prepareOriginalMenu = function(menu){
+                for(let i in document.ioframe.languages){
+                    if(menu[document.ioframe.languages[i]+'_title'] === undefined)
+                        menu[document.ioframe.languages[i]+'_title'] = null;
                 }
                 if(menu.children !== undefined){
                     for(let i in menu.children)
@@ -490,11 +485,11 @@ Vue.component('menus-editor', {
             prepareOriginalMenu(this.menu.original);
             let original = JSON.parse(JSON.stringify(this.menu.original));
             this.menu.current = JSON.parse(JSON.stringify(original));
-            var prepareCurrentMenu = function(menu){
+            let prepareCurrentMenu = function(menu){
                 menu['@'] = {};
-                for(let i in document.languages){
-                    if(menu[document.languages[i]+'_title'] === undefined)
-                        menu[document.languages[i]+'_title'] = null;
+                for(let i in document.ioframe.languages){
+                    if(menu[document.ioframe.languages[i]+'_title'] === undefined)
+                        menu[document.ioframe.languages[i]+'_title'] = null;
                 }
                 if(menu.children !== undefined){
                     for(let i in menu.children)
@@ -718,7 +713,7 @@ Vue.component('menus-editor', {
                     alertLog('Server error! '+response,'error',this.$el);
                     break;
                 case 0:
-                    alertLog('Menu Updated!','success',this.$el);
+                    alertLog('Menu Updated!','success',this.$el,{autoDismiss:2000});
                     eventHub.$emit('searchAgain');
                     this.menu.current = JSON.parse(JSON.stringify(this.menu.moveMenuPending));
                     this.menu.moveMenuPending = {};
@@ -763,7 +758,7 @@ Vue.component('menus-editor', {
                     alertLog('Server error!','error',this.$el);
                     break;
                 case 0:
-                    alertLog('Menu Updated!','success',this.$el);
+                    alertLog('Menu Updated!','success',this.$el,{autoDismiss:2000});
                     eventHub.$emit('searchAgain');
                     this.setMenuAsCurrent();
                     this.recompute.menuChanged = !this.recompute.menuChanged;
@@ -817,7 +812,7 @@ Vue.component('menus-editor', {
                     alertLog('Server error!','error',this.$el);
                     break;
                  case 0:
-                     alertLog('Item '+(this.mode === 'create'? 'created!' : 'Updated'),'success',this.$el);
+                     alertLog('Item '+(this.mode === 'create'? 'created!' : 'Updated'),'success',this.$el,{autoDismiss:2000});
                      eventHub.$emit('searchAgain');
                      if(this.mode === 'create')
                         this.resetInputs();
@@ -953,14 +948,15 @@ Vue.component('menus-editor', {
                     add:true
                 }
             };
-            for(let i in document.languages){
-                newChild[document.languages[i]+'_title'] = '';
+            for(let i in document.ioframe.languages){
+                newChild[document.ioframe.languages[i]+'_title'] = '';
             }
             Vue.set(this.menu.preview,'newChild',newChild);
             this.$forceUpdate();
         },
         addMenuChildPair: function(item = null){
-            item['@'].changed = true;
+            if(item && item['@'])
+                item['@'].changed = true;
             if(item === null)
                 item = this.menu.preview.newChild;
             if(
@@ -1028,7 +1024,7 @@ Vue.component('menus-editor', {
             let changes = [];
             let additions = [];
             let context = this;
-            var initiateMenuSet = function(menu, removals,changes,additions,address){
+            let initiateMenuSet = function(menu, removals,changes,additions,address){
 
                 let skipChildren = false;
                 let rootMenu = false;
@@ -1345,7 +1341,7 @@ Vue.component('menus-editor', {
                     v-model:value="item.current"
                     @change="item.current = paramMap[key].parseOnChange($event.target.value);recompute.changed = ! recompute.changed"
                     >
-                       <option v-for="item in paramMap[key].list" :value="item.value" v-text="item.title? item.title: item.value"></option>
+                        <option v-for="(title,value) in paramMap[key].list" :value="value" v-text="title"></option>
                     </select>
 
                 </div>

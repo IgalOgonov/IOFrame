@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('search-list', {
     mixins:[
         eventHubManager,
@@ -9,17 +6,20 @@ Vue.component('search-list', {
         componentHookFunctions
     ],
     props: {
-        //Test Mode
+        //TODO Add infinite scroll support
+        //Identifier
         identifier: {
             type: String
         },
-        //The API url, e.g. document.pathToRoot+"api/media"
+        //The API url, e.g. document.ioframe.pathToRoot+"api/media"
         apiUrl: {
             type: String
         },
-        //The base action required to request the data from the api, e.g. "getGalleries"
+        //The base action required to request the data from the api, e.g. "getGalleries".
+        //On v2 APIs, this might not be required
         apiAction: {
-            type: String
+            type: String,
+            default: null
         },
         //Elements we are displaying
         items: {
@@ -54,8 +54,19 @@ Vue.component('search-list', {
                     pagination:{
                         total:'Total Pages:',
                         goTo:'Go To Page',
-                        go:'Go'
+                        go:'Go',
+                        resultNum:'#'
                     }
+                };
+            }
+        },
+        //Request parameters
+        requestParams: {
+            type: Object,
+            default: function(){
+                return {
+                    'method':'get',
+                    'mode':'cors',
                 };
             }
         },
@@ -65,7 +76,7 @@ Vue.component('search-list', {
             default: function(){
                 return {
                     //Object of the form {'param'  : value}
-                    };
+                };
             }
         },
         //Amount of galleries per page
@@ -207,6 +218,12 @@ Vue.component('search-list', {
                 return {};
             },
         },
+        /* Automatically initiates a search when the key "Enter" is pressed inside the filters.
+         * */
+        filtersSearchOnEnter: {
+            type: Boolean,
+            default: true
+        },
         /* Extra classes for an item. May be a string (a specific class for each item), a array of strings (similar), or
            a function (which parses the item, and returns a AN ARRAY OF STRINGS - even if it's one string) */
         extraClasses: {
@@ -214,6 +231,11 @@ Vue.component('search-list', {
         },
         //Whether to render invisible titles before each item (so they can be displayed via CSS later if need be)
         invisibleTitles: {
+            type: Boolean,
+            default: true
+        },
+        //Show Number Of Results
+        showResultNum: {
             type: Boolean,
             default: true
         },
@@ -241,6 +263,11 @@ Vue.component('search-list', {
             type: Boolean,
             default: true
         },
+        //Whether to initiate before update
+        earlyInitiation: {
+            type: Boolean,
+            default: false
+        },
     },
     data: function(){
         return {
@@ -250,74 +277,6 @@ Vue.component('search-list', {
             pageToGoTo:1
         }
     },
-    template: '\
-         <div class="search-list">\
-            <div class="filter-container" v-if="filters.length>0">\
-                <div v-html="filterList" class="filters"></div>\
-                <button @click.prevent.prevent="search"><img :src="sourceURL()+\'img/icons/search-icon.svg\'"><div v-text="text.search" ></div></button>\
-            </div>\
-            \
-            <div class="pagination" v-if="pagesArray.length > 1">\
-                <span class="buttons-container">\
-                    <button v-if="pagesArray.length > 6 && (page+1) > 6" v-text="\'<<\'" @click.prevent="goToPage(0)"></button>\
-                    <button v-if="page > 0" @click.prevent="goToPage(-1)" v-text="\'<\'">  </button>\
-                    <span v-if="pagesArray.length > 6 && (page+1) > 6" v-text="\'...\'"></span>\
-                    <button v-for="(item,index) in currentPages"\
-                        v-text="item"\
-                        :class="{selected:(page===item-1)}"\
-                        @click.prevent="goToPage(item-1)"\
-                       ></button>\
-                    <span v-if="pagesArray.length - (page+1) > 5" v-text="\'...\'"></span>\
-                    <button  v-if="pagesArray.length - (page+1) > 0" @click.prevent="goToPage(page+1)"  v-text="\'>\'"></button>\
-                    <button  v-if="pagesArray.length - (page+1) > 5" @click.prevent="goToPage(pagesArray.length-1)"  v-text="\'>>\'"> </button>\
-                </span>\
-                <span class="total-pages"> \
-                    <span v-text="text.pagination.total"></span> \
-                    <span v-text="pagesArray.length"></span>\
-                </span>\
-                \
-                <span class="go-to-page"> \
-                    <span v-text="text.pagination.goTo"></span>\
-                    <input type="number" v-model:value="pageToGoTo" :min="1" :max="pagesArray.length"> \
-                    <button @click.prevent="goToPage(\'goto\')" class="go-to" v-text="text.pagination.go"> </button>\
-                </span>\
-            </div>\
-            \
-            <div class="search-results">\
-                <div class="search-titles" v-html="renderTitles"></div>\
-                <div v-for="(item,index) in items"\
-                v-html="renderItem(index)"\
-                @click="requestSelection(index)"\
-                :class="calculateItemClasses(index)"></div>\
-            </div>\
-            \
-            <div class="pagination" v-if="pagesArray.length > 1 && items.length > 9">\
-                <span class="buttons-container">\
-                    <button v-if="pagesArray.length > 6 && (page+1) > 6" v-text="\'<<\'" @click.prevent="goToPage(0)"></button>\
-                    <button v-if="page > 0" @click.prevent="goToPage(-1)" v-text="\'<\'">  </button>\
-                    <span v-if="pagesArray.length > 6 && (page+1) > 6" v-text="\'...\'"></span>\
-                    <button v-for="(item,index) in currentPages"\
-                        v-text="item"\
-                        :class="{selected:(page===item-1)}"\
-                        @click.prevent="goToPage(item-1)"\
-                       ></button>\
-                    <span v-if="pagesArray.length - (page+1) > 5" v-text="\'...\'"></span>\
-                    <button  v-if="pagesArray.length - (page+1) > 0" @click.prevent="goToPage(page+1)"  v-text="\'>\'"></button>\
-                    <button  v-if="pagesArray.length - (page+1) > 5" @click.prevent="goToPage(pagesArray.length-1)"  v-text="\'>>\'"> </button>\
-                </span>\
-                <span class="total-pages"> \
-                    <span v-text="text.pagination.total"></span> \
-                    <span v-text="pagesArray.length"></span>\
-                </span>\
-                \
-                <span class="go-to-page"> \
-                    <span v-text="text.pagination.goTo"></span>\
-                    <input type="number" v-model:value="pageToGoTo" :min="1" :max="pagesArray.length"> \
-                    <button @click.prevent="goToPage(\'goto\')" class="go-to" v-text="text.pagination.go"> </button>\
-                </span>\
-            </div>\
-         </div>\
-        ',
     methods: {
 
         //Requests item selection
@@ -378,7 +337,9 @@ Vue.component('search-list', {
                 const filter = filters[k];
                 //Recursively validate a group of filters
                 if(filter.type === 'Group'){
-                    res = this.validateFilterVars(filter.group);
+                    let res = this.validateFilterVars(filter.group);
+                    if(!res)
+                        return false;
                 }
                 else if(filter.type !== 'List' && filter.type !== 'Select'){
 
@@ -400,6 +361,8 @@ Vue.component('search-list', {
                     switch(filter.type){
                         case 'Datetime':
                         case 'Date':
+                            if(!value)
+                                continue;
                             value = value.split('-').reverse();
                             [value[0], value[1]] = [value[1], value[0]];
                             value = dateToTimestamp(value.join('-'));
@@ -480,8 +443,9 @@ Vue.component('search-list', {
             return true;
         },
 
-        //Gets all filter variables (recursively works on groups). Will also parse the value
-        getFilterVars(filters = []){
+        //Gets all filter variables (recursively works on groups). Will also parse the value.
+        // rawValueStore, if passed, will store raw values.
+        getFilterVars(filters = [], rawValueStore = null){
 
             let variables = {};
 
@@ -493,7 +457,7 @@ Vue.component('search-list', {
                 const filter = filters[k];
                 //Recursively validate a group of filters
                 if(filter.type === 'Group'){
-                    Object.assign(variables, this.getFilterVars(filter.group));
+                    Object.assign(variables, this.getFilterVars(filter.group, rawValueStore));
                 }
                 else if(filter.type !== 'List'){
                     let localFilter = this.$el.querySelector('.filters *[name="'+filter.name+'"]');
@@ -502,6 +466,9 @@ Vue.component('search-list', {
                         continue;
 
                     let value = localFilter.value;
+
+                    if(typeof rawValueStore === 'object')
+                        rawValueStore[filter.name] = value;
 
                     //Basic check
                     if(value === '')
@@ -517,6 +484,8 @@ Vue.component('search-list', {
                     //In case of Datetime, add the minutes
                     if(filter.type === 'Datetime'){
                         let value2 = this.$el.querySelector('.filters *[name="@'+filter.name+'"]').value;
+                        if(typeof rawValueStore === 'object')
+                            rawValueStore['@'+filter.name] = value;
                         if(value2 !== ''){
                             value2 = value2.split(':');
                             value += value2[0]*3600*1000 + value2[1]*60*1000 ;
@@ -533,23 +502,22 @@ Vue.component('search-list', {
                 else{
                     //TODO LIST SUPPORT
                 }
-
                 //Parse the value
                 if(filter.parser !== undefined)
                     variables[filter.name] = filter.parser(variables[filter.name]);
             }
-
             return variables;
         },
 
-        search: function(){
+        search: function(params = {}){
+
+            params.ignoreOffset = params.ignoreOffset ?? false;
 
             if(this.initiating){
                 if(this.verbose)
                     console.log('Already initiating a search!');
                 return;
             }
-            this.initiating = true;
 
             //Validation
             if(this.verbose)
@@ -560,62 +528,87 @@ Vue.component('search-list', {
                 return;
             }
 
-            //Parsing
-            let filterArray = this.getFilterVars();
+            this.initiating = true;
 
+            //Parsing
+            let rawFilers = {};
+            let filterArray = this.getFilterVars([],rawFilers);
             filterArray = this.parseFilters(filterArray);
 
             if(this.verbose)
                 console.log('Querying API at '+this.apiUrl+' with parameters ', filterArray,'extra parameters ',
                     this.extraParams,' limit '+this.limit+', offset '+this.limit*(this.page));
 
+            let dontSendBody = this.requestParams.dontSendBody ?? false;
+            let method = this.requestParams.method ?? 'get';
+            let methodHasBody = !dontSendBody && (['put','post','patch'].indexOf(method)!== -1);
+
             //Data to be sent
-            let data = new FormData();
-            data.append('action', this.apiAction);
+            const appendToFormOrObject = function(data,key,value,methodHasBody){
+                if(methodHasBody)
+                    data.append(key, value);
+                else
+                    data[key] = value;
+            }
+
+            let data = methodHasBody? new FormData() : {};
+            if(this.apiAction){
+                appendToFormOrObject(data,'action',this.apiAction,methodHasBody);
+            }
 
             //Add pagination
-            data.append('limit', this.limit);
-            if(this.page > 0)
-                data.append('offset', this.limit*(this.page));
+            appendToFormOrObject(data,'limit',this.limit,methodHasBody);
+            if((this.page > 0) && !params.ignoreOffset)
+                appendToFormOrObject(data,'offset',this.limit*(this.page),methodHasBody);
 
             //Add filters
             for(let key in filterArray){
-                data.append(key, filterArray[key]);
+                appendToFormOrObject(data,key,filterArray[key],methodHasBody);
             }
 
             //Add extra params - do not override filters!
             for(let key in this.extraParams){
                 if(filterArray[key] === undefined)
-                    data.append(key, this.extraParams[key]);
+                    appendToFormOrObject(data,key,encodeURIComponent(this.extraParams[key]),methodHasBody);
             }
 
             //Emit filters event
             let request =  this.identifier ?
                 {
                     from: this.identifier,
-                    content: filterArray
+                    content: rawFilers
                 }
                 :
-                filterArray;
+                rawFilers;
             eventHub.$emit(this.filtersEventName,request);
 
+            let requestParams = JSON.parse(JSON.stringify(this.requestParams));
+            requestParams.verbose = this.verbose;
+            requestParams.parseJSON = true;
+            requestParams.identifier = this.identifier;
+            requestParams.urlPrefix = '';
+            requestParams.ignoreCSRF = !this.checkCSRFToken;
+            if(!methodHasBody){
+                requestParams.queryParams = requestParams.queryParams ?? {};
+                for (let i in data)
+                    requestParams.queryParams[i] = data[i];
+            }
+            if(params.ignoreOffset)
+                requestParams.extraEvents = {
+                    'resetSearchPage':true
+                };
+
             this.apiRequest(
-                data,
+                methodHasBody?data:null,
                 this.apiUrl,
                 this.eventName,
-                {
-                    'verbose': this.verbose,
-                    'parseJSON':true,
-                    'identifier':this.identifier,
-                    'urlPrefix':'',
-                    'ignoreCSRF':!this.checkCSRFToken
-                }
+                requestParams
             );
         },
 
         //Returns the absolute media URL
         absoluteMediaURL:function(relativeURL){
-            return document.rootURI + 'front/ioframe/img/'+relativeURL;
+            return document.ioframe.rootURI + 'front/ioframe/img/'+relativeURL;
         },
 
         //Returns byts in readable size
@@ -716,7 +709,7 @@ Vue.component('search-list', {
                 result +='<select name="'+filterProperties.name+'"> ';
                     for(let k in filterProperties.list){
                         result +='<option value="'+filterProperties.list[k].value+'">';
-                        result +=filterProperties.list[k].title;
+                        result +=filterProperties.list[k].title??filterProperties.list[k].value;
                         result +='</option>';
                     }
                 result +='</select >';
@@ -758,7 +751,7 @@ Vue.component('search-list', {
                     default:
                         classes.push(this.extraClasses);
                 }
-            };
+            }
             return classes;
         },
 
@@ -777,7 +770,7 @@ Vue.component('search-list', {
                 let identifier;
 
                 //Handler complex identifier
-                if(columns[k].id.indexOf('.') != -1)
+                if(columns[k].id.indexOf('.') !== -1)
                     identifier = columns[k].id.replace('.','-');
                 else
                     identifier = columns[k].id;
@@ -786,9 +779,9 @@ Vue.component('search-list', {
 
                 result += '<span class="search-item-property '+identifier+'">';
 
-                var value;
+                let value;
 
-                if((columns[k].id.indexOf('.') != -1 && !columns[k].custom)){
+                if((columns[k].id.indexOf('.') !== -1) && !columns[k].custom){
                     let identifiers = columns[k].id.split('.');
                     value = item;
                     for(let tempIdentifier in identifiers){
@@ -817,7 +810,7 @@ Vue.component('search-list', {
                 result += value;
                 
                 result += '</span>';
-            };
+            }
 
             return result;
         },
@@ -851,17 +844,13 @@ Vue.component('search-list', {
             //Render column titles
             let result = '';
             for(let k in columns){
-                let identifier;
-                if(columns[k].id.indexOf('.') != -1)
-                    identifier = columns[k].id.replace('.','-');
-                else
-                    identifier = columns[k].id;
+                let identifier = (columns[k].id.indexOf('.') !== -1)?  columns[k].id.replace('.','-') : columns[k].id;
                 if(columns[k]['idSuffix'])
                     identifier+=columns[k]['idSuffix'];
                 result += '<span class="search-title '+columns[k].id+'">';
                 result += columns[k].title;
                 result += '</span>';
-            };
+            }
             return result;
         },
         //Renders the filter list
@@ -919,7 +908,7 @@ Vue.component('search-list', {
     beforeUpdate: function(){
         if(this.verbose)
             console.log('Search list ',this.identifier,' beforeUpdate');
-        if(this.initiate){
+        if(this.initiate && this.earlyInitiation){
             if(this.verbose)
                 console.log('Initiating before update');
             this.search();
@@ -933,5 +922,79 @@ Vue.component('search-list', {
                 console.log('Initiating at update');
             this.search();
         }
-    }
+    },
+    template: `
+         <div class="search-list">
+            <div class="filter-container" v-if="filters.length>0">
+                <div v-html="filterList" v-on:keydown.enter="filtersSearchOnEnter ? search({ignoreOffset:true}) : ()=>{}" class="filters"></div>
+                <button @click.prevent.prevent="search({ignoreOffset:true})"><img :src="sourceURL()+'img/icons/search-icon.svg'"><div v-text="text.search" ></div></button>
+            </div>
+            
+            <div class="pagination" v-if="(showResultNum && items.length) || (pagesArray.length > 1)">
+                
+                <span v-if="showResultNum && total" class="result-num"> 
+                    <span v-text="text.pagination.resultNum"></span> 
+                    <span v-text="total"></span>
+                </span>
+                
+                <span class="buttons-container">
+                    <button v-if="pagesArray.length > 6 && (page+1) > 6" v-text="'<<'" @click.prevent="goToPage(0)"></button>
+                    <button v-if="page > 0" @click.prevent="goToPage(-1)" v-text="'<'">  </button>
+                    <span v-if="pagesArray.length > 6 && (page+1) > 6" v-text="'...'"></span>
+                    <button v-for="(item,index) in currentPages"
+                        v-text="item"
+                        :class="{selected:(page===item-1)}"
+                        @click.prevent="goToPage(item-1)"
+                       ></button>
+                    <span v-if="pagesArray.length - (page+1) > 5" v-text="'...'"></span>
+                    <button  v-if="pagesArray.length - (page+1) > 0" @click.prevent="goToPage(page+1)"  v-text="'>'"></button>
+                    <button  v-if="pagesArray.length - (page+1) > 5" @click.prevent="goToPage(pagesArray.length-1)"  v-text="'>>'"> </button>
+                </span>
+                <span class="total-pages"> 
+                    <span v-text="text.pagination.total"></span> 
+                    <span v-text="pagesArray.length"></span>
+                </span>
+                
+                <span class="go-to-page"> 
+                    <span v-text="text.pagination.goTo"></span>
+                    <input type="number" v-model:value="pageToGoTo" :min="1" :max="pagesArray.length"> 
+                    <button @click.prevent="goToPage('goto')" class="go-to" v-text="text.pagination.go"> </button>
+                </span>
+            </div>
+            
+            <div class="search-results">
+                <div class="search-titles" v-html="renderTitles"></div>
+                <div v-for="(item,index) in items"
+                v-html="renderItem(index)"
+                @click="requestSelection(index)"
+                :class="calculateItemClasses(index)"></div>
+            </div>
+            
+            <div class="pagination" v-if="(pagesArray.length > 1) && items.length > 9">
+                <span class="buttons-container">
+                    <button v-if="pagesArray.length > 6 && (page+1) > 6" v-text="'<<'" @click.prevent="goToPage(0)"></button>
+                    <button v-if="page > 0" @click.prevent="goToPage(-1)" v-text="'<'">  </button>
+                    <span v-if="pagesArray.length > 6 && (page+1) > 6" v-text="'...'"></span>
+                    <button v-for="(item,index) in currentPages"
+                        v-text="item"
+                        :class="{selected:(page===item-1)}"
+                        @click.prevent="goToPage(item-1)"
+                       ></button>
+                    <span v-if="pagesArray.length - (page+1) > 5" v-text="'...'"></span>
+                    <button  v-if="pagesArray.length - (page+1) > 0" @click.prevent="goToPage(page+1)"  v-text="'>'"></button>
+                    <button  v-if="pagesArray.length - (page+1) > 5" @click.prevent="goToPage(pagesArray.length-1)"  v-text="'>>'"> </button>
+                </span>
+                <span class="total-pages"> 
+                    <span v-text="text.pagination.total"></span> 
+                    <span v-text="pagesArray.length"></span>
+                </span>
+                
+                <span class="go-to-page"> 
+                    <span v-text="text.pagination.goTo"></span>
+                    <input type="number" v-model:value="pageToGoTo" :min="1" :max="pagesArray.length"> 
+                    <button @click.prevent="goToPage('goto')" class="go-to" v-text="text.pagination.go"> </button>
+                </span>
+            </div>
+         </div>
+        `
 });

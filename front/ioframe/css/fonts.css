@@ -38,15 +38,6 @@
     url('fonts/DMSerifText-Italic.ttf') format('truetype');
 }
 
-@font-face{
-    font-family:book antiqua;
-    font-style:normal;
-    font-weight:400;
-    src:local('Book Antiqua'),local('BookAntiqua-Regular'),
-    url('fonts/bookAntiqua.woff') format('woff'),
-    url('fonts/bookAntiqua.ttf') format('truetype')
-}
-
 *{
     font-family:'DM Serif',sans-serif;
 }

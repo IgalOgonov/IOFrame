@@ -31,6 +31,9 @@ if(is_array($res)){
 
                 if(!empty($articleResultsColumnMap[$resKey]['type']) && gettype($resValue) !== 'array' && $resValue !== null)
                     switch($articleResultsColumnMap[$resKey]['type']){
+                        case 'csv':
+                            $resValue = $resValue? explode($articleResultsColumnMap[$resKey]['separator']??',',$resValue):[];
+                            break;
                         case 'string':
                             $resValue = (string)$resValue;
                             break;
@@ -44,13 +47,13 @@ if(is_array($res)){
                             $resValue = (double)$resValue;
                             break;
                         case 'json':
-                            if(!\IOFrame\Util\is_json($resValue) || empty($articleResultsColumnMap[$resKey]['validChildren']))
+                            if(!\IOFrame\Util\PureUtilFunctions::is_json($resValue) || empty($articleResultsColumnMap[$resKey]['validChildren']))
                                 break;
                             else
                                 $resValue = json_decode($resValue,true);
                             $tempRes = [];
                             foreach($articleResultsColumnMap[$resKey]['validChildren'] as $validChild){
-                                $tempRes[$validChild] = isset($resValue[$validChild])? $resValue[$validChild] : null;
+                                $tempRes[$validChild] = $resValue[$validChild] ?? null;
                             }
                             $resValue = $tempRes;
                             break;
@@ -70,7 +73,8 @@ if(is_array($res)){
         }
     }
     //Second, append blocks
-    $blocks = $ArticleHandler->getItems([[$res['articleId']]], 'general-block', $retrieveParams)[$res['articleId']];
+    $blocks = $ArticleHandler->getItems([[$res['articleId']]], 'general-block', $retrieveParams);
+    $blocks = $blocks[$res['articleId']] ?? [];
     $blockOrder = !empty($res['blockOrder']) ? explode(',',$res['blockOrder']) : [];
     $res['blocks'] = [];
 
@@ -88,7 +92,7 @@ if(is_array($res)){
             elseif(is_array($blockArr)){
                 //Collect the required galleries in case they're needed
                 if(!empty($blockArr['Collection_Name']) && $blockArr['Block_Type'] === 'gallery')
-                    array_push($galleries,$blockArr['Collection_Name']);
+                    $galleries[] = $blockArr['Collection_Name'];
 
                 foreach($blockArr as $blockArrKey => $blockValue){
                     if(isset($blocksResultsColumnMap[$blockArrKey])){
@@ -116,13 +120,13 @@ if(is_array($res)){
                                     $blockValue = (double)$blockValue;
                                     break;
                                 case 'json':
-                                    if(!\IOFrame\Util\is_json($blockValue) || empty($blocksResultsColumnMap[$blockArrKey]['validChildren']))
+                                    if(!\IOFrame\Util\PureUtilFunctions::is_json($blockValue) || empty($blocksResultsColumnMap[$blockArrKey]['validChildren']))
                                         break;
                                     else
                                         $blockValue = json_decode($blockValue,true);
                                     $tempRes = [];
                                     foreach($blocksResultsColumnMap[$blockArrKey]['validChildren'] as $validChild){
-                                        $tempRes[$validChild] = isset($blockValue[$validChild])? $blockValue[$validChild] : null;
+                                        $tempRes[$validChild] = $blockValue[$validChild] ?? null;
                                     }
                                     break;
                             }
@@ -162,7 +166,7 @@ if(is_array($res)){
                 $blocks[$key]['orphan'] = false;
                 $blocks[$key]['exists'] = true;
             }
-            array_push($res['blocks'],$blocks[$key]);
+            $res['blocks'][] = $blocks[$key];
             $toUnset[$key] = true;
         }
         //Unset blocks we pushed
@@ -175,17 +179,15 @@ if(is_array($res)){
             foreach($blocks as $block){
                 $block['orphan'] = true;
                 $block['exists'] = true;
-                array_push($res['blocks'],$block);
+                $res['blocks'][] = $block;
             }
         }
 
         //
         if($inputs['preloadGalleries'] && count($galleries)){
-            if(!defined('FrontEndResourceHandler'))
-                require __DIR__ . '/../../IOFrame/Handlers/FrontEndResourceHandler.php';
-            if(!isset($FrontEndResourceHandler))
-                $FrontEndResourceHandler = new IOFrame\Handlers\FrontEndResourceHandler($settings,$defaultSettingsParams);
-            $galleryMembers = $FrontEndResourceHandler->getGalleries($galleries,['test'=>$test,'includeGalleryInfo'=>true]);
+            if(!isset($FrontEndResources))
+                $FrontEndResources = new \IOFrame\Handlers\Extenders\FrontEndResources($settings,$defaultSettingsParams);
+            $galleryMembers = $FrontEndResources->getGalleries($galleries,['test'=>$test,'includeGalleryInfo'=>true]);
             foreach($res['blocks'] as $index => $block){
                 if(
                     !$block['exists'] ||
@@ -204,13 +206,13 @@ if(is_array($res)){
                 $order = explode(',',$galleryMembers['@'.$block['collection']['name']]['Collection_Order']);
                 foreach($order as $address){
                     if(!empty($galleryMembers[$address]))
-                        array_push($res['blocks'][$index]['collection']['members'],[
-                            'address' => $galleryMembers[$address]['local']? $galleryMembers[$address]['relativeAddress'] : $galleryMembers[$address]['address'],
+                        $res['blocks'][$index]['collection']['members'][] = [
+                            'address' => $galleryMembers[$address]['local'] ? $galleryMembers[$address]['relativeAddress'] : $galleryMembers[$address]['address'],
                             'local' => $galleryMembers[$address]['local'],
                             'updated' => (int)$galleryMembers[$address]['lastChanged'],
                             'dataType' => $galleryMembers[$address]['dataType'],
-                            'meta' => \IOFrame\Util\is_json($galleryMembers[$address]['meta'])? json_decode($galleryMembers[$address]['meta'],true): []
-                        ]);
+                            'meta' => \IOFrame\Util\PureUtilFunctions::is_json($galleryMembers[$address]['meta']) ? json_decode($galleryMembers[$address]['meta'], true) : []
+                        ];
                 }
 
             }
@@ -220,4 +222,4 @@ if(is_array($res)){
 }
 
 
-$result = $res;
+$result = ['article'=>$res];

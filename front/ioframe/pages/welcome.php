@@ -5,9 +5,9 @@ require $settings->getSetting('absPathToRoot').'front/ioframe/templates/definiti
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_start.php';
 
-array_push($CSS, 'welcome.css');
+$CSS[] = 'welcome.css';
 foreach($languages as $languagePrefix)
-    array_push($CSS, $languagePrefix.'_welcome.css');
+    $CSS[] = $languagePrefix . '_welcome.css';
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'headers_get_resources.php';
 
@@ -52,5 +52,3 @@ require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'footers_s
 $frontEndResourceTemplateManager->printResources('JS');
 
 require $settings->getSetting('absPathToRoot').$IOFrameTemplateRoot . 'footers_end.php';
-
-?>

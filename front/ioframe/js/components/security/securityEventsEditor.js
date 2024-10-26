@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('security-events-editor', {
     mixins: [sourceURL,eventHubManager,IOFrameCommons],
     props: {
@@ -124,7 +121,7 @@ Vue.component('security-events-editor', {
                 blacklistFor:0
             },
             //Whether the item is up to date
-            upToDate: this.mode == 'create',
+            upToDate: this.mode === 'create',
             //Whether anything changed
             changed: false,
            //Whether we are currently initiating the item
@@ -271,7 +268,7 @@ Vue.component('security-events-editor', {
 
         //Adds newly selected item to sequences
         addItem: function(){
-            let existing = this.items.filter(item => item.sequence == this.newItem.sequence);
+            let existing = this.items.filter(item => item.sequence === this.newItem.sequence);
             if(existing.length > 0){
                 alertLog('Sequence '+this.newItem.sequence+' already exists!','warning',this.$el);
                 return;
@@ -302,11 +299,8 @@ Vue.component('security-events-editor', {
             if(selected.add){
                 this.items.splice(key,1);
             }
-            else if(selected.remove){
-                this.items[key].remove = false;
-            }
             else{
-                this.items[key].remove = true;
+                this.items[key].remove = !selected.remove;
             }
             
             this.changed = true;
@@ -461,7 +455,7 @@ Vue.component('security-events-editor', {
             }
 
             if(success.length > 0){
-                alertLog('The following sequences were set: '+success.join(', '),'success',this.$el);
+                alertLog('The following sequences were set: '+success.join(', '),'success',this.$el,{autoDismiss:2000});
                 for(let i in successKeys){
                     for(let j in this.items[successKeys[i]]){
                         if(this.items[successKeys[i]][j].original)
@@ -511,7 +505,7 @@ Vue.component('security-events-editor', {
                         stuffToSet = true
                     }
                 }
-                alertLog('Sequences were deleted!','success',this.$el);
+                alertLog('Sequences were deleted!','success',this.$el,{autoDismiss:2000});
                 if(!stuffToSet){
                     this.changed = false;
                     eventHub.$emit('searchAgain');

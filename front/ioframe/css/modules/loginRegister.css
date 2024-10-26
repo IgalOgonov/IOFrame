@@ -1,3 +1,8 @@
+@keyframes rotatingLoop{
+    from {transform: rotate(0deg);}
+    to {transform: rotate(360deg);}
+}
+
 #login-register.main-app[mode="login"],
 #login-register.main-app[mode="register"]{
     max-width: calc(100vw);
@@ -14,6 +19,8 @@
 #login-register.main-app form{
     display: flex;
     flex-direction: column;
+    min-width: 200px;
+    min-height: 40px;
     padding: 10px;
     margin: 5px 0px;
     background: var(--main-color-2);
@@ -26,6 +33,26 @@
 }
 #login-register.main-app .user-login form > div {
     margin: 5px 0px;
+}
+
+/*Register requesting*/
+#login-register.main-app .user-login{
+    position: relative;
+}
+#login-register.main-app .user-login.requesting:after{
+    content: '';
+    display: block;
+    width: 30px;
+    height: 30px;
+    position: absolute;
+    bottom: 10px;
+    left: 85px;
+    background: var(--main-color-8);
+    animation-name: rotatingLoop;
+    animation-duration: 2s;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    clip-path: polygon(50% 0%, 90% 20%, 100% 60%, 75% 100%, 25% 100%, 0% 60%, 10% 20%);
 }
 
 /*Buttons in general*/

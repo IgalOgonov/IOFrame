@@ -8,11 +8,19 @@ DirectoryIndex index.php
    Require all denied
 </Files>
 
-<Files COPYRIGHT> 
+<Files COPYRIGHT.md> 
    Require all denied
 </Files>
 
-<Files LICENSE> 
+<Files LICENSE.md> 
+   Require all denied
+</Files>
+
+<Files README.md> 
+   Require all denied
+</Files>
+
+<Files INSTALL.md> 
    Require all denied
 </Files>
 
@@ -22,7 +30,12 @@ RewriteRule . index.php [L]
 #The following rule protects .git and .idea
 RedirectMatch 403 \.git
 RedirectMatch 403 \.idea
-
+RedirectMatch 403 "^composer.json$"
+RedirectMatch 403 "^composer.lock$"
+RedirectMatch 403 "^COPYRIGHT$"
+RedirectMatch 403 "^LICENSE$"
+RedirectMatch 403 "^README$"
+RedirectMatch 403 "^INSTALL$"
 #Possible fix for cache in some cases
 FileETag None
 

@@ -64,6 +64,11 @@ var users = new Vue({
                 return;
 
             let response = request.content;
+            if(this.test){
+                alertLog(request.content,'info');
+                return;
+            }
+
             if(typeof response === 'number')
                 response += '';
 
@@ -71,6 +76,7 @@ var users = new Vue({
 
             let message;
             let messageType = this.test?'info':'error';
+            let alertParams = {};
 
             switch (response){
                 case 'INPUT_VALIDATION_FAILURE':
@@ -79,6 +85,7 @@ var users = new Vue({
                     break;
                 case '0':
                     messageType = 'success';
+                    alertParams = {autoDismiss:2000};
                     this.updatesInfo.current = this.updatesInfo.next;
                     this.updatesInfo.next = this.updatesInfo.versions[this.updatesInfo.next] ?
                         this.updatesInfo.versions[this.updatesInfo.next] : null;
@@ -95,7 +102,7 @@ var users = new Vue({
             if(!message){
                 message = this.text.responses[response];
             }
-            alertLog(message,messageType);
+            alertLog(message,messageType,this.$el,alertParams);
         },
         //Tries to run the system update
         update: function(){
@@ -105,6 +112,7 @@ var users = new Vue({
             //Data to be sent
             let data = new FormData();
             data.append('action', 'update');
+            data.append('maintenance', '1');
 
             if(this.test)
                 data.append('req', 'test');

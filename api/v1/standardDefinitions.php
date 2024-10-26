@@ -1,0 +1,102 @@
+<?php
+
+$STANDARD_API_DEFINITIONS = [
+    'validation'=>[
+        'anyValid'=>'^.*$',
+        'regexRegex'=>'^[\w\.\-\_ ]{1,128}$',
+        'engTitleRegex'=>'^\w[\w\d\-_\\\' ]{0,128}$',
+        'imageAddressRegex'=>'^\w[\w\d\-_\\\'\/\.\: ]{0,128}$',
+    ],
+    'auth'=>[
+    ]
+];
+$STANDARD_API_INPUT_MAPS = [
+    'standardPaginationValidation'=>[
+        'getMeta'=>[
+            'type'=>'bool',
+            'default'=>false
+        ],
+        'limit'=>[
+            'type'=>'int',
+            'required'=>false
+        ],
+        'offset'=>[
+            'type'=>'int',
+            'required'=>false
+        ],
+        'includeRegex'=>[
+            'type'=>'string',
+            'valid'=>$STANDARD_API_DEFINITIONS['validation']['regexRegex'],
+            'required'=>false
+        ],
+        'excludeRegex'=>[
+            'type'=>'string',
+            'valid'=>$STANDARD_API_DEFINITIONS['validation']['regexRegex'],
+            'required'=>false
+        ],
+        'createdAfter'=>[
+            'type'=>'int',
+            'min'=>0,
+            'max'=>9999999999,
+            'required'=>false
+        ],
+        'createdBefore'=>[
+            'type'=>'int',
+            'min'=>0,
+            'max'=>9999999999,
+            'required'=>false
+        ],
+        'changedAfter'=>[
+            'type'=>'int',
+            'min'=>0,
+            'max'=>9999999999,
+            'required'=>false
+        ],
+        'changedBefore'=>[
+            'type'=>'int',
+            'min'=>0,
+            'max'=>9999999999,
+            'required'=>false
+        ],
+        'weightFrom'=>[
+            'type'=>'int',
+            'min'=>0,
+            'max'=>9999999999,
+            'required'=>false
+        ],
+        'weightTo'=>[
+            'type'=>'int',
+            'min'=>0,
+            'max'=>9999999999,
+            'required'=>false
+        ],
+    ],
+    'standardUpdateOverwriteValidation'=>[
+        'overwrite'=>[
+            'type'=>'bool',
+            'default'=>true
+        ],
+        'update'=>[
+            'type'=>'bool',
+            'default'=>false
+        ]
+    ]
+];
+$STANDARD_API_PARSING_MAPS = [
+    'standardTimeColumns'=>[
+        'Created'=>[
+            'resultName'=>'created',
+            'type'=>'int'
+        ],
+        'Last_Updated'=>[
+            'resultName'=>'updated',
+            'type'=>'int'
+        ]
+    ],
+    'standardWeightColumn'=>[
+        'Weight'=>[
+            'resultName'=>'weight',
+            'type'=>'int'
+        ],
+    ],
+];

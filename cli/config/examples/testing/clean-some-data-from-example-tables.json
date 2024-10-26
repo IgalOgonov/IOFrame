@@ -1,0 +1,15 @@
+{
+	"dbData": {
+		"RESOURCES": {
+			"drop": false,
+			"cond": ["Resource_Type","img","!="]
+		},
+		"RESOURCE_COLLECTIONS": {
+			"drop": false,
+			"cond": ["Resource_Type","js","!="]
+		}
+	},
+	"dbOptions": {
+		"targetPrefix": "EXAMPLE_"
+	}
+}

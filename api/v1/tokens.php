@@ -4,7 +4,7 @@
  *      See standard return values at defaultInputResults.php
  *
  * Parameters:
- * "action"     - Requested action - described bellow
+ * "action"     - Requested action - described below
  *_________________________________________________
  * getTokens
  *      Gets tokens.
@@ -123,8 +123,8 @@
  *
  * */
 
-if(!defined('coreInit'))
-    require __DIR__ . '/../../main/coreInit.php';
+if(!defined('IOFrameMainCoreInit'))
+    require __DIR__ . '/../../main/core_init.php';
 
 require __DIR__ . '/../apiSettingsChecks.php';
 require __DIR__ . '/../defaultInputChecks.php';
@@ -139,13 +139,11 @@ if(!isset($_REQUEST["action"]))
 if($test)
     echo 'Testing mode!'.EOL;
 
-if(!checkApiEnabled('tokens',$apiSettings,$_REQUEST['action']))
+if(!checkApiEnabled('tokens',$apiSettings,$SecurityHandler,$_REQUEST['action']))
     exit(API_DISABLED);
 
-$target = isset($_REQUEST["target"])? $_REQUEST["target"] : '';
+$target = $_REQUEST["target"] ?? '';
 
-if(!isset($_REQUEST["action"]))
-    exit('Action not specified!');
 $action = $_REQUEST["action"];
 
 if(isset($_REQUEST['params']))
@@ -170,7 +168,7 @@ switch($action){
         break;
 
     case 'setToken':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = ["token","tags","tokenAction","uses","ttl","overwrite","update"];
@@ -183,7 +181,7 @@ switch($action){
         break;
 
     case 'setTokens':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = ["tokens","overwrite","update"];
@@ -199,7 +197,7 @@ switch($action){
         break;
 
     case 'deleteTokens':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = ["tokens"];
@@ -212,7 +210,7 @@ switch($action){
         break;
 
     case 'deleteExpiredTokens':
-        if(!validateThenRefreshCSRFToken($SessionHandler))
+        if(!validateThenRefreshCSRFToken($SessionManager))
             exit(WRONG_CSRF_TOKEN);
 
         $arrExpected = ["time"];
@@ -227,6 +225,3 @@ switch($action){
     default:
         exit('Specified action is not recognized');
 }
-
-
-?>

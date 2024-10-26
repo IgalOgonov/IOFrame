@@ -3,8 +3,8 @@ require_once $settings->getSetting('absPathToRoot').'vendor/autoload.php';
 
 $setParams = [
     'test'=>$test,
-    'override'=>($inputs['override'] !== null ? (bool)$inputs['override'] : true),
-    'update'=>($inputs['update'] !== null ? (bool)$inputs['update'] : false)
+    'override'=>(!($inputs['override'] !== null) || (bool)$inputs['override']),
+    'update'=>($inputs['update'] !== null && (bool)$inputs['update'])
 ];
 
 $config = HTMLPurifier_Config::createDefault();
@@ -13,7 +13,7 @@ $purifier = new HTMLPurifier($config);
 
 if ($inputs['inputs'] !== null) {
 
-    if(!\IOFrame\Util\is_json($inputs['inputs'])){
+    if(!\IOFrame\Util\PureUtilFunctions::is_json($inputs['inputs'])){
         if($test)
             echo 'inputs must be a valid json!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);
@@ -44,8 +44,8 @@ if ($inputs['inputs'] !== null) {
             exit(INPUT_VALIDATION_FAILURE);
         }
 
-        if (isset($inputArray['title']) && $inputArray['title'] !== null) {
-            $tempInput[$setColumnMap['title']] = $purifier->purify($inputArray['title']); ;
+        if (isset($inputArray['title'])) {
+            $tempInput[$setColumnMap['title']] = $purifier->purify($inputArray['title']);
             if(gettype($tempInput[$setColumnMap['title']]) !== 'string' || strlen($tempInput[$setColumnMap['title']]) === 0 || strlen($tempInput[$setColumnMap['title']]) > MENU_TITLE_MAX_LENGTH){
                 if($test)
                     echo 'title must not be empty, or longer than '.MENU_TITLE_MAX_LENGTH.EOL;
@@ -53,10 +53,10 @@ if ($inputs['inputs'] !== null) {
             }
         }
 
-        if (isset($inputArray['meta']) && $inputArray['meta'] !== null) {
+        if (isset($inputArray['meta'])) {
 
             $tempInput[$setColumnMap['meta']] = $purifier->purify($inputArray['meta']);
-            if(!\IOFrame\Util\is_json($tempInput[$setColumnMap['meta']])){
+            if(!\IOFrame\Util\PureUtilFunctions::is_json($tempInput[$setColumnMap['meta']])){
                 if($test)
                     echo 'meta must be a valid json string!'.EOL;
                 exit(INPUT_VALIDATION_FAILURE);

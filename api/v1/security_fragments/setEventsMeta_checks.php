@@ -5,7 +5,7 @@ $inputs['override'] = $inputs['override'] === null? true : $inputs['override'];
 $inputs['update'] = $inputs['update'] === null? false : $inputs['update'];
 
 //inputs
-if(!isset($inputs['inputs']) || !\IOFrame\Util\is_json($inputs['inputs'])){
+if(!isset($inputs['inputs']) || !\IOFrame\Util\PureUtilFunctions::is_json($inputs['inputs'])){
     if($test)
         echo 'Inputs must be set and a valid JSON'.EOL;
     exit(INPUT_VALIDATION_FAILURE);
@@ -39,13 +39,13 @@ foreach($inputs['inputs'] as $index => $inputArray){
             $cleanInput[$param] = $inputArray[$param];
     }
 
-    if(isset($inputArray['meta']) && !\IOFrame\Util\is_json($inputArray['meta'])){
+    if(isset($inputArray['meta']) && !\IOFrame\Util\PureUtilFunctions::is_json($inputArray['meta'])){
         if($test)
             echo 'meta must be a valid JSON string!'.EOL;
         exit(INPUT_VALIDATION_FAILURE);
     }
     else
-        $cleanInput['meta'] = isset($inputArray['meta']) ? $inputArray['meta'] : null;
+        $cleanInput['meta'] = $inputArray['meta'] ?? null;
 
     $inputs['inputs'][$index] = $cleanInput;
 }

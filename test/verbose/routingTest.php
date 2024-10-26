@@ -1,15 +1,15 @@
 <?php
 
 require_once __DIR__.'/../../IOFrame/Handlers/RouteHandler.php';
-$RouteHandler = new IOFrame\Handlers\RouteHandler($settings,$defaultSettingsParams);
+$RouteHandler = new \IOFrame\Handlers\RouteHandler($settings,$defaultSettingsParams);
 
 echo 'Adding routes:'.EOL;
 var_dump(
-    $RouteHandler->addRoutes(
+    $RouteHandler->setRoutes(
         [
-            ['GET|POST','api/[*:trailing]','api',null,false],
-            ['GET|POST','[*:trailing]','front',null,false],
-            ['GET|POST','*','404']
+            'test1'=>['GET|POST','api/[*:trailing]','api',null,false],
+            'test2'=>['GET|POST','[*:trailing]','front',null,false],
+            'test3'=>['GET|POST','*','404']
         ],
         [
             'test'=>true,
@@ -19,14 +19,13 @@ var_dump(
 );
 echo EOL;
 
-echo 'Adding updating routes 0 to 3:'.EOL;
+echo 'Adding routes 0 to 3:'.EOL;
 var_dump(
-    $RouteHandler->updateRoutes(
+    $RouteHandler->setRoutes(
         [
-            [0,'GET|POST','*','test0.1',null,false],
-            [1,'GET|POST','*','test0.1',null,false],
-            [2,'GET|POST','/','test0.2',null,false],
-            [3,'GET|POST','/test','test0.3','',false]
+            'test1'=>['GET|POST','*','test0.1',null,false],
+            'test2'=>['GET|POST','*','test0.1',null,false],
+            'test3'=>['GET|POST','/','test0.2',null,false]
         ],
         [
             'test'=>true,
@@ -44,7 +43,7 @@ echo EOL;
 
 echo 'Deleting routes 0 to 3'.EOL;
 var_dump(
-    $RouteHandler->deleteRoutes([0,1,2,3],['test'=>true,'verbose'=>true ])
+    $RouteHandler->deleteRoutes(['test-1','test-2'],['test'=>true,'verbose'=>true ])
 );
 echo EOL;
 

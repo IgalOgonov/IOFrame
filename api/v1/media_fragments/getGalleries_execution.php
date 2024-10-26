@@ -1,8 +1,7 @@
 <?php
-if(!defined('FrontEndResourceHandler'))
-    require __DIR__ . '/../../../IOFrame/Handlers/FrontEndResourceHandler.php';
 
-$FrontEndResourceHandler = new IOFrame\Handlers\FrontEndResourceHandler($settings,$defaultSettingsParams);
+
+$FrontEndResources = new \IOFrame\Handlers\Extenders\FrontEndResources($settings,$defaultSettingsParams);
 
 $requestParams = ['test'=>$test];
 
@@ -27,12 +26,12 @@ if($inputs['includeLocal'])
 
 $result = (
     $action === 'getGalleries' ?
-        $FrontEndResourceHandler->getGalleries(
+        $FrontEndResources->getGalleries(
             [],
             $requestParams
         )
         :
-        $FrontEndResourceHandler->getVideoGalleries(
+        $FrontEndResources->getVideoGalleries(
             [],
             $requestParams
         )
@@ -54,13 +53,13 @@ foreach($result as $galleryName => $infoArray){
 
     //Handle meta
     $meta = $infoArray['Meta'];
-    if(\IOFrame\Util\is_json($meta)){
+    if(\IOFrame\Util\PureUtilFunctions::is_json($meta)){
         $meta = json_decode($meta,true);
 
         $expected = ['name'];
 
         foreach($languages as $lang){
-            array_push($expected,$lang.'_name');
+            $expected[] = $lang . '_name';
         }
 
         foreach($expected as $attr){

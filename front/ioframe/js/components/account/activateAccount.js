@@ -1,6 +1,3 @@
-if(eventHub === undefined)
-    var eventHub = new Vue();
-
 Vue.component('activate-account', {
     mixins: [sourceURL,parseLimit,eventHubManager,IOFrameCommons],
     props: {
@@ -60,7 +57,7 @@ Vue.component('activate-account', {
         //Selected language
         language: {
             type: String,
-            default: document.selectedLanguage ?? ''
+            default: document.ioframe.selectedLanguage ?? ''
         },
         //App Identifier
         identifier: {
@@ -164,6 +161,7 @@ Vue.component('activate-account', {
 
             let message;
             let messageType = 'error';
+            let extraParams = {};
 
             switch (response){
                 case 'INPUT_VALIDATION_FAILURE':
@@ -181,6 +179,7 @@ Vue.component('activate-account', {
                     break;
                 case '0':
                     messageType = 'success';
+                    extraParams = {autoDismiss:2000};
                     this.response = true;
                     break;
                 case '1':
@@ -198,7 +197,7 @@ Vue.component('activate-account', {
                 message = this.text.responses[response];
             }
             if(this.alertOptions.use)
-                alertLog(message,messageType,this.alertOptions.target,this.alertOptions.params);
+                alertLog(message,messageType,this.alertOptions.target,{...this.alertOptions.params,...extraParams});
 
             eventHub.$emit('regConfirmResult',{
                 response:response,
