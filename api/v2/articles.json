@@ -371,7 +371,7 @@
                     "description": "Article subtitle - in systems where it's relevant",
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 128
+                    "maxLength": 512
                   },
                   "address":{
                     "$ref": "#/components/schemas/ArticleAddress"
@@ -585,7 +585,7 @@
                     "description": "Article subtitle - in systems where it's relevant",
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 128
+                    "maxLength": 512
                   },
                   "address":{
                     "$ref": "#/components/schemas/ArticleAddress"

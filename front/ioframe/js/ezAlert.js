@@ -77,7 +77,18 @@ class ezAlert{
             alert.style.display = 'block';
             alert.style.textDecoration = 'none';
             alert.style.cursor = 'pointer';
-            alert.addEventListener('click',e =>{e.target.parentNode.removeChild(e.target)});
+            alert.addEventListener('click',e =>{
+                if(['A','BUTTON'].indexOf(e.target.nodeName) === -1){
+                    let target = e.target;
+                    while(target.className !== this.className+" "+params.extraClasses+" click"){
+                        target = target.parentNode;
+                        if(target.nodeName === 'BODY')
+                            break;
+                    }
+                    if(target.className === this.className+" "+params.extraClasses+" click")
+                        target.parentNode.removeChild(target)
+                }
+            });
         }
         if(params.dismissible === 'button'){
             alert.className +=' button';

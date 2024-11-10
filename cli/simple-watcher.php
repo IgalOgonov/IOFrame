@@ -106,12 +106,12 @@ function populateWatchArray($inputs,&$watchArray,$depth,$silent,$test,$baseUrl,$
     foreach($inputs as $index => $input){
         if(empty($input['target'])){
             if(!$silent)
-                echo 'Watched file '.$index.' has no target!'.EOL;
+                echo '['.date('Y-m-d H:i:s').'] '.'Watched file '.$index.' has no target!'.EOL;
             continue;
         }
         if(empty($input['destination'])){
             if(!$silent)
-                echo 'Watched file '.$index.' has no destination!'.EOL;
+                echo '['.date('Y-m-d H:i:s').'] '.'Watched file '.$index.' has no destination!'.EOL;
             continue;
         }
         $fullTarget = $baseUrl.$input['target'];
@@ -119,17 +119,17 @@ function populateWatchArray($inputs,&$watchArray,$depth,$silent,$test,$baseUrl,$
         $changeTime = @filemtime($fullTarget);
         if(!$changeTime){
             if(!$silent)
-                echo 'Watched file '.$index.' target file '.$fullTarget.' does not exist!'.EOL;
+                echo '['.date('Y-m-d H:i:s').'] '.'Watched file '.$index.' target file '.$fullTarget.' does not exist!'.EOL;
         }
         elseif(is_file($fullTarget)){
             if(!$silent)
-                echo '['.$changeTime.'] '.$fullTarget.' added to watchlist'.EOL;
+                echo '['.date('Y-m-d H:i:s').' ('.date('Y-m-d H:i:s',$changeTime).')] '.$fullTarget.' added to watchlist'.EOL;
             if((!is_file($fullDestination) || @filemtime($fullDestination) < $changeTime) || $overwrite){
                 if(!$silent){
                     if(is_file($fullDestination))
-                        echo 'Watched file '.$index.' target file '.$fullDestination.' does not exist, copying file!'.EOL;
+                        echo '['.date('Y-m-d H:i:s').'] '.'Watched file '.$index.' target file '.$fullDestination.' does not exist, copying file!'.EOL;
                     else
-                        echo 'Watched file '.$index.' target file '.$fullDestination.' is older than source, copying file!'.EOL;
+                        echo '['.date('Y-m-d H:i:s').'] '.'Watched file '.$index.' target file '.$fullDestination.' is older than source, copying file!'.EOL;
                 }
                 if(!$test)
                     @copy($fullTarget,$fullDestination);
@@ -144,18 +144,18 @@ function populateWatchArray($inputs,&$watchArray,$depth,$silent,$test,$baseUrl,$
             $currentDepth = $input['depth'] ?? $depth;
             if($currentDepth < 1){
                 if(!$silent)
-                    echo '['.time().'] '.$fullTarget.' cannot be added, exceeding maximum depth.'.EOL;
+                    echo '['.date('Y-m-d H:i:s').'] '.$fullTarget.' cannot be added, exceeding maximum depth.'.EOL;
                 continue;
             }
 
             if(is_file($fullDestination)){
                 if(!$silent)
-                    echo 'Watched file '.$index.' target folder '.$fullDestination.' is a file, cannot watch!'.EOL;
+                    echo '['.date('Y-m-d H:i:s').'] '.'Watched file '.$index.' target folder '.$fullDestination.' is a file, cannot watch!'.EOL;
                 continue;
             }
             elseif(!is_dir($fullDestination)){
                 if(!$silent)
-                    echo 'Watched file '.$index.' target folder '.$fullDestination.' does not exist, creating empty dir!'.EOL;
+                    echo '['.date('Y-m-d H:i:s').'] '.'Watched file '.$index.' target folder '.$fullDestination.' does not exist, creating empty dir!'.EOL;
                 if(!$test)
                     mkdir( $fullDestination, 0777, true );
             }
@@ -173,7 +173,7 @@ function populateWatchArray($inputs,&$watchArray,$depth,$silent,$test,$baseUrl,$
         }
         else{
             if(!$silent)
-                echo $fullTarget.' is neither a file nor a directory!'.EOL;
+                echo '['.date('Y-m-d H:i:s').'] '.$fullTarget.' is neither a file nor a directory!'.EOL;
         }
     }
 }
@@ -228,7 +228,7 @@ while(true){
     else{
         if(count($watchArray) == 0){
             if(!$silent)
-                echo 'Exiting because no more files left to watch!'.EOL.time().EOL;
+                echo '['.date('Y-m-d H:i:s').'] '.'Exiting because no more files left to watch!'.EOL.EOL;
             break;
         }
 
@@ -236,14 +236,14 @@ while(true){
             //filemtime apparently doesn't always registers when files get deleted/moved after the first time - on windows at least
             if(!file_exists($input['fullTarget'])){
                 if(!$silent)
-                    echo '['.time().'] '.$input['target'].' no longer exists!'.EOL;
+                    echo '['.date('Y-m-d H:i:s').'] '.$input['target'].' no longer exists!'.EOL;
                 array_splice($watchArray,$index,1);
                 continue;
             }
             $changeTime = @filemtime($input['fullTarget']);
             if($input['changedAt'] !== $changeTime){
                 if(!$silent)
-                    echo '['.$changeTime.'] '.$input['target'].' changed.'.EOL;
+                    echo '['.date('Y-m-d H:i:s',$changeTime).'] '.$input['target'].' changed.'.EOL;
 
                 if(!$test)
                     $copy = @copy($input['fullTarget'],$input['fullDestination']);
@@ -253,13 +253,13 @@ while(true){
                 if(!$copy) {
 
                     if(!$silent){
-                        echo '['.time().'] '.$input['destination'].' failed to update'.EOL;
+                        echo '['.date('Y-m-d H:i:s').'] '.$input['destination'].' failed to update'.EOL;
                         echo "Error: ".error_get_last().EOL;
                     }
 
                     if(++$watchArray[$index]['failedAttempts'] > $timeout){
                         if(!$silent)
-                            echo '['.time().'] '.'Last failure attempt, no longer watching file!'.EOL;
+                            echo '['.date('Y-m-d H:i:s').'] '.'Last failure attempt, no longer watching file!'.EOL;
                         array_splice($watchArray,$index,1);
                     }
 
@@ -267,7 +267,7 @@ while(true){
                 else {
 
                     if(!$silent)
-                        echo '['.time().'] '.$input['destination'].' updated.'.EOL;
+                        echo '['.date('Y-m-d H:i:s').'] '.$input['destination'].' updated.'.EOL;
 
                     $watchArray[$index]['changedAt'] = $changeTime;
                     $watchArray[$index]['failedAttempts'] = 0;

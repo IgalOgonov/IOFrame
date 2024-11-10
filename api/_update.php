@@ -980,6 +980,8 @@ switch($action){
 
                 $newMatches['front'] = ['front/ioframe/pages/[trailing]', 'php,html,htm',true];
                 break;
+            case '2.0.0.0rc2':
+                break;
             default:
         }
 
@@ -1380,6 +1382,7 @@ switch($action){
                             case '1.2.2.1':
                             case '1.2.2.2':
                             case '2.0.0.0rc':
+                            case '2.0.0.0rc2':
                                 break;
                             default:
                         }

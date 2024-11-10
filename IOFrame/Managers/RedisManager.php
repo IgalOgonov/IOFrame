@@ -55,13 +55,13 @@ namespace IOFrame\Managers{
             }
 
             //Authenticate if needed (although a plaintext password is useless either way)
-            if($redisPass !== null)
+            if($redisPass??null)
                 $this->r->auth($redisPass);
 
             //At this point, we are ready to go, so we should be marked as initiated
             $this->isInit = true;
             //Set options
-            if($redisPrefix !== null)
+            if($redisPrefix??null)
                 $this->r->setOption(\Redis::OPT_PREFIX,$redisPrefix);
             if($redisSerializer !== null){
                 $map = [];

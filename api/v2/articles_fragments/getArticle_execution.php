@@ -5,6 +5,7 @@ if(!empty($inputs['id']))
     $res = $ArticleHandler->getItems([[$inputs['id']]], 'articles', $retrieveParams)[$inputs['id']];
 else{
     $retrieveParams['addressIs'] = $inputs['address'];
+    $retrieveParams['authAtMost'] = 1;
     $res = $ArticleHandler->getItems([], 'articles', $retrieveParams);
     if(is_array($res)){
         foreach($res as $key => $item)

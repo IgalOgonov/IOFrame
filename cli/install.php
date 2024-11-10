@@ -26,8 +26,8 @@
     NOTE: If an option is optional but a sub option is required, it is required as long as the parent option is present.
  * */
 
-require_once __DIR__.'/../main/definitions.php';
 require_once __DIR__.'/../vendor/autoload.php';
+require_once __DIR__.'/../main/definitions.php';
 require 'commons/ensure_cli.php';
 $baseUrl = \IOFrame\Util\FrameworkUtilFunctions::getBaseUrl();
 
@@ -59,7 +59,7 @@ $initiationDefinitions = [
             [
                 'pathToRoot'=>[
                     'type'=>'string',
-                    'default'=>'""',
+                    'default'=>'"/"',
                     'required'=>false,
                     'desc'=>'As in localSettings'
                 ],
@@ -97,7 +97,7 @@ $initiationDefinitions = [
         'recalculated'=>true,
         'func'=>function($options,$context,$params){
             return \IOFrame\Util\CLI\CommonManagerHelperFunctions::genericOptionsLoadingFunctionHelper($options,$context,'localSettings',[
-                'pathToRoot'=>'',
+                'pathToRoot'=>'/',
                 'dieOnPluginMismatch'=>1,
                 'expectedProxy'=>'',
                 'nodeID'=>'',
@@ -708,7 +708,7 @@ $initiationParams = [
                 $defaultsMap = [
                     'localSettings'=>[
                         'pathToRoot'=>[
-                            'default'=>'',
+                            'default'=>'/',
                             'required'=>$fullInstall,
                             'interactiveMsg'=>'Enter path to project from Apache server root, or press Enter to skip',
                         ],
@@ -1073,11 +1073,11 @@ $initiationParams = [
                         if(
                             (
                                 (empty($context->variables[$var][$opt]) && empty($optObject['default'])) ||
-                                ( $context->variables[$var][$opt] === ($optObject['default']) )
+                                ( $context->variables[$var][$opt]??null === ($optObject['default']) )
                             ) &&
                             !(
                                 $v['installOptions']['ignoreOptionalDefaults'] &&
-                                ( $context->variables[$var][$opt] === ($optObject['default']) )
+                                ( $context->variables[$var][$opt]??null === ($optObject['default']) )
                             )
                         ){
 

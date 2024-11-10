@@ -820,7 +820,13 @@ namespace IOFrame\Managers{
                         $result['result'] = null;
                         $result['error'] = 'exception';
                         $result['errorDetails'] = [
-                            'exception'=>$e
+                            'exception'=>[
+                                'code'=>$e->getCode(),
+                                'msg'=>$e->getMessage(),
+                                'trace'=>$e->getTraceAsString(),
+                                'file'=>$e->getFile(),
+                                'line'=>$e->getLine()
+                            ]
                         ];
                     }
                 }

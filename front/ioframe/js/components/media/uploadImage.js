@@ -92,8 +92,8 @@ Vue.component('media-uploader', {
                 type="file"
                 style="display:none"
                 :accept="mediaType === 'img'?
-                'image/jpg,image/jpeg,image/png,image/gif,image/bmp,image/svg' :
-                'video/mp4,video/webm,video/ogg'"
+                'image/*' :
+                'video/*'"
                 >
             </div>
             <div :style="remoteType !== 'link' ? 'display:none' : ''" class="link-container properties">

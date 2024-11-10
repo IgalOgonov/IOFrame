@@ -244,12 +244,12 @@ Vue.component('articles-editor', {
                     placeholder: "Will appear when people view the thumbnail",
                     onUpdate: {
                         validate: function(item){
-                            return item.length < 128;
+                            return item.length < 512;
                         },
                         setName: 'subtitle'
                     },
                     replaceEmpty: '@',
-                    pattern:'^.{0,128}$',
+                    pattern:'^.{0,512}$',
                     validateFailureMessage: `Thumbnail subtitle must be no longer than 128 characters`,
                 },
                 'meta.caption':{
