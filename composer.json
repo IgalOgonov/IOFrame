@@ -44,8 +44,8 @@
         "symfony/string": "6.4.x-dev"
     },
     "require-dev": {
-        "fakerphp/faker": "^1.9.1",
-        "phpunit/phpunit": "^9.3.3"
+        "fakerphp/faker": "^1",
+        "phpunit/phpunit": "^9"
     },
     "autoload": {
         "psr-4": {
